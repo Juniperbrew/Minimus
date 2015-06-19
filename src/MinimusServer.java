@@ -125,23 +125,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 if(object instanceof Network.Message){
                     //Handle messages
                 }
-                if(object instanceof Network.UserInput){
-                    Network.UserInput input = (Network.UserInput) object;
-                    //System.out.println("Received userinput with ID:"+input.inputID);
-
-                    if(inputQueue.get(connection)!=null){
-                        inputQueue.get(connection).add(input);
-                    }else{
-                        ArrayList<Network.UserInput> list = new ArrayList<Network.UserInput>();
-                        list.add(input);
-                        inputQueue.put(connection,list);
-                    }
-                }
                 if(object instanceof Network.UserInputs){
                     Network.UserInputs inputPacket = (Network.UserInputs) object;
-                    for(Network.UserInput input:inputPacket.inputs){
-                        //System.out.println("Received userinput with ID:"+input.inputID);
-                    }
                     if(inputQueue.get(connection)!=null){
                         inputQueue.get(connection).addAll(inputPacket.inputs);
                     }else{

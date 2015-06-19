@@ -104,10 +104,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     int currentPacketsReceived;
     long currentBytesReceivedCounter;
     int currentPacketsReceivedCounter;
+    int lastReceivedPacketSize;
 
     long logTwoSecondStarted = 0;
 
-
+    boolean showPerformanceWarnings = true;
     long clientStartTime;
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
 
@@ -143,7 +144,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private void logReceivedPackets(Connection connection, Object packet){
         KryoSerialization s = (KryoSerialization) client.getSerialization();
         s.write(connection, buffer ,packet);
-        System.out.println("Received " + buffer.position() + " bytes");
+        lastReceivedPacketSize = buffer.position();
         totalPacketsReceived++;
         totalBytesReceived += buffer.position();
         currentBytesReceivedCounter += buffer.position();
@@ -205,8 +206,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     private void sendUDP(Object o){
-        totalUDPBytesSent += client.sendUDP(o);
-        currentUDPBytesSentCounter += client.sendUDP(o);
+        int bytesSent = client.sendUDP(o);
+        totalUDPBytesSent += bytesSent;
+        currentUDPBytesSentCounter += bytesSent;
 
         totalUDPPacketsSent++;
         currentUDPPacketsSentCounter++;
@@ -506,7 +508,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             createStateSnapshot(clientTime); //FIXME Will cause concurrent modifications
         }
         float checkpoint3 = (System.nanoTime()-logicStart)/1000000f;
-        if(checkpoint3-checkpoint0>1) {
+        if(checkpoint3-checkpoint0>1&& showPerformanceWarnings) {
             System.out.println("UpdateStates:" + (checkpoint1 - checkpoint0) + "ms");
             System.out.println("Send input:" + (checkpoint2 - checkpoint1) + "ms");
             System.out.println("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
@@ -515,7 +517,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
-        if((System.nanoTime()-renderStart)/1000000f > 30){
+        if((System.nanoTime()-renderStart)/1000000f > 30 && showPerformanceWarnings){
             System.out.println("Long time since last render() call:"+(System.nanoTime()-renderStart)/1000000f);
         }
         renderStart = System.nanoTime();
@@ -578,7 +580,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
         //fpsLogger.log();
 
-        if((System.nanoTime()-renderStart)/1000000f>5){
+        if((System.nanoTime()-renderStart)/1000000f>30 && showPerformanceWarnings){
             System.out.println("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
         }
     }
@@ -610,6 +612,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
         if(character == 'o'){
             sendUDP(new Network.TestPacket());
+        }
+        if(character == 'w'){
+            showPerformanceWarnings = !showPerformanceWarnings;
+            System.out.println("ShowPerformanceWarnings:"+showPerformanceWarnings);
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
@@ -762,6 +768,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         JLabel packetsPerSecondCurrent = new JLabel();
         JLabel bytesPerSecondCurrent = new JLabel();
         JLabel averagePacketSize = new JLabel();
+        JLabel lastReceivedPacketSizeLabel = new JLabel();
 
         public DataDialog(){
 
@@ -785,6 +792,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             add(packetsPerSecondCurrent);
             add(bytesPerSecondCurrent);
             add(averagePacketSize);
+            add(lastReceivedPacketSizeLabel);
 
             update();
             setVisible(true);
@@ -824,6 +832,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 packetsPerSecondCurrent.setText("Current packets/s received:"+ currentPacketsReceived /2);
                 bytesPerSecondCurrent.setText("Current bytes/s received:"+ currentBytesReceived /2);
                 averagePacketSize.setText("Average received packet size:" + (currentBytesReceived / currentPacketsReceived));
+                lastReceivedPacketSizeLabel.setText("Last received packet size:" + lastReceivedPacketSize);
             }
             pack();
         }
