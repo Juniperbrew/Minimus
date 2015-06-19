@@ -612,7 +612,56 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             sendUDP(new Network.TestPacket());
         }
         if(character == 'q'){
-            dataDialog.update();
+            KryoSerialization s = (KryoSerialization) client.getSerialization();
+            Entity e = new Entity(50,50);
+            s.write(client, buffer ,e);
+            System.out.println("Entity size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            //Integer i = new Integer(63);
+            /*int i =  1000;
+            s.write(client, buffer ,i);
+            System.out.println("Integer size is " + buffer.position() + " bytes");
+            buffer.clear();*/
+
+            int totalEntitySize = 0;
+
+            s.write(client, buffer ,e.heading);
+            totalEntitySize += buffer.position();
+            System.out.println("Heading size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            s.write(client, buffer ,e.health);
+            totalEntitySize += buffer.position();
+            System.out.println("Health size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            s.write(client, buffer ,e.maxHealth);
+            totalEntitySize += buffer.position();
+            System.out.println("Maxhealth size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            s.write(client, buffer ,e.x);
+            totalEntitySize += buffer.position();
+            System.out.println("X size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            s.write(client, buffer ,e.y);
+            totalEntitySize += buffer.position();
+            System.out.println("Y size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            s.write(client, buffer ,e.height);
+            totalEntitySize += buffer.position();
+            System.out.println("Height size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            s.write(client, buffer ,e.width);
+            totalEntitySize += buffer.position();
+            System.out.println("Width size is " + buffer.position() + " bytes");
+            buffer.clear();
+
+            System.out.println("Total entity size is " +totalEntitySize + " bytes");
         }
         if(character == '0'){
             showDebug = !showDebug;
