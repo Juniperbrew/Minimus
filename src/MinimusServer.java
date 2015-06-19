@@ -366,12 +366,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                     tickStartTime=System.nanoTime();
                     currentTick++;
 
+                    /*
                     if(System.nanoTime()-lastPingUpdate>10*1000000000){
                         for(Connection c:server.getConnections()){
                             c.updateReturnTripTime();
                         }
                         lastPingUpdate = System.nanoTime();
                     }
+                    */
 
                     processCommands();
                     float processCommandsCheckpoint = (System.nanoTime()-tickStartTime)/1000000f;

@@ -10,15 +10,11 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 
+import javax.swing.*;
+import java.awt.*;
 import java.awt.geom.Line2D;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -92,11 +88,30 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     long totalUDPBytesSent;
     int totalUDPPacketsSent;
+    long currentUDPBytesSent;
+    int currentUDPPacketsSent;
+    long currentUDPBytesSentCounter;
+    int currentUDPPacketsSentCounter;
+
+
+
     long totalTCPBytesSent;
     int totalTCPPacketsSent;
 
+    long totalBytesReceived;
+    int totalPacketsReceived;
+    long currentBytesReceived;
+    int currentPacketsReceived;
+    long currentBytesReceivedCounter;
+    int currentPacketsReceivedCounter;
+
+    long logTwoSecondStarted = 0;
+
+
     long clientStartTime;
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
+
+    DataDialog dataDialog;
 
     public MinimusClient(String ip){
         serverIP = ip;
@@ -112,14 +127,39 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         attackVisuals = new ArrayList<Line2D.Float>();
         timer = new Timer();
     }
+
+    private void twoSecondElapsed(){
+        currentBytesReceived = currentBytesReceivedCounter;
+        currentPacketsReceived = currentPacketsReceivedCounter;
+        currentBytesReceivedCounter = 0;
+        currentPacketsReceivedCounter = 0;
+
+        currentUDPBytesSent = currentUDPBytesSentCounter;
+        currentUDPPacketsSent = currentUDPPacketsSentCounter;
+        currentUDPBytesSentCounter = 0;
+        currentUDPPacketsSentCounter = 0;
+    }
+
+    private void logReceivedPackets(Connection connection, Object packet){
+        KryoSerialization s = (KryoSerialization) client.getSerialization();
+        s.write(connection, buffer ,packet);
+        System.out.println("Received " + buffer.position() + " bytes");
+        totalPacketsReceived++;
+        totalBytesReceived += buffer.position();
+        currentBytesReceivedCounter += buffer.position();
+        currentPacketsReceivedCounter++;
+        buffer.clear();
+    }
     
     @Override
     public void create() {
+        dataDialog = new DataDialog();
         clientStartTime = System.nanoTime();
         initialize();
         joinServer();
         Gdx.input.setInputProcessor(this);
     }
+
     private void joinServer(){
         client = new Client(writeBuffer,objectBuffer);
         Network.register(client);
@@ -130,10 +170,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             }
 
             public void received(Connection connection, Object object) {
-                KryoSerialization s = (KryoSerialization) client.getSerialization();
-                s.write(connection, buffer ,object);
-                System.out.println(buffer.position());
-                buffer.clear();
+                logReceivedPackets(connection, object);
 
                 /*if(object instanceof Network.EntityUpdate){
                     Network.EntityUpdate update = (Network.EntityUpdate) object;
@@ -169,7 +206,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     private void sendUDP(Object o){
         totalUDPBytesSent += client.sendUDP(o);
+        currentUDPBytesSentCounter += client.sendUDP(o);
+
         totalUDPPacketsSent++;
+        currentUDPPacketsSentCounter++;
     }
 
     private void sendTCP(Object o){
@@ -432,7 +472,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         float delta = Gdx.graphics.getDeltaTime();
 
         //Request ping update every 10 seconds
-        if(System.nanoTime()-lastPingRequest>10*1000000000){
+        if(System.nanoTime()-lastPingRequest>10*1000000000l){
+            System.out.println("Checking ping");
             client.updateReturnTripTime();
             lastPingRequest = System.nanoTime();
         }
@@ -474,7 +515,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
-        if((System.nanoTime()-renderStart)/1000000f > 20){
+        if((System.nanoTime()-renderStart)/1000000f > 30){
             System.out.println("Long time since last render() call:"+(System.nanoTime()-renderStart)/1000000f);
         }
         renderStart = System.nanoTime();
@@ -482,6 +523,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         doLogic();
+        dataDialog.update();
+
+        if(System.nanoTime()- logTwoSecondStarted >2*1000000000l){
+            logTwoSecondStarted = System.nanoTime();
+            twoSecondElapsed();
+        }
 
         if(stateSnapshot !=null){
             if(showDebug) {
@@ -532,7 +579,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         //fpsLogger.log();
 
         if((System.nanoTime()-renderStart)/1000000f>5){
-            System.out.println("Long Render() duration:"+(System.nanoTime()-renderStart)/1000000f);
+            System.out.println("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
         }
     }
 
@@ -565,22 +612,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             sendUDP(new Network.TestPacket());
         }
         if(character == 'q'){
-            long runtime = (System.nanoTime()-clientStartTime)/1000000000;
-            if(totalUDPPacketsSent>0) {
-                System.out.println("UDP Packets sent:" + totalUDPPacketsSent);
-                System.out.println("UDP bytes sent:" + totalUDPBytesSent);
-                System.out.println("UDP bytes/s sent:" + totalUDPBytesSent / runtime);
-                System.out.println("UDP packets/s sent:" + totalUDPPacketsSent / runtime);
-                System.out.println("Average UDP packet size:" + (totalUDPBytesSent / totalUDPPacketsSent));
-            }
-
-            if(totalTCPPacketsSent>0){
-                System.out.println("TCP Packets sent:"+totalTCPPacketsSent);
-                System.out.println("TCP bytes sent:"+totalTCPBytesSent);
-                System.out.println("TCP bytes/s sent:"+totalTCPBytesSent/runtime);
-                System.out.println("TCP packets/s sent:"+totalTCPPacketsSent/runtime);
-                System.out.println("Average TCP packet size:"+(totalTCPBytesSent/totalTCPPacketsSent));
-            }
+            dataDialog.update();
         }
         if(character == '0'){
             showDebug = !showDebug;
@@ -660,5 +692,91 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     @Override
     public boolean scrolled(int amount) {
         return false;
+    }
+
+    class DataDialog extends JFrame{
+
+        JLabel runtimeLabel = new JLabel();
+
+        JLabel UDPpackets = new JLabel();
+        JLabel UDPbytes = new JLabel();
+        //JLabel UDPpacketsS = new JLabel();
+        //JLabel UDPbytesS = new JLabel();
+        JLabel UDPpacketsPerSecondCurrent = new JLabel();
+        JLabel UDPbytesPerSecondCurrent = new JLabel();
+        JLabel averageUDPpacketSize = new JLabel();
+
+        JLabel packets = new JLabel();
+        JLabel bytes = new JLabel();
+        //JLabel packetsS = new JLabel();
+        //JLabel bytesS = new JLabel();
+        JLabel packetsPerSecondCurrent = new JLabel();
+        JLabel bytesPerSecondCurrent = new JLabel();
+        JLabel averagePacketSize = new JLabel();
+
+        public DataDialog(){
+
+            setLayout(new GridLayout(0,1));
+            add(runtimeLabel);
+
+            add(UDPpackets);
+            add(UDPbytes);
+            //add(UDPpacketsS);
+            //add(UDPbytesS);
+            add(UDPpacketsPerSecondCurrent);
+            add(UDPbytesPerSecondCurrent);
+            add(averageUDPpacketSize);
+
+            add(new JSeparator());
+
+            add(packets);
+            add(bytes);
+            //add(packetsS);
+            //add(bytesS);
+            add(packetsPerSecondCurrent);
+            add(bytesPerSecondCurrent);
+            add(averagePacketSize);
+
+            update();
+            setVisible(true);
+        }
+
+        public void update(){
+            long runtime = (System.nanoTime()-clientStartTime)/1000000000;
+            if(runtime==0){
+                return;
+            }
+            runtimeLabel.setText("Runtime:"+runtime);
+            if(totalUDPPacketsSent>0) {
+                UDPpackets.setText("UDP packets sent:" + totalUDPPacketsSent);
+                UDPbytes.setText("UDP bytes sent:" + totalUDPBytesSent);
+                //UDPpacketsS.setText("UDP packets/s sent:" + totalUDPPacketsSent / runtime);
+                //UDPbytesS.setText("UDP bytes/s sent:" + totalUDPBytesSent / runtime);
+                UDPpacketsPerSecondCurrent.setText("Current UDP packets/s sent:"+ currentUDPPacketsSent /2);
+                UDPbytesPerSecondCurrent.setText("Current UDP bytes/s sent:"+ currentUDPBytesSent /2);
+                averageUDPpacketSize.setText("Average UDP packet size:" + (currentUDPBytesSent / currentUDPPacketsSent));
+            }
+
+            /*
+                        if(totalTCPPacketsSent>0){
+                System.out.println("TCP Packets sent:"+totalTCPPacketsSent);
+                System.out.println("TCP bytes sent:"+totalTCPBytesSent);
+                System.out.println("TCP bytes/s sent:"+totalTCPBytesSent/runtime);
+                System.out.println("TCP packets/s sent:"+totalTCPPacketsSent/runtime);
+                System.out.println("Average TCP packet size:"+(totalTCPBytesSent/totalTCPPacketsSent));
+            }
+             */
+
+            if(totalPacketsReceived>0) {
+                packets.setText("Packets received:" + totalPacketsReceived);
+                bytes.setText("Bytes received:" + totalBytesReceived);
+                //packetsS.setText("Packets/s received:" + totalPacketsReceived / runtime);
+                //bytesS.setText("Bytes/s received:" + totalBytesReceived / runtime);
+                packetsPerSecondCurrent.setText("Current packets/s received:"+ currentPacketsReceived /2);
+                bytesPerSecondCurrent.setText("Current bytes/s received:"+ currentBytesReceived /2);
+                averagePacketSize.setText("Average received packet size:" + (currentBytesReceived / currentPacketsReceived));
+            }
+            pack();
+        }
     }
 }
