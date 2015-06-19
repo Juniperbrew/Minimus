@@ -816,7 +816,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             }
              */
 
-            if(totalPacketsReceived>0) {
+            if(totalPacketsReceived>0&&currentPacketsReceived>0) {
                 packets.setText("Packets received:" + totalPacketsReceived);
                 bytes.setText("Bytes received:" + totalBytesReceived);
                 //packetsS.setText("Packets/s received:" + totalPacketsReceived / runtime);
