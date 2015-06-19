@@ -796,7 +796,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 return;
             }
             runtimeLabel.setText("Runtime:"+runtime);
-            if(totalUDPPacketsSent>0) {
+            if(totalUDPPacketsSent>0&&currentUDPPacketsSent>0) {
                 UDPpackets.setText("UDP packets sent:" + totalUDPPacketsSent);
                 UDPbytes.setText("UDP bytes sent:" + totalUDPBytesSent);
                 //UDPpacketsS.setText("UDP packets/s sent:" + totalUDPPacketsSent / runtime);
