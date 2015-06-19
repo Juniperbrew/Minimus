@@ -1,0 +1,83 @@
+server tickrate
+updaterate
+
+cmdrate
+
+
+client in the future 
+
+
+i have a server and client running at 30 ticks per second, client checks input once per tick and send it to server,
+
+client tick count will lag behind the server 
+
+
+[server can run lower tickrate than client polls commands, this mean we apply multiple inputs per tick on server]
+
+
+
+client send command packet with tick number attached[DONE]
+
+server sends entity states with tick number attached[DONE]
+
+when client gets a entityState it checks it's tick number, this is now the authorative state
+	client syncs all entities to this entityState (interpolate between this and the previous entityState)
+	after this the player is moved using the command packets which have already been sent but server haven't acknowledged
+	
+
+what do we do if client and server tickrate goes out of sync?
+if client runs faster the server will start queuing input commands and the input delay will keep getting bigger, also the client has to gradually simulate more inputs per tick for clientside prediction because the client time keeps going further from server time
+
+if server runs faster than client then server never processes received input commands because their tick number is always lower than
+the current tick number on server
+
+server>client: server tick count always ahead of client so input is never processed, client keeps getting reverted to same position
+client>server: server tick count always behind client so server keeps piling up on input commands it cant process in time, client keeps having more inputs to simulate after syncing serverstate
+
+
+
+
+what do we do when player send multiple input requests per tick
+
+
+createStateSnapshot()
+cl_interp=100ms
+
+last authorative state time + time since it arrived is clientStateTime
+if(packet.time < lastPacket.time-cl_interp) remove packet
+
+find between which two packets clientStateTime-cl_interp is
+renderTime = clientStateTime-cl_interp
+
+interpolate(packet1,packet2,alpha)
+
+
+adjustable vars
+client: interp, pollrate
+server: tickrate
+
+
+
+
+
+decouple server tickRate from updateRate[DONE]
+decouple client inputrate from updaterate [DONE]
+time client render thread [DONE]
+
+
+10x100ms inputs sent 10 times a second
+40*25ms inputs sent 40 times a second
+40*25ms inputs sent 10 times a second (4 updates per packet)
+[currently server processes all updates from one player then processes the next player]
+
+
+support changing velocity on client/server
+
+
+add HP, draw draining hp as gradually filling red box
+hitscan laser
+hitscan sword
+projectile
+
+new players are not added on clients untill they receive full entity update
+
