@@ -1,3 +1,6 @@
+TODO larger map, viewport, server packets sent/received per connection
+
+
 server tickrate
 updaterate
 
