@@ -1,0 +1,11 @@
+sv_velocity 0.1
+sv_tickrate 60
+sv_updaterate 10
+cl_udp 1
+cl_log_interval_seconds 2
+cl_clientside_prediction 1
+cl_interp 0.15
+cl_input_update_rate 20
+cl_show_debug 0
+cl_compress_input 0
+cl_show_performance_warnings 0
