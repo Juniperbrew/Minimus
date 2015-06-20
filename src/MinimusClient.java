@@ -9,9 +9,7 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
-import net.miginfocom.swing.MigLayout;
 
-import javax.swing.*;
 import java.awt.geom.Line2D;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,8 +31,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private int objectBuffer = 4096; //Default 2048
     ShapeRenderer shapeRenderer;
 
-    boolean useClientSidePrediction = true;
-    float interpDelay = 1f;  //TODO allow an option to link this to server updateRate
+    //boolean useClientSidePrediction = true;
+    //float interpDelay = 1f;  //TODO allow an option to link this to server updateRate
     //minimum interpDelay (1/serverUpdateRate)+0,5*latency
 
     //Counter to give each input request an unique id
@@ -42,7 +40,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     //Input requests that haven't been sent yet
     ArrayList<Network.UserInput> pendingInputPacket;
     //How many times per second we gather all created inputs and send them to server
-    float inputUpdateRate =20;
+    //float inputUpdateRate =20;
     private long lastInputSent;
     //Sent input requests that haven't been acknowledged on server yet
     ArrayList<Network.UserInput> inputQueue;
@@ -67,12 +65,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private Network.FullEntityUpdate interpTo;//private Network.EntityUpdate interpTo;
 
     //Velocity of all entities sent from server, if this doesn't match server velocity then player clientside prediction will be wrong and corrected each state update
-    float velocity;
+    //float velocity;
     int playerID;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
 
-    boolean showDebug;
-    boolean compressInput = true;
+    //boolean showDebug;
+    //boolean compressInput = false;
     long lastPingRequest;
     private ArrayList<Network.AddEntity> pendingAddedEntities;
 
@@ -86,15 +84,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     String serverIP;
 
-    ConnectionDataUsage dataUsage;
-    int logIntervalSeconds = 2;
+    StatusData statusData;
+    //int logIntervalSeconds = 2;
     long logIntervalStarted;
 
-    boolean showPerformanceWarnings = true;
+    //boolean showPerformanceWarnings = false;
     long clientStartTime;
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
 
-    DataFrame dataFrame;
+    ClientStatusFrame statusFrame;
+    ConVars conVars;
+    ConsoleFrame consoleFrame;
 
     public MinimusClient(String ip){
         serverIP = ip;
@@ -112,24 +112,34 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     private void logIntervalElapsed(){
-        dataUsage.intervalElapsed();
+        statusData.intervalElapsed();
     }
 
     private void logReceivedPackets(Connection connection, Object packet){
         KryoSerialization s = (KryoSerialization) client.getSerialization();
         s.write(connection, buffer ,packet);
-        dataUsage.addBytesReceived(buffer.position());
+        statusData.addBytesReceived(buffer.position());
         buffer.clear();
     }
     
     @Override
     public void create() {
+        conVars = new ConVars();
+        consoleFrame = new ConsoleFrame(conVars);
         clientStartTime = System.nanoTime();
-        dataUsage = new ConnectionDataUsage(null,clientStartTime,logIntervalSeconds);
-        dataFrame = new DataFrame(dataUsage);
+        statusData = new StatusData(null,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
+        statusFrame = new ClientStatusFrame(statusData);
         initialize();
         joinServer();
         Gdx.input.setInputProcessor(this);
+    }
+
+    public void showConsoleWindow(){
+        consoleFrame.setVisible(true);
+    }
+
+    public void showStatusWindow(){
+        statusFrame.setVisible(true);
     }
 
     private void joinServer(){
@@ -155,11 +165,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 }else if(object instanceof Network.AssignEntity){
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
-                    velocity = assign.velocity;
+                    conVars.set("sv_velocity",assign.velocity);
                 }else if(object instanceof Network.FullEntityUpdate){
                     Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
                     pendingReceivedStates.add(fullUpdate);
                     //System.out.println("Received full update");
+                }else if(object instanceof String){
+                    String command = (String) object;
+                    consoleFrame.giveCommand(command);
                 }
             }
         });
@@ -178,12 +191,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     private void sendUDP(Object o){
         int bytesSent = client.sendUDP(o);
-        dataUsage.addBytesSent(bytesSent);
+        statusData.addBytesSent(bytesSent);
     }
 
     private void sendTCP(Object o){
         int bytesSent = client.sendTCP(o);
-        dataUsage.addBytesSent(bytesSent);
+        statusData.addBytesSent(bytesSent);
     }
 
     private void pollInput(short delta){
@@ -231,7 +244,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
 
-        if(!useClientSidePrediction){
+        if(!conVars.getBool("cl_clientside_prediction")){
             return;
         }
         Iterator<Network.UserInput> iter = inputQueue.iterator();
@@ -254,19 +267,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         float deltaX = 0;
         float deltaY = 0;
         if(input.buttons.contains(Enums.Buttons.UP)){
-            deltaY = velocity *input.msec;
+            deltaY = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.NORTH;
         }
         if(input.buttons.contains(Enums.Buttons.DOWN)){
-            deltaY = -1* velocity *input.msec;
+            deltaY = -1* conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.SOUTH;
         }
         if(input.buttons.contains(Enums.Buttons.LEFT)){
-            deltaX = -1* velocity *input.msec;
+            deltaX = -1* conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.WEST;
         }
         if(input.buttons.contains(Enums.Buttons.RIGHT)){
-            deltaX = velocity *input.msec;
+            deltaX = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.EAST;
         }
         //System.out.println(" Moved from ("+pos.x+","+pos.y+") to ("+(pos.x+deltaX)+","+(pos.y+deltaY)+")");
@@ -287,8 +300,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private void createStateSnapshot(float clientTime){
 
         //printStateHistory();
-        //If interp delay is 0 we simply copy the latest autorative state and run clientside prediction on that
-        if(interpDelay == 0){
+        //If interp delay is 0 we simply copy the latest authorative state and run clientside prediction on that
+        if(conVars.get("cl_interp") <= 0){
             HashMap<Integer, Entity> authoritativeStateCopy = new HashMap<Integer, Entity>();
             for(int id : authoritativeState.entities.keySet()){
                 Entity e = authoritativeState.entities.get(id);
@@ -300,7 +313,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             return;
         }
 
-        float renderTime = clientTime-interpDelay;
+        float renderTime = clientTime-conVars.get("cl_interp");
 
         //Copy this because it's modified from network thread
         Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
@@ -452,10 +465,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         float checkpoint1 = (System.nanoTime()-logicStart)/1000000f;
 
         //Send all gathered inputs at set interval
-        if(System.nanoTime()- lastInputSent > 1000000000/inputUpdateRate){
+        if(System.nanoTime()- lastInputSent > 1000000000/conVars.getInt("cl_input_update_rate")){
             if(pendingInputPacket.size() > 0) {
                 Network.UserInputs inputPacket = new Network.UserInputs();
-                if(compressInput){
+                if(conVars.getBool("cl_compress_input")){
                     ArrayList<Network.UserInput> packedInputs = compressInputPacket(pendingInputPacket);
                     inputPacket.inputs = packedInputs;
                 }else{
@@ -475,7 +488,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             createStateSnapshot(clientTime); //FIXME Will cause concurrent modifications
         }
         float checkpoint3 = (System.nanoTime()-logicStart)/1000000f;
-        if(checkpoint3-checkpoint0>1&& showPerformanceWarnings) {
+        if(checkpoint3-checkpoint0>1&& conVars.getBool("cl_show_performance_warnings")) {
             System.out.println("UpdateStates:" + (checkpoint1 - checkpoint0) + "ms");
             System.out.println("Send input:" + (checkpoint2 - checkpoint1) + "ms");
             System.out.println("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
@@ -484,10 +497,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
-        if((System.nanoTime()-renderStart)/1000000f > 30 && showPerformanceWarnings){
+        if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
             System.out.println("Long time since last render() call:"+(System.nanoTime()-renderStart)/1000000f);
         }
-        if(System.nanoTime()- logIntervalStarted >Tool.secondsToNano(logIntervalSeconds)){
+        if(System.nanoTime()- logIntervalStarted >Tool.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();
         }
@@ -496,10 +509,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         doLogic();
-        dataFrame.update();
+        statusFrame.update();
 
         if(stateSnapshot !=null){
-            if(showDebug) {
+            if(conVars.getBool("cl_show_debug")) {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
                 for (Entity e : interpFrom.entities.values()) {
@@ -539,14 +552,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
 
         if(stateSnapshot!=null){
-            Gdx.graphics.setTitle("FPS:" + Gdx.graphics.getFramesPerSecond()+" Ping:"+client.getReturnTripTime()+" Entities:"+stateSnapshot.size()+" InputRequest:"+currentInputRequest+" InputQueue:"+inputQueue.size()
-            +" Interp:"+interpDelay+" InputUpdateRate:"+ inputUpdateRate +" ServerTime:"+lastServerTime+" ClientTime:"+(lastServerTime+((System.nanoTime()- lastAuthoritativeStateReceived)/1000000000f)));
-        }else{
-            Gdx.graphics.setTitle("FPS:" + Gdx.graphics.getFramesPerSecond());
+            statusData.setEntityCount(stateSnapshot.size());
         }
+        statusData.setFps(Gdx.graphics.getFramesPerSecond());
+        statusData.setServerTime(lastServerTime);
+        statusData.setClientTime(lastServerTime+((System.nanoTime()- lastAuthoritativeStateReceived)/1000000000f));
+        statusData.currentInputRequest = currentInputRequest;
+        statusData.inputQueue = inputQueue.size();
+
         //fpsLogger.log();
 
-        if((System.nanoTime()-renderStart)/1000000f>30 && showPerformanceWarnings){
+        if((System.nanoTime()-renderStart)/1000000f>30 && conVars.getBool("cl_show_performance_warnings")){
             System.out.println("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
         }
     }
@@ -580,8 +596,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             sendUDP(new Network.TestPacket());
         }
         if(character == 'w'){
-            showPerformanceWarnings = !showPerformanceWarnings;
-            System.out.println("ShowPerformanceWarnings:"+showPerformanceWarnings);
+            boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
+            if(showPerformanceWarnings){
+                conVars.set("cl_show_performance_warnings",false);
+            }else{
+                conVars.set("cl_show_performance_warnings",true);
+            }
+            System.out.println("ShowPerformanceWarnings:"+ conVars.getBool("cl_show_performance_warnings"));
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
@@ -589,12 +610,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             s.write(client, buffer ,e);
             System.out.println("Entity size is " + buffer.position() + " bytes");
             buffer.clear();
-
-            //Integer i = new Integer(63);
-            /*int i =  1000;
-            s.write(client, buffer ,i);
-            System.out.println("Integer size is " + buffer.position() + " bytesReceived");
-            buffer.clear();*/
 
             int totalEntitySize = 0;
 
@@ -635,6 +650,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
             System.out.println("Total entity size is " +totalEntitySize + " bytes");
         }
+        /*
         if(character == '0'){
             showDebug = !showDebug;
         }
@@ -675,6 +691,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             compressInput = !compressInput;
             System.out.println("CompressInput:"+compressInput);
         }
+        */
         return false;
     }
 
@@ -715,84 +732,4 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         return false;
     }
 
-    class DataFrame extends JFrame{
-
-        JLabel runtimeLabel = new JLabel();
-        JLabel download = new JLabel();
-        JLabel upload = new JLabel();
-
-        JLabel packetsSent = new JLabel();
-        JLabel bytesSent = new JLabel();
-        JLabel packetsPerSecondSent = new JLabel();
-        JLabel bytesPerSecondSent = new JLabel();
-        JLabel averageSentPacketSize = new JLabel();
-        JLabel lastSentPacketSize = new JLabel();
-
-        JLabel packetsReceived = new JLabel();
-        JLabel bytesReceived = new JLabel();
-        JLabel packetsPerSecondReceived = new JLabel();
-        JLabel bytesPerSecondReceived = new JLabel();
-        JLabel averageReceivedPacketSize = new JLabel();
-        JLabel lastReceivedPacketSize = new JLabel();
-
-        ConnectionDataUsage data;
-
-        public DataFrame(ConnectionDataUsage dataUsage){
-
-            super("Stats");
-            setResizable(false);
-            data = dataUsage;
-
-            setLayout(new MigLayout("wrap"));
-            add(runtimeLabel);
-            add(download);
-            add(upload);
-            add(new JSeparator(),"pushx, growx");
-
-            add(packetsSent);
-            add(bytesSent);
-            add(packetsPerSecondSent);
-            add(bytesPerSecondSent);
-            add(averageSentPacketSize);
-            add(lastSentPacketSize);
-
-            add(new JSeparator(),"pushx, growx");
-
-            add(packetsReceived);
-            add(bytesReceived);
-            add(packetsPerSecondReceived);
-            add(bytesPerSecondReceived);
-            add(averageReceivedPacketSize);
-            add(lastReceivedPacketSize);
-
-            setVisible(true);
-            update();
-        }
-
-        public void update(){
-            javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    runtimeLabel.setText("Connection time:"+data.getConnectionTime());
-                    download.setText("Down:"+data.getDownload());
-                    upload.setText("Up:"+data.getUpload());
-
-                    packetsSent.setText("Packets sent:" + data.packetsSent);
-                    bytesSent.setText("Bytes sent:" + data.bytesSent);
-                    packetsPerSecondSent.setText("Current  packets/s sent:" + data.getPacketsSentPerSecond());
-                    bytesPerSecondSent.setText("Current bytes/s sent:" + data.getBytesSentPerSecond());
-                    averageSentPacketSize.setText("Average sent packet size:" + data.getAverageSentPacketSize());
-                    lastSentPacketSize.setText("Last sent packet size:"+ data.lastSentPacketSize);
-
-                    packetsReceived.setText("Packets received:" + data.packetsReceived);
-                    bytesReceived.setText("Bytes received:" + data.bytesReceived);
-                    packetsPerSecondReceived.setText("Current packets/s received:" + data.getPacketsReceivedPerSecond());
-                    bytesPerSecondReceived.setText("Current bytes/s received:" + data.getBytesReceivedPerSecond());
-                    averageReceivedPacketSize.setText("Average received packet size:" + data.getAverageReceivedPacketSize());
-                    lastReceivedPacketSize.setText("Last received packet size:" + data.lastReceivedPacketSize);
-                    pack();
-                }
-            });
-        }
-    }
 }

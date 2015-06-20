@@ -1,5 +1,8 @@
-TODO larger map, viewport, server packets sent/received per connection
+TODO larger map
+TODO viewport
+TODO console, let server change client values
 
+DONE server packets sent/received per connection
 
 server tickrate
 updaterate

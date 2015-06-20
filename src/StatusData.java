@@ -6,12 +6,21 @@ import java.util.Locale;
 /**
  * Created by Juniperbrew on 20.6.2015.
  */
-public class ConnectionDataUsage {
+public class StatusData {
 
+    int fps;
+    int entityCount;
     Connection connection;
     long connectionTime;
     long disconnectTime = 0;
     int logIntervalSeconds;
+    int currentTick;
+
+    int currentInputRequest;
+    int inputQueue;
+
+    float serverTime;
+    float clientTime;
 
     long bytesSent;
     int packetsSent;
@@ -29,7 +38,7 @@ public class ConnectionDataUsage {
     int packetsReceivedInterval;
     int lastReceivedPacketSize;
 
-    public ConnectionDataUsage(Connection connection, long connectionTime, int logIntervalSeconds){
+    public StatusData(Connection connection, long connectionTime, int logIntervalSeconds){
         this.connection = connection;
         this.connectionTime = connectionTime;
         this.logIntervalSeconds = logIntervalSeconds;
@@ -43,6 +52,27 @@ public class ConnectionDataUsage {
             timestamp = Tool.secondsToTimestamp(Tool.nanoToSeconds(System.nanoTime()-connectionTime));
         }
         return timestamp;
+    }
+
+    public String getServerTime(){
+        return Tool.secondsToMilliTimestamp(serverTime);
+    }
+
+    public String getClientTime(){
+        return Tool.secondsToMilliTimestamp(clientTime);
+    }
+
+    public void setServerTime(float serverTime){
+        this.serverTime = serverTime;
+    }
+    public void setClientTime(float clientTime){
+        this.clientTime = clientTime;
+    }
+    public void setFps(int fps){
+        this.fps = fps;
+    }
+    public void setEntityCount(int entityCount){
+        this.entityCount = entityCount;
     }
 
     public void disconnected(){

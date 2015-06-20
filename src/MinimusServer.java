@@ -8,19 +8,12 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
-import net.miginfocom.swing.MigLayout;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.geom.Line2D;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -38,19 +31,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     HashMap<Connection,Integer> lastInputIDProcessed;
     HashMap<Connection,Integer> connectionUpdateRate;
     HashMap<Connection, ArrayList<Network.UserInput>> inputQueue;
-    HashMap<Connection,ConnectionDataUsage> connectionDataUsage;
+    HashMap<Connection, StatusData> connectionStatus;
 
     private int networkIDCounter = 1;
 
-    final float velocity = 0.1f;  //pix/ms
-    float tickRate=60;
-    float updateRate=2;
+    //final float velocity = 0.1f;  //pix/ms
+    //float tickRate=60;
+    //float updateRate=2;
 
     private int currentTick=0;
 
     long serverStartTime;
 
-    boolean useUDP = true;
+    //boolean useUDP = true;
 
     int screenW;
     int screenH;
@@ -64,16 +57,27 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     final long ATTACK_DELAY = (long) (0.3*1000000000);
     Timer timer;
 
-    long totalUDPBytesSent;
-    int totalUDPPacketsSent;
-    long totalTCPBytesSent;
-    int totalTCPPacketsSent;
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
-    int logIntervalSeconds = 2;
+    //int logIntervalSeconds = 2;
     long logIntervalStarted;
 
-    DataFrame dataFrame;
-    ConnectionDataUsage totalDataUsage;
+    ServerStatusFrame serverStatusFrame;
+    ConsoleFrame consoleFrame;
+    StatusData statusData;
+
+    ConVars conVars;
+
+    public void showConsoleWindow(){
+        consoleFrame.setVisible(true);
+    }
+
+    public void showServerStatusWindow(){
+        serverStatusFrame.setVisible(true);
+    }
+
+    public void setTitle(final String title){
+        //Gdx.graphics.setTitle(title);
+    }
 
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
@@ -81,7 +85,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         npcs = new HashMap<Integer, Entity>();
         playerList = new HashMap<Connection, Integer>();
         connectionUpdateRate = new HashMap<Connection, Integer>();
-        connectionDataUsage = new HashMap<Connection, ConnectionDataUsage>();
+        connectionStatus = new HashMap<Connection, StatusData>();
         inputQueue = new HashMap<Connection, ArrayList<Network.UserInput>>();
         lastInputIDProcessed = new HashMap<Connection, Integer>();
         lastAttackDone = new HashMap<Connection, Long>();
@@ -97,9 +101,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public void create() {
+        conVars = new ConVars();
+        consoleFrame = new ConsoleFrame(conVars,this);
         serverStartTime = System.nanoTime();
-        totalDataUsage = new ConnectionDataUsage(null,serverStartTime,logIntervalSeconds);
-        dataFrame = new DataFrame(totalDataUsage);
+        statusData = new StatusData(null,serverStartTime,conVars.getInt("cl_log_interval_seconds"));
+        serverStatusFrame = new ServerStatusFrame(statusData);
         startServer();
         initialize();
         startSimulation();
@@ -109,15 +115,21 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     private void logReceivedPackets(Connection connection, Object packet){
         KryoSerialization s = (KryoSerialization) server.getSerialization();
         s.write(connection, buffer ,packet);
-        connectionDataUsage.get(connection).addBytesReceived(buffer.position());
-        totalDataUsage.addBytesReceived(buffer.position());
+        connectionStatus.get(connection).addBytesReceived(buffer.position());
+        statusData.addBytesReceived(buffer.position());
         buffer.clear();
     }
 
     private void logIntervalElapsed(){
-        totalDataUsage.intervalElapsed();
-        for(ConnectionDataUsage dataUsage : connectionDataUsage.values()){
+        statusData.intervalElapsed();
+        for(StatusData dataUsage : connectionStatus.values()){
             dataUsage.intervalElapsed();
+        }
+    }
+
+    public void sendCommand(String command){
+        for(Connection connection :playerList.keySet()){
+            connection.sendTCP(command);
         }
     }
 
@@ -137,13 +149,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 int networkID = getNextNetworkID();
                 entities.put(networkID, newPlayer);
                 playerList.put(connection,networkID);
-                ConnectionDataUsage dataUsage = new ConnectionDataUsage(connection, System.nanoTime(),logIntervalSeconds);
-                connectionDataUsage.put(connection, dataUsage);
-                dataFrame.addConnection(connection.toString(),dataUsage);
+                StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
+                connectionStatus.put(connection, dataUsage);
+                serverStatusFrame.addConnection(connection.toString(),dataUsage);
 
                 Network.AssignEntity assign = new Network.AssignEntity();
                 assign.networkID = networkID;
-                assign.velocity = velocity;
+                assign.velocity = conVars.get("sv_velocity");
                 connection.sendTCP(assign);
 
                 Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
@@ -156,7 +168,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             public void disconnected(Connection connection){
                 entities.remove(playerList.get(connection));
                 playerList.remove(connection);
-                connectionDataUsage.get(connection).disconnected();
+                connectionStatus.get(connection).disconnected();
             }
 
             public void received (Connection connection, Object object) {
@@ -267,14 +279,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             }else{
                 update.lastProcessedInputID = -1;
             }
-            if(useUDP){
+            if(conVars.getBool("cl_udp")){
                 int bytesSent = connection.sendUDP(update);
-                connectionDataUsage.get(connection).addBytesSent(bytesSent);
-                totalDataUsage.addBytesSent(bytesSent);
+                connectionStatus.get(connection).addBytesSent(bytesSent);
+                statusData.addBytesSent(bytesSent);
             }else{
                 int bytesSent = connection.sendTCP(update);
-                connectionDataUsage.get(connection).addBytesSent(bytesSent);
-                totalDataUsage.addBytesSent(bytesSent);
+                connectionStatus.get(connection).addBytesSent(bytesSent);
+                statusData.addBytesSent(bytesSent);
             }
         }
     }
@@ -325,10 +337,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             float newY = y;
 
             switch(e.heading){
-                case NORTH: newY += velocity*delta; break;
-                case SOUTH: newY -= velocity*delta; break;
-                case WEST: newX -= velocity*delta; break;
-                case EAST: newX += velocity*delta; break;
+                case NORTH: newY += conVars.get("sv_velocity")*delta; break;
+                case SOUTH: newY -= conVars.get("sv_velocity")*delta; break;
+                case WEST: newX -= conVars.get("sv_velocity")*delta; break;
+                case EAST: newX += conVars.get("sv_velocity")*delta; break;
             }
             if(newX+width > screenW && e.heading==Enums.Heading.EAST){
                 e.heading = Enums.Heading.WEST;
@@ -356,19 +368,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         float deltaX = 0;
         float deltaY = 0;
         if(input.buttons.contains(Enums.Buttons.UP)){
-            deltaY = velocity *input.msec;
+            deltaY = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.NORTH;
         }
         if(input.buttons.contains(Enums.Buttons.DOWN)){
-            deltaY = -1* velocity *input.msec;
+            deltaY = -1* conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.SOUTH;
         }
         if(input.buttons.contains(Enums.Buttons.LEFT)){
-            deltaX = -1* velocity *input.msec;
+            deltaX = -1* conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.WEST;
         }
         if(input.buttons.contains(Enums.Buttons.RIGHT)){
-            deltaX = velocity *input.msec;
+            deltaX = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.EAST;
         }
         e.x += deltaX;
@@ -387,7 +399,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 long targetTickDurationNano, tickStartTime = 0,tickEndTime = 0,tickActualDuration = 0, tickWorkDuration, sleepDuration;
                 long lastUpdateSent = 0;
                 while(true){
-                    targetTickDurationNano= (long) (1000000000/tickRate);
+                    targetTickDurationNano= (long) (1000000000/conVars.getInt("sv_tickrate"));
                     if(tickEndTime>0){
                         tickActualDuration=tickEndTime-tickStartTime;
                     }
@@ -410,7 +422,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                     moveNPC(tickActualDuration/1000000f);
                     float moveNpcCheckpoint = (System.nanoTime()-tickStartTime)/1000000f;
 
-                    if(System.nanoTime()-lastUpdateSent>(1000000000/updateRate)){
+                    if(System.nanoTime()-lastUpdateSent>(1000000000/conVars.getInt("sv_updaterate"))){
                         updateClients();
                         lastUpdateSent = System.nanoTime();
                     }
@@ -442,11 +454,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
-        if(System.nanoTime()- logIntervalStarted > Tool.secondsToNano(logIntervalSeconds)){
+        if(System.nanoTime()- logIntervalStarted > Tool.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();
         }
-        dataFrame.update();
+        serverStatusFrame.update();
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -466,43 +478,30 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             shapeRenderer.end();
         }
 
-        updateTitle();
+        updateStatusData();
     }
 
-    private void updateTitle(){
-        StringBuilder inputQueueString = new StringBuilder("[");
-        int i = 0;
+    private void updateStatusData(){
         for(Connection c:inputQueue.keySet()){
-            inputQueueString.append(i+":"+inputQueue.get(c).size()+" ");
-            i++;
+            connectionStatus.get(c).inputQueue = inputQueue.get(c).size();
         }
-        inputQueueString.deleteCharAt(inputQueueString.length()-1);
-        inputQueueString.append("]");
-
-        StringBuilder pingString = new StringBuilder("[");
-        i = 0;
-        for(Connection c:server.getConnections()){
-            pingString.append(i+":"+c.getReturnTripTime()+" ");
-            i++;
-        }
-        pingString.deleteCharAt(pingString.length()-1);
-        pingString.append("]");
-        Gdx.graphics.setTitle(
-                "FPS:"+Gdx.graphics.getFramesPerSecond()
-                        +" Pings"+pingString
-                        +" Entities:"+entities.size()
-                        +" TickRate:"+tickRate
-                        +" UpdateRate:"+updateRate
-                        +" Tick:"+currentTick
-                        +" InputQueue:" +inputQueueString
-                        +" Time:"+((System.nanoTime()-serverStartTime)/1000000000f));
+        statusData.fps = Gdx.graphics.getFramesPerSecond();
+        statusData.entityCount = entities.size();
+        statusData.currentTick = currentTick;
+        statusData.serverTime = (System.nanoTime() - serverStartTime) / 1000000000f;
     }
 
     @Override
     public boolean keyTyped(char character) {
         if (character == 'u') {
-            useUDP = !useUDP;
-            System.out.println("UseUDP:"+useUDP);
+            boolean useUDP = conVars.getBool("cl_udp");
+            if(useUDP){
+                conVars.set("cl_udp",0);
+            }else{
+                conVars.set("cl_udp",1);
+            }
+
+            System.out.println("UseUDP:"+conVars.getBool("cl_udp"));
         }
         if (character == '-') {
             removeNPC();
@@ -511,38 +510,46 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             addNPC();
         }
         if (character == '1') {
-            if(tickRate <=1){
-                tickRate /= 2;
+            if(conVars.getInt("sv_tickrate") <=1){
+                int tickRate = conVars.getInt("sv_tickrate") / 2;
+                conVars.set("sv_tickrate",tickRate);
             }else{
-                tickRate--;
+                int tickRate = conVars.getInt("sv_tickrate") - 1;
+                conVars.set("sv_tickrate",tickRate);
             }
         }
         if (character == '2') {
-            if(tickRate <1){
-                tickRate *= 2;
-                if(tickRate > 1){
-                    tickRate = 1;
+            if(conVars.getInt("sv_tickrate") <1){
+                int tickRate = conVars.getInt("sv_tickrate") * 2;
+                conVars.set("sv_tickrate",tickRate);
+                if(conVars.getInt("sv_tickrate") > 1){
+                    conVars.set("sv_tickrate",1);
                 }
             }else{
-                tickRate++;
+                int tickRate = conVars.getInt("sv_tickrate") + 1;
+                conVars.set("sv_tickrate",tickRate);
             }
         }
         if (character == '8') {
-            if(updateRate <=1){
-                updateRate /= 2;
+            if(conVars.getInt("sv_updaterate") <=1){
+                int updateRate = conVars.getInt("sv_updaterate")/2;
+                conVars.set("sv_updaterate",updateRate);
             }else{
-                updateRate--;
+                int updateRate = conVars.getInt("sv_updaterate")-1;
+                conVars.set("sv_updaterate",updateRate);
             }
 
         }
         if (character == '9') {
-            if(updateRate <1){
-                updateRate *= 2;
-                if(updateRate > 1){
-                    updateRate = 1;
+            if(conVars.getInt("sv_updaterate") <1){
+                int updateRate = conVars.getInt("sv_updaterate")*2;
+                conVars.set("sv_updaterate",updateRate);
+                if(conVars.getInt("sv_updaterate") > 1){
+                    conVars.set("sv_updaterate",1);
                 }
             }else{
-                updateRate++;
+                int updateRate = conVars.getInt("sv_updaterate")+1;
+                conVars.set("sv_updaterate",updateRate);
             }
         }
         return false;
@@ -593,219 +600,4 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         return false;
     }
 
-    class DataFrame extends JFrame {
-
-        ArrayList<DataPanel> dataPanels = new ArrayList<DataPanel>();
-        JComboBox dropDownMenu = new JComboBox();
-        DataPanel activeDataPanel;
-        TotalDataPanel totalDataPanel;
-        JPanel dataContentPanel;
-
-        public DataFrame(ConnectionDataUsage totalDataUsage){
-
-            super("Server stats");
-            setResizable(false);
-            dataContentPanel = new JPanel();
-
-            totalDataPanel = new TotalDataPanel(totalDataUsage);
-            dataPanels.add(totalDataPanel);
-            dropDownMenu.addItem("Total");
-            dataContentPanel.add(totalDataPanel);
-            activeDataPanel = totalDataPanel;
-
-            setLayout(new MigLayout("wrap"));
-
-            dropDownMenu.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    System.out.println("Selected index:"+dropDownMenu.getSelectedIndex());
-                    dataContentPanel.removeAll();
-                    activeDataPanel = dataPanels.get(dropDownMenu.getSelectedIndex());
-                    dataContentPanel.add(activeDataPanel);
-                    activeDataPanel.update();
-                    repaint();
-                }
-            });
-
-            add(dropDownMenu,"growx,pushx");
-            add(dataContentPanel);
-            pack();
-            update();
-            setVisible(true);
-        }
-
-        public void addConnection(String name, ConnectionDataUsage dataUsage){
-            dataPanels.add(new ConnectionDataPanel(name,dataUsage));
-            dropDownMenu.addItem(name);
-        }
-
-        public void update(){
-            activeDataPanel.update();
-        }
-
-        abstract class DataPanel extends JPanel{
-
-            JLabel nameLabel = new JLabel();
-            JLabel connectionTimeLabel = new JLabel();
-            JLabel up = new JLabel();
-            JLabel down = new JLabel();
-
-            JLabel packetsSent = new JLabel();
-            JLabel bytesSent = new JLabel();
-            JLabel packetsPerSecondSent = new JLabel();
-            JLabel bytesPerSecondSent = new JLabel();
-            JLabel averageSentPacketSize = new JLabel();
-            JLabel lastSentPacketSize = new JLabel();
-
-            JLabel packetsReceived = new JLabel();
-            JLabel bytesReceived = new JLabel();
-            JLabel packetsPerSecondReceived = new JLabel();
-            JLabel bytesPerSecondReceived = new JLabel();
-            JLabel averageReceivedPacketSize = new JLabel();
-            JLabel lastReceivedPacketSize = new JLabel();
-
-            ConnectionDataUsage data;
-
-            abstract public void update();
-        }
-
-        class ConnectionDataPanel extends DataPanel{
-            JLabel hostName = new JLabel();
-            JLabel ipLabel = new JLabel();
-            JLabel pingLabel = new JLabel();
-
-            public ConnectionDataPanel(String name, ConnectionDataUsage dataUsage){
-
-                data = dataUsage;
-                nameLabel = new JLabel(name);
-                setLayout(new MigLayout("wrap"));
-                add(nameLabel);
-                add(hostName);
-                add(ipLabel);
-                add(connectionTimeLabel);
-                add(pingLabel);
-                add(down);
-                add(up);
-
-                add(new JSeparator(),"growx,pushx");
-
-                add(packetsSent);
-                add(bytesSent);
-                add(packetsPerSecondSent);
-                add(bytesPerSecondSent);
-                add(averageSentPacketSize);
-                add(lastSentPacketSize);
-
-                add(new JSeparator(),"growx,pushx");
-
-                add(packetsReceived);
-                add(bytesReceived);
-                add(packetsPerSecondReceived);
-                add(bytesPerSecondReceived);
-                add(averageReceivedPacketSize);
-                add(lastReceivedPacketSize);
-
-                setVisible(true);
-                update();
-            }
-
-            @Override
-            public void update() {
-                javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        String connectionTime;
-                        hostName.setText("Hostname:"+data.getUdpHostName());
-                        ipLabel.setText("IP:"+data.getUdpAddress());
-                        up.setText("Up:"+data.getUpload());
-                        down.setText("Down:"+data.getDownload());
-                        if(data.disconnectTime > 0){
-                            pingLabel.setText("Ping: DISCONNECTED");
-                        }else{
-                            pingLabel.setText("Ping:"+data.getPing());
-                        }
-                        connectionTimeLabel.setText("Connection time:" + data.getConnectionTime());
-
-                        packetsSent.setText("Packets sent:" + data.packetsSent);
-                        bytesSent.setText("Bytes sent:" + data.bytesSent);
-                        packetsPerSecondSent.setText("Current packets/s sent:"+ data.getPacketsSentPerSecond());
-                        bytesPerSecondSent.setText("Current bytes/s sent:" + data.getBytesSentPerSecond());
-                        averageSentPacketSize.setText("Average sent packet size:" + data.getAverageSentPacketSize());
-                        lastSentPacketSize.setText("Last sent packet size:"+data.lastSentPacketSize);
-
-                        packetsReceived.setText("Packets received:" + data.packetsReceived);
-                        bytesReceived.setText("Bytes received:" + data.bytesReceived);
-                        packetsPerSecondReceived.setText("Current packets/s received:"+ data.getPacketsReceivedPerSecond());
-                        bytesPerSecondReceived.setText("Current bytes/s received:"+ data.getBytesReceivedPerSecond());
-                        averageReceivedPacketSize.setText("Average received packet size:" + data.getAverageReceivedPacketSize());
-                        lastReceivedPacketSize.setText("Last received packet size:" + data.lastReceivedPacketSize);
-                        pack();
-                    }
-                });
-            }
-        }
-
-        class TotalDataPanel extends DataPanel{
-
-            public TotalDataPanel(ConnectionDataUsage dataUsage){
-                data = dataUsage;
-                nameLabel = new JLabel("Total");
-                setLayout(new MigLayout("wrap"));
-                add(nameLabel);
-                add(connectionTimeLabel);
-                add(down);
-                add(up);
-
-                add(new JSeparator(),"growx,pushx");
-
-                add(packetsSent);
-                add(bytesSent);
-                add(packetsPerSecondSent);
-                add(bytesPerSecondSent);
-                add(averageSentPacketSize);
-                add(lastSentPacketSize);
-
-                add(new JSeparator(),"growx,pushx");
-
-                add(packetsReceived);
-                add(bytesReceived);
-                add(packetsPerSecondReceived);
-                add(bytesPerSecondReceived);
-                add(averageReceivedPacketSize);
-                add(lastReceivedPacketSize);
-
-                setVisible(true);
-                update();
-            }
-
-            @Override
-            public void update() {
-                javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        String connectionTime;
-                        connectionTime = Tool.secondsToTimestamp(Tool.nanoToSeconds(System.nanoTime()-data.connectionTime));
-                        connectionTimeLabel.setText("Server uptime:" + connectionTime);
-                        up.setText("Up:"+data.getUpload());
-                        down.setText("Down:"+data.getDownload());
-
-                        packetsSent.setText("Packets sent:" + data.packetsSent);
-                        bytesSent.setText("Bytes sent:" + data.bytesSent);
-                        packetsPerSecondSent.setText("Current packets/s sent:" + data.getPacketsSentPerSecond());
-                        bytesPerSecondSent.setText("Current bytes/s sent:" + data.getBytesSentPerSecond());
-                        averageSentPacketSize.setText("Average sent packet size:" + data.getAverageSentPacketSize());
-                        lastSentPacketSize.setText("Last sent packet size:"+data.lastSentPacketSize);
-
-                        packetsReceived.setText("Packets received:" + data.packetsReceived);
-                        bytesReceived.setText("Bytes received:" + data.bytesReceived);
-                        packetsPerSecondReceived.setText("Current packets/s received:"+ data.getPacketsReceivedPerSecond());
-                        bytesPerSecondReceived.setText("Current bytes/s received:"+ data.getBytesReceivedPerSecond());
-                        averageReceivedPacketSize.setText("Average received packet size:" + data.getAverageReceivedPacketSize());
-                        lastReceivedPacketSize.setText("Last received packet size:" + data.lastReceivedPacketSize);
-                        pack();
-                    }
-                });
-            }
-        }
-    }
 }
