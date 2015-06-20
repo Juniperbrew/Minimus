@@ -5,13 +5,22 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import net.miginfocom.swing.MigLayout;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.geom.Line2D;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -29,6 +38,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     HashMap<Connection,Integer> lastInputIDProcessed;
     HashMap<Connection,Integer> connectionUpdateRate;
     HashMap<Connection, ArrayList<Network.UserInput>> inputQueue;
+    HashMap<Connection,ConnectionDataUsage> connectionDataUsage;
 
     private int networkIDCounter = 1;
 
@@ -58,6 +68,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     int totalUDPPacketsSent;
     long totalTCPBytesSent;
     int totalTCPPacketsSent;
+    ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
+    int logIntervalSeconds = 2;
+    long logIntervalStarted;
+
+    DataFrame dataFrame;
+    ConnectionDataUsage totalDataUsage;
 
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
@@ -65,6 +81,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         npcs = new HashMap<Integer, Entity>();
         playerList = new HashMap<Connection, Integer>();
         connectionUpdateRate = new HashMap<Connection, Integer>();
+        connectionDataUsage = new HashMap<Connection, ConnectionDataUsage>();
         inputQueue = new HashMap<Connection, ArrayList<Network.UserInput>>();
         lastInputIDProcessed = new HashMap<Connection, Integer>();
         lastAttackDone = new HashMap<Connection, Long>();
@@ -81,10 +98,27 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     @Override
     public void create() {
         serverStartTime = System.nanoTime();
+        totalDataUsage = new ConnectionDataUsage(null,serverStartTime,logIntervalSeconds);
+        dataFrame = new DataFrame(totalDataUsage);
         startServer();
         initialize();
         startSimulation();
         Gdx.input.setInputProcessor(this);
+    }
+
+    private void logReceivedPackets(Connection connection, Object packet){
+        KryoSerialization s = (KryoSerialization) server.getSerialization();
+        s.write(connection, buffer ,packet);
+        connectionDataUsage.get(connection).addBytesReceived(buffer.position());
+        totalDataUsage.addBytesReceived(buffer.position());
+        buffer.clear();
+    }
+
+    private void logIntervalElapsed(){
+        totalDataUsage.intervalElapsed();
+        for(ConnectionDataUsage dataUsage : connectionDataUsage.values()){
+            dataUsage.intervalElapsed();
+        }
     }
 
     private void startServer(){
@@ -103,6 +137,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 int networkID = getNextNetworkID();
                 entities.put(networkID, newPlayer);
                 playerList.put(connection,networkID);
+                ConnectionDataUsage dataUsage = new ConnectionDataUsage(connection, System.nanoTime(),logIntervalSeconds);
+                connectionDataUsage.put(connection, dataUsage);
+                dataFrame.addConnection(connection.toString(),dataUsage);
 
                 Network.AssignEntity assign = new Network.AssignEntity();
                 assign.networkID = networkID;
@@ -119,9 +156,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             public void disconnected(Connection connection){
                 entities.remove(playerList.get(connection));
                 playerList.remove(connection);
+                connectionDataUsage.get(connection).disconnected();
             }
 
             public void received (Connection connection, Object object) {
+                logReceivedPackets(connection,object);
                 if(object instanceof Network.Message){
                     //Handle messages
                 }
@@ -229,9 +268,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 update.lastProcessedInputID = -1;
             }
             if(useUDP){
-                connection.sendUDP(update);
+                int bytesSent = connection.sendUDP(update);
+                connectionDataUsage.get(connection).addBytesSent(bytesSent);
+                totalDataUsage.addBytesSent(bytesSent);
             }else{
-                connection.sendTCP(update);
+                int bytesSent = connection.sendTCP(update);
+                connectionDataUsage.get(connection).addBytesSent(bytesSent);
+                totalDataUsage.addBytesSent(bytesSent);
             }
         }
     }
@@ -351,14 +394,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                     tickStartTime=System.nanoTime();
                     currentTick++;
 
-                    /*
-                    if(System.nanoTime()-lastPingUpdate>10*1000000000){
+
+                    if(System.nanoTime()-lastPingUpdate>10*1000000000l){
+                        System.out.println("Updating pings");
                         for(Connection c:server.getConnections()){
                             c.updateReturnTripTime();
                         }
                         lastPingUpdate = System.nanoTime();
                     }
-                    */
+
 
                     processCommands();
                     float processCommandsCheckpoint = (System.nanoTime()-tickStartTime)/1000000f;
@@ -398,6 +442,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
+        if(System.nanoTime()- logIntervalStarted > Tool.secondsToNano(logIntervalSeconds)){
+            logIntervalStarted = System.nanoTime();
+            logIntervalElapsed();
+        }
+        dataFrame.update();
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -542,5 +591,221 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     @Override
     public boolean scrolled(int amount) {
         return false;
+    }
+
+    class DataFrame extends JFrame {
+
+        ArrayList<DataPanel> dataPanels = new ArrayList<DataPanel>();
+        JComboBox dropDownMenu = new JComboBox();
+        DataPanel activeDataPanel;
+        TotalDataPanel totalDataPanel;
+        JPanel dataContentPanel;
+
+        public DataFrame(ConnectionDataUsage totalDataUsage){
+
+            super("Server stats");
+            setResizable(false);
+            dataContentPanel = new JPanel();
+
+            totalDataPanel = new TotalDataPanel(totalDataUsage);
+            dataPanels.add(totalDataPanel);
+            dropDownMenu.addItem("Total");
+            dataContentPanel.add(totalDataPanel);
+            activeDataPanel = totalDataPanel;
+
+            setLayout(new MigLayout("wrap"));
+
+            dropDownMenu.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    System.out.println("Selected index:"+dropDownMenu.getSelectedIndex());
+                    dataContentPanel.removeAll();
+                    activeDataPanel = dataPanels.get(dropDownMenu.getSelectedIndex());
+                    dataContentPanel.add(activeDataPanel);
+                    activeDataPanel.update();
+                    repaint();
+                }
+            });
+
+            add(dropDownMenu,"growx,pushx");
+            add(dataContentPanel);
+            pack();
+            update();
+            setVisible(true);
+        }
+
+        public void addConnection(String name, ConnectionDataUsage dataUsage){
+            dataPanels.add(new ConnectionDataPanel(name,dataUsage));
+            dropDownMenu.addItem(name);
+        }
+
+        public void update(){
+            activeDataPanel.update();
+        }
+
+        abstract class DataPanel extends JPanel{
+
+            JLabel nameLabel = new JLabel();
+            JLabel connectionTimeLabel = new JLabel();
+            JLabel up = new JLabel();
+            JLabel down = new JLabel();
+
+            JLabel packetsSent = new JLabel();
+            JLabel bytesSent = new JLabel();
+            JLabel packetsPerSecondSent = new JLabel();
+            JLabel bytesPerSecondSent = new JLabel();
+            JLabel averageSentPacketSize = new JLabel();
+            JLabel lastSentPacketSize = new JLabel();
+
+            JLabel packetsReceived = new JLabel();
+            JLabel bytesReceived = new JLabel();
+            JLabel packetsPerSecondReceived = new JLabel();
+            JLabel bytesPerSecondReceived = new JLabel();
+            JLabel averageReceivedPacketSize = new JLabel();
+            JLabel lastReceivedPacketSize = new JLabel();
+
+            ConnectionDataUsage data;
+
+            abstract public void update();
+        }
+
+        class ConnectionDataPanel extends DataPanel{
+            JLabel hostName = new JLabel();
+            JLabel ipLabel = new JLabel();
+            JLabel pingLabel = new JLabel();
+
+            public ConnectionDataPanel(String name, ConnectionDataUsage dataUsage){
+
+                data = dataUsage;
+                nameLabel = new JLabel(name);
+                setLayout(new MigLayout("wrap"));
+                add(nameLabel);
+                add(hostName);
+                add(ipLabel);
+                add(connectionTimeLabel);
+                add(pingLabel);
+                add(down);
+                add(up);
+
+                add(new JSeparator(),"growx,pushx");
+
+                add(packetsSent);
+                add(bytesSent);
+                add(packetsPerSecondSent);
+                add(bytesPerSecondSent);
+                add(averageSentPacketSize);
+                add(lastSentPacketSize);
+
+                add(new JSeparator(),"growx,pushx");
+
+                add(packetsReceived);
+                add(bytesReceived);
+                add(packetsPerSecondReceived);
+                add(bytesPerSecondReceived);
+                add(averageReceivedPacketSize);
+                add(lastReceivedPacketSize);
+
+                setVisible(true);
+                update();
+            }
+
+            @Override
+            public void update() {
+                javax.swing.SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        String connectionTime;
+                        hostName.setText("Hostname:"+data.getUdpHostName());
+                        ipLabel.setText("IP:"+data.getUdpAddress());
+                        up.setText("Up:"+data.getUpload());
+                        down.setText("Down:"+data.getDownload());
+                        if(data.disconnectTime > 0){
+                            pingLabel.setText("Ping: DISCONNECTED");
+                        }else{
+                            pingLabel.setText("Ping:"+data.getPing());
+                        }
+                        connectionTimeLabel.setText("Connection time:" + data.getConnectionTime());
+
+                        packetsSent.setText("Packets sent:" + data.packetsSent);
+                        bytesSent.setText("Bytes sent:" + data.bytesSent);
+                        packetsPerSecondSent.setText("Current packets/s sent:"+ data.getPacketsSentPerSecond());
+                        bytesPerSecondSent.setText("Current bytes/s sent:" + data.getBytesSentPerSecond());
+                        averageSentPacketSize.setText("Average sent packet size:" + data.getAverageSentPacketSize());
+                        lastSentPacketSize.setText("Last sent packet size:"+data.lastSentPacketSize);
+
+                        packetsReceived.setText("Packets received:" + data.packetsReceived);
+                        bytesReceived.setText("Bytes received:" + data.bytesReceived);
+                        packetsPerSecondReceived.setText("Current packets/s received:"+ data.getPacketsReceivedPerSecond());
+                        bytesPerSecondReceived.setText("Current bytes/s received:"+ data.getBytesReceivedPerSecond());
+                        averageReceivedPacketSize.setText("Average received packet size:" + data.getAverageReceivedPacketSize());
+                        lastReceivedPacketSize.setText("Last received packet size:" + data.lastReceivedPacketSize);
+                        pack();
+                    }
+                });
+            }
+        }
+
+        class TotalDataPanel extends DataPanel{
+
+            public TotalDataPanel(ConnectionDataUsage dataUsage){
+                data = dataUsage;
+                nameLabel = new JLabel("Total");
+                setLayout(new MigLayout("wrap"));
+                add(nameLabel);
+                add(connectionTimeLabel);
+                add(down);
+                add(up);
+
+                add(new JSeparator(),"growx,pushx");
+
+                add(packetsSent);
+                add(bytesSent);
+                add(packetsPerSecondSent);
+                add(bytesPerSecondSent);
+                add(averageSentPacketSize);
+                add(lastSentPacketSize);
+
+                add(new JSeparator(),"growx,pushx");
+
+                add(packetsReceived);
+                add(bytesReceived);
+                add(packetsPerSecondReceived);
+                add(bytesPerSecondReceived);
+                add(averageReceivedPacketSize);
+                add(lastReceivedPacketSize);
+
+                setVisible(true);
+                update();
+            }
+
+            @Override
+            public void update() {
+                javax.swing.SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        String connectionTime;
+                        connectionTime = Tool.secondsToTimestamp(Tool.nanoToSeconds(System.nanoTime()-data.connectionTime));
+                        connectionTimeLabel.setText("Server uptime:" + connectionTime);
+                        up.setText("Up:"+data.getUpload());
+                        down.setText("Down:"+data.getDownload());
+
+                        packetsSent.setText("Packets sent:" + data.packetsSent);
+                        bytesSent.setText("Bytes sent:" + data.bytesSent);
+                        packetsPerSecondSent.setText("Current packets/s sent:" + data.getPacketsSentPerSecond());
+                        bytesPerSecondSent.setText("Current bytes/s sent:" + data.getBytesSentPerSecond());
+                        averageSentPacketSize.setText("Average sent packet size:" + data.getAverageSentPacketSize());
+                        lastSentPacketSize.setText("Last sent packet size:"+data.lastSentPacketSize);
+
+                        packetsReceived.setText("Packets received:" + data.packetsReceived);
+                        bytesReceived.setText("Bytes received:" + data.bytesReceived);
+                        packetsPerSecondReceived.setText("Current packets/s received:"+ data.getPacketsReceivedPerSecond());
+                        bytesPerSecondReceived.setText("Current bytes/s received:"+ data.getBytesReceivedPerSecond());
+                        averageReceivedPacketSize.setText("Average received packet size:" + data.getAverageReceivedPacketSize());
+                        lastReceivedPacketSize.setText("Last received packet size:" + data.lastReceivedPacketSize);
+                        pack();
+                    }
+                });
+            }
+        }
     }
 }

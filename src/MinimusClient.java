@@ -9,9 +9,9 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
+import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.geom.Line2D;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -86,33 +86,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     String serverIP;
 
-    long totalUDPBytesSent;
-    int totalUDPPacketsSent;
-    long currentUDPBytesSent;
-    int currentUDPPacketsSent;
-    long currentUDPBytesSentCounter;
-    int currentUDPPacketsSentCounter;
-
-
-
-    long totalTCPBytesSent;
-    int totalTCPPacketsSent;
-
-    long totalBytesReceived;
-    int totalPacketsReceived;
-    long currentBytesReceived;
-    int currentPacketsReceived;
-    long currentBytesReceivedCounter;
-    int currentPacketsReceivedCounter;
-    int lastReceivedPacketSize;
-
-    long logTwoSecondStarted = 0;
+    ConnectionDataUsage dataUsage;
+    int logIntervalSeconds = 2;
+    long logIntervalStarted;
 
     boolean showPerformanceWarnings = true;
     long clientStartTime;
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
 
-    DataDialog dataDialog;
+    DataFrame dataFrame;
 
     public MinimusClient(String ip){
         serverIP = ip;
@@ -129,33 +111,22 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         timer = new Timer();
     }
 
-    private void twoSecondElapsed(){
-        currentBytesReceived = currentBytesReceivedCounter;
-        currentPacketsReceived = currentPacketsReceivedCounter;
-        currentBytesReceivedCounter = 0;
-        currentPacketsReceivedCounter = 0;
-
-        currentUDPBytesSent = currentUDPBytesSentCounter;
-        currentUDPPacketsSent = currentUDPPacketsSentCounter;
-        currentUDPBytesSentCounter = 0;
-        currentUDPPacketsSentCounter = 0;
+    private void logIntervalElapsed(){
+        dataUsage.intervalElapsed();
     }
 
     private void logReceivedPackets(Connection connection, Object packet){
         KryoSerialization s = (KryoSerialization) client.getSerialization();
         s.write(connection, buffer ,packet);
-        lastReceivedPacketSize = buffer.position();
-        totalPacketsReceived++;
-        totalBytesReceived += buffer.position();
-        currentBytesReceivedCounter += buffer.position();
-        currentPacketsReceivedCounter++;
+        dataUsage.addBytesReceived(buffer.position());
         buffer.clear();
     }
     
     @Override
     public void create() {
-        dataDialog = new DataDialog();
         clientStartTime = System.nanoTime();
+        dataUsage = new ConnectionDataUsage(null,clientStartTime,logIntervalSeconds);
+        dataFrame = new DataFrame(dataUsage);
         initialize();
         joinServer();
         Gdx.input.setInputProcessor(this);
@@ -207,16 +178,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     private void sendUDP(Object o){
         int bytesSent = client.sendUDP(o);
-        totalUDPBytesSent += bytesSent;
-        currentUDPBytesSentCounter += bytesSent;
-
-        totalUDPPacketsSent++;
-        currentUDPPacketsSentCounter++;
+        dataUsage.addBytesSent(bytesSent);
     }
 
     private void sendTCP(Object o){
-        totalTCPBytesSent += client.sendTCP(o);
-        totalTCPPacketsSent++;
+        int bytesSent = client.sendTCP(o);
+        dataUsage.addBytesSent(bytesSent);
     }
 
     private void pollInput(short delta){
@@ -520,17 +487,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         if((System.nanoTime()-renderStart)/1000000f > 30 && showPerformanceWarnings){
             System.out.println("Long time since last render() call:"+(System.nanoTime()-renderStart)/1000000f);
         }
+        if(System.nanoTime()- logIntervalStarted >Tool.secondsToNano(logIntervalSeconds)){
+            logIntervalStarted = System.nanoTime();
+            logIntervalElapsed();
+        }
         renderStart = System.nanoTime();
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         doLogic();
-        dataDialog.update();
-
-        if(System.nanoTime()- logTwoSecondStarted >2*1000000000l){
-            logTwoSecondStarted = System.nanoTime();
-            twoSecondElapsed();
-        }
+        dataFrame.update();
 
         if(stateSnapshot !=null){
             if(showDebug) {
@@ -627,7 +593,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             //Integer i = new Integer(63);
             /*int i =  1000;
             s.write(client, buffer ,i);
-            System.out.println("Integer size is " + buffer.position() + " bytes");
+            System.out.println("Integer size is " + buffer.position() + " bytesReceived");
             buffer.clear();*/
 
             int totalEntitySize = 0;
@@ -749,92 +715,84 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         return false;
     }
 
-    class DataDialog extends JFrame{
+    class DataFrame extends JFrame{
 
         JLabel runtimeLabel = new JLabel();
+        JLabel download = new JLabel();
+        JLabel upload = new JLabel();
 
-        JLabel UDPpackets = new JLabel();
-        JLabel UDPbytes = new JLabel();
-        //JLabel UDPpacketsS = new JLabel();
-        //JLabel UDPbytesS = new JLabel();
-        JLabel UDPpacketsPerSecondCurrent = new JLabel();
-        JLabel UDPbytesPerSecondCurrent = new JLabel();
-        JLabel averageUDPpacketSize = new JLabel();
+        JLabel packetsSent = new JLabel();
+        JLabel bytesSent = new JLabel();
+        JLabel packetsPerSecondSent = new JLabel();
+        JLabel bytesPerSecondSent = new JLabel();
+        JLabel averageSentPacketSize = new JLabel();
+        JLabel lastSentPacketSize = new JLabel();
 
-        JLabel packets = new JLabel();
-        JLabel bytes = new JLabel();
-        //JLabel packetsS = new JLabel();
-        //JLabel bytesS = new JLabel();
-        JLabel packetsPerSecondCurrent = new JLabel();
-        JLabel bytesPerSecondCurrent = new JLabel();
-        JLabel averagePacketSize = new JLabel();
-        JLabel lastReceivedPacketSizeLabel = new JLabel();
+        JLabel packetsReceived = new JLabel();
+        JLabel bytesReceived = new JLabel();
+        JLabel packetsPerSecondReceived = new JLabel();
+        JLabel bytesPerSecondReceived = new JLabel();
+        JLabel averageReceivedPacketSize = new JLabel();
+        JLabel lastReceivedPacketSize = new JLabel();
 
-        public DataDialog(){
+        ConnectionDataUsage data;
 
-            setLayout(new GridLayout(0,1));
+        public DataFrame(ConnectionDataUsage dataUsage){
+
+            super("Stats");
+            setResizable(false);
+            data = dataUsage;
+
+            setLayout(new MigLayout("wrap"));
             add(runtimeLabel);
+            add(download);
+            add(upload);
+            add(new JSeparator(),"pushx, growx");
 
-            add(UDPpackets);
-            add(UDPbytes);
-            //add(UDPpacketsS);
-            //add(UDPbytesS);
-            add(UDPpacketsPerSecondCurrent);
-            add(UDPbytesPerSecondCurrent);
-            add(averageUDPpacketSize);
+            add(packetsSent);
+            add(bytesSent);
+            add(packetsPerSecondSent);
+            add(bytesPerSecondSent);
+            add(averageSentPacketSize);
+            add(lastSentPacketSize);
 
-            add(new JSeparator());
+            add(new JSeparator(),"pushx, growx");
 
-            add(packets);
-            add(bytes);
-            //add(packetsS);
-            //add(bytesS);
-            add(packetsPerSecondCurrent);
-            add(bytesPerSecondCurrent);
-            add(averagePacketSize);
-            add(lastReceivedPacketSizeLabel);
+            add(packetsReceived);
+            add(bytesReceived);
+            add(packetsPerSecondReceived);
+            add(bytesPerSecondReceived);
+            add(averageReceivedPacketSize);
+            add(lastReceivedPacketSize);
 
-            update();
             setVisible(true);
+            update();
         }
 
         public void update(){
-            long runtime = (System.nanoTime()-clientStartTime)/1000000000;
-            if(runtime==0){
-                return;
-            }
-            runtimeLabel.setText("Runtime:"+runtime);
-            if(totalUDPPacketsSent>0&&currentUDPPacketsSent>0) {
-                UDPpackets.setText("UDP packets sent:" + totalUDPPacketsSent);
-                UDPbytes.setText("UDP bytes sent:" + totalUDPBytesSent);
-                //UDPpacketsS.setText("UDP packets/s sent:" + totalUDPPacketsSent / runtime);
-                //UDPbytesS.setText("UDP bytes/s sent:" + totalUDPBytesSent / runtime);
-                UDPpacketsPerSecondCurrent.setText("Current UDP packets/s sent:"+ currentUDPPacketsSent /2);
-                UDPbytesPerSecondCurrent.setText("Current UDP bytes/s sent:"+ currentUDPBytesSent /2);
-                averageUDPpacketSize.setText("Average UDP packet size:" + (currentUDPBytesSent / currentUDPPacketsSent));
-            }
+            javax.swing.SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    runtimeLabel.setText("Connection time:"+data.getConnectionTime());
+                    download.setText("Down:"+data.getDownload());
+                    upload.setText("Up:"+data.getUpload());
 
-            /*
-                        if(totalTCPPacketsSent>0){
-                System.out.println("TCP Packets sent:"+totalTCPPacketsSent);
-                System.out.println("TCP bytes sent:"+totalTCPBytesSent);
-                System.out.println("TCP bytes/s sent:"+totalTCPBytesSent/runtime);
-                System.out.println("TCP packets/s sent:"+totalTCPPacketsSent/runtime);
-                System.out.println("Average TCP packet size:"+(totalTCPBytesSent/totalTCPPacketsSent));
-            }
-             */
+                    packetsSent.setText("Packets sent:" + data.packetsSent);
+                    bytesSent.setText("Bytes sent:" + data.bytesSent);
+                    packetsPerSecondSent.setText("Current  packets/s sent:" + data.getPacketsSentPerSecond());
+                    bytesPerSecondSent.setText("Current bytes/s sent:" + data.getBytesSentPerSecond());
+                    averageSentPacketSize.setText("Average sent packet size:" + data.getAverageSentPacketSize());
+                    lastSentPacketSize.setText("Last sent packet size:"+ data.lastSentPacketSize);
 
-            if(totalPacketsReceived>0&&currentPacketsReceived>0) {
-                packets.setText("Packets received:" + totalPacketsReceived);
-                bytes.setText("Bytes received:" + totalBytesReceived);
-                //packetsS.setText("Packets/s received:" + totalPacketsReceived / runtime);
-                //bytesS.setText("Bytes/s received:" + totalBytesReceived / runtime);
-                packetsPerSecondCurrent.setText("Current packets/s received:"+ currentPacketsReceived /2);
-                bytesPerSecondCurrent.setText("Current bytes/s received:"+ currentBytesReceived /2);
-                averagePacketSize.setText("Average received packet size:" + (currentBytesReceived / currentPacketsReceived));
-                lastReceivedPacketSizeLabel.setText("Last received packet size:" + lastReceivedPacketSize);
-            }
-            pack();
+                    packetsReceived.setText("Packets received:" + data.packetsReceived);
+                    bytesReceived.setText("Bytes received:" + data.bytesReceived);
+                    packetsPerSecondReceived.setText("Current packets/s received:" + data.getPacketsReceivedPerSecond());
+                    bytesPerSecondReceived.setText("Current bytes/s received:" + data.getBytesReceivedPerSecond());
+                    averageReceivedPacketSize.setText("Average received packet size:" + data.getAverageReceivedPacketSize());
+                    lastReceivedPacketSize.setText("Last received packet size:" + data.lastReceivedPacketSize);
+                    pack();
+                }
+            });
         }
     }
 }
