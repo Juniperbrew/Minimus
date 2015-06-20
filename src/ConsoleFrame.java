@@ -28,6 +28,7 @@ public class ConsoleFrame extends JFrame {
     public ConsoleFrame(ConVars conVars){
         super("Console");
         this.conVars = conVars;
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setLayout(new MigLayout("wrap"));
         setPreferredSize(new Dimension(800, 400));
         textArea.setEditable(false);

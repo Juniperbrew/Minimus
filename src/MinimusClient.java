@@ -650,6 +650,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
             System.out.println("Total entity size is " +totalEntitySize + " bytes");
         }
+        if(character == '1'){
+            showConsoleWindow();
+        }
+        if(character == '2'){
+            showStatusWindow();
+        }
         /*
         if(character == '0'){
             showDebug = !showDebug;

@@ -493,6 +493,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public boolean keyTyped(char character) {
+        System.out.println("Keytyped:"+character);
         if (character == 'u') {
             boolean useUDP = conVars.getBool("cl_udp");
             if(useUDP){
@@ -510,6 +511,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             addNPC();
         }
         if (character == '1') {
+            showConsoleWindow();
+        }
+        if (character == '2'){
+            showServerStatusWindow();
+        }
+        if (character == '3') {
             if(conVars.getInt("sv_tickrate") <=1){
                 int tickRate = conVars.getInt("sv_tickrate") / 2;
                 conVars.set("sv_tickrate",tickRate);
@@ -518,7 +525,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 conVars.set("sv_tickrate",tickRate);
             }
         }
-        if (character == '2') {
+        if (character == '4') {
             if(conVars.getInt("sv_tickrate") <1){
                 int tickRate = conVars.getInt("sv_tickrate") * 2;
                 conVars.set("sv_tickrate",tickRate);

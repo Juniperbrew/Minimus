@@ -16,13 +16,7 @@ import java.awt.event.WindowListener;
  */
 public class ServerLauncher {
 
-    /*public static void main(String[] args) {
-        LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
-        cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
-        //cfg.foregroundFPS = 0;
-        //cfg.backgroundFPS = 0;
-        new LwjglApplication(new MinimusServer() ,cfg);
-    }*/
+    static boolean useJFrame = false;
 
     public static void main(String[] args) {
 
@@ -31,44 +25,49 @@ public class ServerLauncher {
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
-        final JFrame frame = new JFrame();
-        final MinimusServer minimusServer = new MinimusServer();
-        frame.setTitle(minimusServer.getClass().getSimpleName());
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setResizable(false);
+        if(useJFrame) {
 
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.add(new JMenu("File"));
-        JMenu windowsMenu = new JMenu("Windows");
-        JMenuItem consoleItem = new JMenuItem("Console");
-        consoleItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                minimusServer.showConsoleWindow();
-            }
-        });
-        JMenuItem serverStatusItem = new JMenuItem("Server status");
-        serverStatusItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                minimusServer.showServerStatusWindow();
-            }
-        });
-        windowsMenu.add(consoleItem);
-        windowsMenu.add(serverStatusItem);
-        menuBar.add(windowsMenu);
-        frame.setJMenuBar(menuBar);
+            final JFrame frame = new JFrame();
+            final MinimusServer minimusServer = new MinimusServer();
+            frame.setTitle(minimusServer.getClass().getSimpleName());
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            frame.setResizable(false);
+
+            JMenuBar menuBar = new JMenuBar();
+            menuBar.add(new JMenu("File"));
+            JMenu windowsMenu = new JMenu("Windows");
+            JMenuItem consoleItem = new JMenuItem("Console");
+            consoleItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    minimusServer.showConsoleWindow();
+                }
+            });
+            JMenuItem serverStatusItem = new JMenuItem("Server status");
+            serverStatusItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    minimusServer.showServerStatusWindow();
+                }
+            });
+            windowsMenu.add(consoleItem);
+            windowsMenu.add(serverStatusItem);
+            menuBar.add(windowsMenu);
+            frame.setJMenuBar(menuBar);
 
 
-        final Canvas canvas = new Canvas();
-        canvas.setSize(cfg.width, cfg.height);
-        frame.add(canvas);
+            final Canvas canvas = new Canvas();
+            canvas.setSize(cfg.width, cfg.height);
+            frame.add(canvas);
 
-        new LwjglApplication(minimusServer, cfg, canvas);
+            new LwjglApplication(minimusServer, cfg, canvas);
 
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setLocation(frame.getX(), 0);
-        frame.setVisible(true);
+            frame.pack();
+            frame.setLocationRelativeTo(null);
+            frame.setLocation(frame.getX(), 0);
+            frame.setVisible(true);
+        }else{
+            new LwjglApplication(new MinimusServer() ,cfg);
+        }
     }
 }
