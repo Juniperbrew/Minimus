@@ -68,11 +68,39 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     ConVars conVars;
 
     public void showConsoleWindow(){
-        consoleFrame.setVisible(true);
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                consoleFrame.setVisible(true);
+            }
+        }).start();
     }
 
     public void showServerStatusWindow(){
-        serverStatusFrame.setVisible(true);
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                serverStatusFrame.setVisible(true);
+            }
+        }).start();
     }
 
     public void setTitle(final String title){
@@ -574,11 +602,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
+        System.out.println("Keydown:"+keycode);
         return false;
     }
 
     @Override
     public boolean keyUp(int keycode) {
+        System.out.println("Keydown:"+keycode);
         return false;
     }
 

@@ -135,11 +135,39 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     public void showConsoleWindow(){
-        consoleFrame.setVisible(true);
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                consoleFrame.setVisible(true);
+            }
+        }).start();
     }
 
     public void showStatusWindow(){
-        statusFrame.setVisible(true);
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                statusFrame.setVisible(true);
+            }
+        }).start();
     }
 
     private void joinServer(){
