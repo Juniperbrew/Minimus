@@ -4,6 +4,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
@@ -86,6 +87,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     ConVars conVars;
     ConsoleFrame consoleFrame;
 
+    private OrthographicCamera camera;
+
+    int mapWidth;
+    int mapHeight;
+
     public MinimusClient(String ip){
         serverIP = ip;
     }
@@ -114,6 +120,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     
     @Override
     public void create() {
+        int h = Gdx.graphics.getHeight();
+        int w = Gdx.graphics.getWidth();
+        camera = new OrthographicCamera(h, w);
+        centerCameraOnPlayer();
+
         conVars = new ConVars();
         consoleFrame = new ConsoleFrame(conVars);
         clientStartTime = System.nanoTime();
@@ -184,6 +195,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
                     conVars.set("sv_velocity",assign.velocity);
+                    mapHeight = assign.mapHeight;
+                    mapWidth = assign.mapWidth;
                 }else if(object instanceof Network.FullEntityUpdate){
                     Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
                     pendingReceivedStates.add(fullUpdate);
@@ -523,10 +536,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             logIntervalElapsed();
         }
         renderStart = System.nanoTime();
-        Gdx.gl.glClearColor(0, 0, 0, 1);
+
+        doLogic();
+        centerCameraOnPlayer();
+        shapeRenderer.setProjectionMatrix(camera.combined);
+
+        Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        doLogic();
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0,0,0,1);
+        shapeRenderer.rect(0, 0, mapWidth, mapHeight);
+        shapeRenderer.end();
+
         statusFrame.update();
 
         if(stateSnapshot !=null){
@@ -719,8 +742,25 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         return false;
     }
 
+    private void centerCameraOnPlayer(){
+        Entity player = null;
+        if(stateSnapshot!=null){
+            player = stateSnapshot.get(playerID);
+        }
+        if(player != null){
+            camera.position.set(player.x+player.width/2f, player.y+player.height/2, 0);
+        }else{
+            camera.position.set(mapWidth/2f, mapHeight/2f, 0);
+        }
+        camera.update();
+    }
+
     @Override
-    public void resize(int width, int height) { }
+    public void resize(int width, int height) {
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        centerCameraOnPlayer();
+    }
 
     @Override
     public void pause() {}

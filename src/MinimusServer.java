@@ -1,7 +1,9 @@
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryonet.Connection;
@@ -13,6 +15,7 @@ import java.awt.geom.Line2D;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -35,15 +38,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     private int networkIDCounter = 1;
 
-    //final float velocity = 0.1f;  //pix/ms
-    //float tickRate=60;
-    //float updateRate=2;
-
     private int currentTick=0;
 
     long serverStartTime;
 
-    //boolean useUDP = true;
 
     int screenW;
     int screenH;
@@ -58,7 +56,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     Timer timer;
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
-    //int logIntervalSeconds = 2;
     long logIntervalStarted;
 
     ServerStatusFrame serverStatusFrame;
@@ -66,6 +63,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     StatusData statusData;
 
     ConVars conVars;
+
+    final int MAP_WIDTH = 1000;
+    final int MAP_HEIGHT = 1000;
+
+    float viewPortX;
+    float viewPortY;
+    float cameraVelocity = 300f; //pix/s
+
+    private OrthographicCamera camera;
+    EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
 
     public void showConsoleWindow(){
         //TODO
@@ -129,6 +136,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public void create() {
+
+        int h = Gdx.graphics.getHeight();
+        int w = Gdx.graphics.getWidth();
+        camera = new OrthographicCamera(h, w);
+        viewPortX = MAP_WIDTH/2f;
+        viewPortY = MAP_HEIGHT/2f;
+        camera.position.set(viewPortX, viewPortY, 0);
+
         conVars = new ConVars();
         consoleFrame = new ConsoleFrame(conVars,this);
         serverStartTime = System.nanoTime();
@@ -161,6 +176,27 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         }
     }
 
+    private void moveViewport(float delta){
+        float deltaY = 0;
+        float deltaX = 0;
+        if(buttons.contains(Enums.Buttons.UP)){
+            deltaY = cameraVelocity * delta;
+        }
+        if(buttons.contains(Enums.Buttons.DOWN)){
+            deltaY = -1* cameraVelocity *delta;
+        }
+        if(buttons.contains(Enums.Buttons.LEFT)){
+            deltaX = -1* cameraVelocity *delta;
+        }
+        if(buttons.contains(Enums.Buttons.RIGHT)){
+            deltaX = cameraVelocity *delta;
+        }
+        viewPortX += deltaX;
+        viewPortY += deltaY;
+        camera.position.set(viewPortX, viewPortY, 0);
+        camera.update();
+    }
+
     private void startServer(){
         server = new Server(writeBuffer,objectBuffer);
         Network.register(server);
@@ -184,6 +220,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 Network.AssignEntity assign = new Network.AssignEntity();
                 assign.networkID = networkID;
                 assign.velocity = conVars.get("sv_velocity");
+                assign.mapHeight = MAP_HEIGHT;
+                assign.mapWidth = MAP_WIDTH;
                 connection.sendTCP(assign);
 
                 Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
@@ -322,8 +360,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     private void addNPC(){
         int width = 50;
         int height = 50;
-        float x = MathUtils.random(Gdx.graphics.getWidth()-width);
-        float y = MathUtils.random(Gdx.graphics.getHeight()-height);
+        float x = MathUtils.random(MAP_WIDTH-width);
+        float y = MathUtils.random(MAP_HEIGHT-height);
         Entity npc = new Entity(x,y);
         npc.height = height;
         npc.width = width;
@@ -370,17 +408,17 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 case WEST: newX -= conVars.get("sv_velocity")*delta; break;
                 case EAST: newX += conVars.get("sv_velocity")*delta; break;
             }
-            if(newX+width > screenW && e.heading==Enums.Heading.EAST){
+            if(newX+width > MAP_WIDTH && e.heading==Enums.Heading.EAST){
                 e.heading = Enums.Heading.WEST;
-                newX = screenW-width;
+                newX = MAP_WIDTH-width;
             }
             if(newX<0 && e.heading== Enums.Heading.WEST){
                 e.heading = Enums.Heading.EAST;
                 newX = 0;
             }
-            if(newY+height>screenH && e.heading== Enums.Heading.NORTH){
+            if(newY+height>MAP_HEIGHT && e.heading== Enums.Heading.NORTH){
                 e.heading = Enums.Heading.SOUTH;
-                newY = screenH-height;
+                newY = MAP_HEIGHT-height;
             }
             if(newY<0 && e.heading== Enums.Heading.SOUTH){
                 e.heading = Enums.Heading.NORTH;
@@ -487,10 +525,17 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             logIntervalElapsed();
         }
         serverStatusFrame.update();
-        Gdx.gl.glClearColor(0, 0, 0, 1);
+
+        moveViewport(Gdx.graphics.getDeltaTime());
+        shapeRenderer.setProjectionMatrix(camera.combined);
+
+        Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0,0,0,1);
+        shapeRenderer.rect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+        shapeRenderer.setColor(1,1,1,1);
         for(Entity e: entities.values()){
             shapeRenderer.rect(e.x, e.y, e.width, e.height);
         }
@@ -592,6 +637,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public void resize(int width, int height) {
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        viewPortX = MAP_WIDTH/2f;
+        viewPortY = MAP_HEIGHT/2f;
+        camera.position.set(viewPortX, viewPortY, 0);
+        camera.update();
     }
     @Override
     public void pause() {}
@@ -602,13 +653,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
-        System.out.println("Keydown:"+keycode);
+        if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
+        if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);
+        if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);
+        if(keycode == Input.Keys.DOWN)buttons.add(Enums.Buttons.DOWN);
         return false;
     }
 
     @Override
     public boolean keyUp(int keycode) {
-        System.out.println("Keydown:"+keycode);
+        if(keycode == Input.Keys.LEFT) buttons.remove(Enums.Buttons.LEFT);
+        if(keycode == Input.Keys.RIGHT) buttons.remove(Enums.Buttons.RIGHT);
+        if(keycode == Input.Keys.UP)buttons.remove(Enums.Buttons.UP);
+        if(keycode == Input.Keys.DOWN)buttons.remove(Enums.Buttons.DOWN);
         return false;
     }
 

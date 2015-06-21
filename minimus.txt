@@ -1,6 +1,10 @@
-TODO larger map
-TODO viewport
+TODO have server track what entities have changed and what attributes have changed
+TODO have server limit max entities that can move at once
+TODO make entities pick a destination, walk there and wait untill they get another destination
 
+DONE move viewport on server
+DONE larger map
+DONE viewport
 DONE autoscroll console
 DONE get console textfield history when pressing up arrow
 DONE console, let server change client values

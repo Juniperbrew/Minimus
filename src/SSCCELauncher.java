@@ -9,7 +9,7 @@ import java.awt.*;
  */
 public class SSCCELauncher {
 
-    static boolean useJFrame = false;
+    static boolean useJFrame = true;
 
     public static void main(String[] args) {
 
