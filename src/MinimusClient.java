@@ -313,7 +313,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             deltaX = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.EAST;
         }
-        //System.out.println(" Moved from ("+pos.x+","+pos.y+") to ("+(pos.x+deltaX)+","+(pos.y+deltaY)+")");
+        if(conVars.getBool("cl_check_map_collisions")){
+            if(e.x+e.width+deltaX>mapWidth){
+                deltaX = mapWidth-e.x-e.width;
+            }
+            if(e.x+deltaX<0){
+                deltaX = 0-e.x;
+            }
+            if(e.y+e.height+deltaY>mapHeight){
+                deltaY = mapHeight-e.y-e.height;
+            }
+            if(e.y+deltaY<0){
+                deltaY = 0-e.y;
+            }
+        }
         e.x += deltaX;
         e.y += deltaY;
     }

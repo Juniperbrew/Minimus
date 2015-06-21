@@ -449,6 +449,20 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             deltaX = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.EAST;
         }
+        if(conVars.getBool("sv_check_map_collisions")) {
+            if (e.x + e.width + deltaX > MAP_WIDTH) {
+                deltaX = MAP_WIDTH - e.x - e.width;
+            }
+            if (e.x + deltaX < 0) {
+                deltaX = 0 - e.x;
+            }
+            if (e.y + e.height + deltaY > MAP_HEIGHT) {
+                deltaY = MAP_HEIGHT - e.y - e.height;
+            }
+            if (e.y + deltaY < 0) {
+                deltaY = 0 - e.y;
+            }
+        }
         e.x += deltaX;
         e.y += deltaY;
     }
