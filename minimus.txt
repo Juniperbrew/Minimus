@@ -1,6 +1,6 @@
 TODO larger map
 TODO viewport
-TODO autoscroll console
+DONE autoscroll console
 
 DONE console, let server change client values
 DONE server packets sent/received per connection
