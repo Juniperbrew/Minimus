@@ -537,7 +537,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         shapeRenderer.rect(0, 0, MAP_WIDTH, MAP_HEIGHT);
         shapeRenderer.setColor(1,1,1,1);
         for(Entity e: entities.values()){
-            shapeRenderer.rect(e.x, e.y, e.width, e.height);
+            if(!npcs.values().contains(e)){
+                shapeRenderer.setColor(0,0,1,1);
+                shapeRenderer.rect(e.x, e.y, e.width, e.height);
+                shapeRenderer.setColor(1,1,1,1);
+            }else{
+                shapeRenderer.rect(e.x, e.y, e.width, e.height);
+            }
         }
         shapeRenderer.end();
 

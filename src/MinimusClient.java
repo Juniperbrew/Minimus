@@ -573,7 +573,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             //Render entities
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
                 Entity e = stateSnapshot.get(id);
-                shapeRenderer.setColor(1,1,1,1); //white
+                if(id==playerID){
+                    shapeRenderer.setColor(0,0,1,1); //blue
+                }else{
+                    shapeRenderer.setColor(1,1,1,1); //white
+                }
                 shapeRenderer.rect(e.x, e.y, e.width, e.height);
                 float health = 1-((float)e.health/e.maxHealth);
                 int healthWidth = (int) (e.width*health);
