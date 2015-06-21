@@ -1,0 +1,12 @@
+u	toggle udp
+q	remove entity
+w	add entity
+-	zoom out
++	zoom in
+r	reset zoom
+1	show console
+2	show status
+3	lower tickrate
+4	increase tickrate
+8	lower updaterate
+9	increase updaterate

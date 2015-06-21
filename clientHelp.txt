@@ -1,0 +1,6 @@
+p	send test TCP packet
+o	send test UDP packet
+w	toggle performance warnings
+q	print entity size
+1	show console
+2	show status
