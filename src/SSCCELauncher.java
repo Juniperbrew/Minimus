@@ -3,15 +3,13 @@ import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
  * Created by timorasanen on 20/06/15.
  */
 public class SSCCELauncher {
 
-    static boolean useJFrame = true;
+    static boolean useJFrame = false;
 
     public static void main(String[] args) {
 
