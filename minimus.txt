@@ -1,6 +1,7 @@
 TODO larger map
 TODO viewport
 DONE autoscroll console
+TODO get console textfield history when pressing up arrow
 
 DONE console, let server change client values
 DONE server packets sent/received per connection
