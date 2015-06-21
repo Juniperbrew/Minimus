@@ -1,9 +1,17 @@
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.ArrayList;
+import java.util.LinkedList;
 
 /**
  * Created by Juniperbrew on 20.6.2015.
@@ -12,6 +20,9 @@ public class ConsoleFrame extends JFrame {
 
     JTextArea textArea = new JTextArea();
     ConVars conVars;
+    ArrayList<String> commandHistory = new ArrayList<>();
+    int historyIndex = 0;
+    int maxHistory = 20;
     final String HELP = "Commands:\n" +
                             "help:\t display this message\n" +
                             "cvarlist:\t list all vars\n" +
@@ -25,13 +36,24 @@ public class ConsoleFrame extends JFrame {
         this.minimusServer = minimusServer;
     }
 
+    private void storeCommandHistory(String command){
+        commandHistory.add(command);
+        if(commandHistory.size()>maxHistory){
+            commandHistory.remove(0);
+        }
+    }
+
     public ConsoleFrame(ConVars conVars){
         super("Console");
         this.conVars = conVars;
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setLayout(new MigLayout("wrap"));
         setPreferredSize(new Dimension(800, 400));
+
         textArea.setEditable(false);
+        DefaultCaret caret = (DefaultCaret)textArea.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+
         JScrollPane scrollPane = new JScrollPane(textArea);
         add(scrollPane, "grow,push");
         final JTextField textField = new JTextField();
@@ -40,8 +62,28 @@ public class ConsoleFrame extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if(!textField.getText().isEmpty()){
                     parseCommand(textField.getText());
+                    storeCommandHistory(textField.getText());
                     textField.setText("");
                 }
+            }
+        });
+        textField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                super.keyPressed(e);
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    if (!commandHistory.isEmpty()) {
+                        textField.setText(commandHistory.get(historyIndex % commandHistory.size()));
+                        historyIndex++;
+                    }
+                }
+            }
+        });
+        textField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                super.focusLost(e);
+                historyIndex = 0;
             }
         });
         add(textField, "growx,pushx");
@@ -91,5 +133,9 @@ public class ConsoleFrame extends JFrame {
             return;
         }
         addLine(command);
+    }
+
+    public static void main(String[] args) {
+        new ConsoleFrame(new ConVars()).setVisible(true);
     }
 }

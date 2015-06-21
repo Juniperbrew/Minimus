@@ -31,10 +31,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private int objectBuffer = 4096; //Default 2048
     ShapeRenderer shapeRenderer;
 
-    //boolean useClientSidePrediction = true;
-    //float interpDelay = 1f;  //TODO allow an option to link this to server updateRate
-    //minimum interpDelay (1/serverUpdateRate)+0,5*latency
-
     //Counter to give each input request an unique id
     private int currentInputRequest = 0;
     //Input requests that haven't been sent yet
@@ -64,13 +60,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private Network.FullEntityUpdate interpFrom;//private Network.EntityUpdate interpFrom;
     private Network.FullEntityUpdate interpTo;//private Network.EntityUpdate interpTo;
 
-    //Velocity of all entities sent from server, if this doesn't match server velocity then player clientside prediction will be wrong and corrected each state update
-    //float velocity;
     int playerID;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
 
-    //boolean showDebug;
-    //boolean compressInput = false;
     long lastPingRequest;
     private ArrayList<Network.AddEntity> pendingAddedEntities;
 
@@ -85,10 +77,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     String serverIP;
 
     StatusData statusData;
-    //int logIntervalSeconds = 2;
     long logIntervalStarted;
 
-    //boolean showPerformanceWarnings = false;
     long clientStartTime;
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
 
