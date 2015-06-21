@@ -15,6 +15,7 @@ public class StatusData {
     long disconnectTime = 0;
     int logIntervalSeconds;
     int currentTick;
+    int entitySize;
 
     int currentInputRequest;
     int inputQueue;

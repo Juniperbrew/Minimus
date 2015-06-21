@@ -12,6 +12,9 @@ import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 
 import java.awt.geom.Line2D;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -169,6 +172,24 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 statusFrame.setVisible(true);
             }
         }).start();
+    }
+
+    private void showHelp(){
+        try(BufferedReader reader = new BufferedReader(new FileReader("clientHelp.txt"))){
+            String line;
+            while((line = reader.readLine())!=null){
+                showMessage(line);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showMessage(String message){
+        System.out.println(message);
+        consoleFrame.addLine(message);
     }
 
     private void joinServer(){
@@ -533,16 +554,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
         float checkpoint3 = (System.nanoTime()-logicStart)/1000000f;
         if(checkpoint3-checkpoint0>1&& conVars.getBool("cl_show_performance_warnings")) {
-            System.out.println("UpdateStates:" + (checkpoint1 - checkpoint0) + "ms");
-            System.out.println("Send input:" + (checkpoint2 - checkpoint1) + "ms");
-            System.out.println("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
+            showMessage("UpdateStates:" + (checkpoint1 - checkpoint0) + "ms");
+            showMessage("Send input:" + (checkpoint2 - checkpoint1) + "ms");
+            showMessage("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
         }
     }
 
     @Override
     public void render() {
         if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
-            System.out.println("Long time since last render() call:"+(System.nanoTime()-renderStart)/1000000f);
+            showMessage("Long time since last render() call:" + (System.nanoTime() - renderStart) / 1000000f);
         }
         if(System.nanoTime()- logIntervalStarted >Tool.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
@@ -621,12 +642,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         //fpsLogger.log();
 
         if((System.nanoTime()-renderStart)/1000000f>30 && conVars.getBool("cl_show_performance_warnings")){
-            System.out.println("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
+            showMessage("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
         }
     }
 
     @Override
     public boolean keyDown(int keycode) {
+        if(keycode == Input.Keys.F1){
+            showHelp();
+        }
         if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);
         if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);
@@ -660,53 +684,53 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             }else{
                 conVars.set("cl_show_performance_warnings",true);
             }
-            System.out.println("ShowPerformanceWarnings:"+ conVars.getBool("cl_show_performance_warnings"));
+            showMessage("ShowPerformanceWarnings:" + conVars.getBool("cl_show_performance_warnings"));
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
             Entity e = new Entity(50,50);
             s.write(client, buffer ,e);
-            System.out.println("Entity size is " + buffer.position() + " bytes");
+            showMessage("Entity size is " + buffer.position() + " bytes");
             buffer.clear();
 
             int totalEntitySize = 0;
 
             s.write(client, buffer ,e.heading);
             totalEntitySize += buffer.position();
-            System.out.println("Heading size is " + buffer.position() + " bytes");
+            showMessage("Heading size is " + buffer.position() + " bytes");
             buffer.clear();
 
             s.write(client, buffer ,e.health);
             totalEntitySize += buffer.position();
-            System.out.println("Health size is " + buffer.position() + " bytes");
+            showMessage("Health size is " + buffer.position() + " bytes");
             buffer.clear();
 
             s.write(client, buffer ,e.maxHealth);
             totalEntitySize += buffer.position();
-            System.out.println("Maxhealth size is " + buffer.position() + " bytes");
+            showMessage("Maxhealth size is " + buffer.position() + " bytes");
             buffer.clear();
 
             s.write(client, buffer ,e.x);
             totalEntitySize += buffer.position();
-            System.out.println("X size is " + buffer.position() + " bytes");
+            showMessage("X size is " + buffer.position() + " bytes");
             buffer.clear();
 
             s.write(client, buffer ,e.y);
             totalEntitySize += buffer.position();
-            System.out.println("Y size is " + buffer.position() + " bytes");
+            showMessage("Y size is " + buffer.position() + " bytes");
             buffer.clear();
 
             s.write(client, buffer ,e.height);
             totalEntitySize += buffer.position();
-            System.out.println("Height size is " + buffer.position() + " bytes");
+            showMessage("Height size is " + buffer.position() + " bytes");
             buffer.clear();
 
             s.write(client, buffer ,e.width);
             totalEntitySize += buffer.position();
-            System.out.println("Width size is " + buffer.position() + " bytes");
+            showMessage("Width size is " + buffer.position() + " bytes");
             buffer.clear();
 
-            System.out.println("Total entity size is " +totalEntitySize + " bytes");
+            showMessage("Total entity size is " + totalEntitySize + " bytes");
         }
         if(character == '1'){
             showConsoleWindow();

@@ -6,13 +6,21 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 
 import java.awt.geom.Line2D;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -110,10 +118,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         }).start();
     }
 
-    public void setTitle(final String title){
-        //Gdx.graphics.setTitle(title);
-    }
-
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         entities = new HashMap<Integer, Entity>();
@@ -153,6 +157,43 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         initialize();
         startSimulation();
         Gdx.input.setInputProcessor(this);
+
+        statusData.entitySize = measureKryoEntitySize();
+        showMessage("Kryo entity size:" + statusData.entitySize + "bytes");
+    }
+
+    private void showMessage(String message){
+        System.out.println(message);
+        consoleFrame.addLine(message);
+    }
+
+    private void showHelp(){
+        try(BufferedReader reader = new BufferedReader(new FileReader("serverHelp.txt"))){
+            String line;
+            while((line = reader.readLine())!=null){
+                showMessage(line);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private int measureKryoEntitySize(){
+
+        Kryo kryo = new Kryo();
+        kryo.register(Entity.class);
+        Output output = null;
+        try {
+            output = new Output(new FileOutputStream("file.bin"));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        kryo.writeObject(output, new Entity(1000000,1000000));
+        int size = output.position();
+        output.close();
+        return size;
     }
 
     private void logReceivedPackets(Connection connection, Object packet){
@@ -285,9 +326,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             return;
         }else{
             lastAttackDone.put(connection,System.nanoTime());
-            System.out.println("Entity ID"+playerList.get(connection)+" is attacking");
+            showMessage("Entity ID" + playerList.get(connection) + " is attacking");
             Entity e = entities.get(playerList.get(connection));
-            System.out.println();
             float originX = e.x+e.width/2;
             float originY = e.y+e.height/2;
             float targetX = e.x+e.width/2;
@@ -304,9 +344,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 Entity target = entities.get(id);
                 if(target.getBounds().intersectsLine(hitScan) && target != e){
                     target.health -= 10;
-                    System.out.println("Entity ID"+id+" now has "+target.health+" health.");
+                    showMessage("Entity ID" + id + " now has " + target.health + " health.");
                     if(target.health<=0){
-                        System.out.println("Entity ID"+id+" is dead.");
+                        showMessage("Entity ID" + id + " is dead.");
                         deadEntities.add(id);
                     }
                 }
@@ -371,7 +411,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         int networkID = getNextNetworkID();
         entities.put(networkID,npc);
         npcs.put(networkID,npc);
-        System.out.println("Adding npc ID:"+networkID);
+        showMessage("Adding npc ID:" + networkID);
 
         Network.AddEntity addEntity = new Network.AddEntity();
         addEntity.networkID=networkID;
@@ -383,9 +423,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         Integer[] keys = npcs.keySet().toArray(new Integer[npcs.keySet().size()]);
         if(keys.length != 0){
             int removeIndex = MathUtils.random(keys.length-1);
-            System.out.println("Remove index:"+removeIndex);
+            showMessage("Remove index:" + removeIndex);
             int removeID = keys[removeIndex];
-            System.out.println("Removing npc ID:"+removeID);
+            showMessage("Removing npc ID:"+removeID);
             npcs.remove(removeID);
             entities.remove(removeID);
         }
@@ -510,11 +550,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
                     tickWorkDuration=System.nanoTime()-tickStartTime;
                     if((tickWorkDuration/1000000f) > 20) {
-                        System.out.println("Tick:"+currentTick);
-                        System.out.println("Process commands:" + processCommandsCheckpoint);
-                        System.out.println("MoveNPC:" + (moveNpcCheckpoint - processCommandsCheckpoint));
-                        System.out.println("UpdateClients:" + (updateClientsCheckpoint - moveNpcCheckpoint));
-                        System.out.println("Work:" + (tickWorkDuration / 1000000f));
+                        showMessage("Tick:" + currentTick);
+                        showMessage("Process commands:" + processCommandsCheckpoint);
+                        showMessage("MoveNPC:" + (moveNpcCheckpoint - processCommandsCheckpoint));
+                        showMessage("UpdateClients:" + (updateClientsCheckpoint - moveNpcCheckpoint));
+                        showMessage("Work:" + (tickWorkDuration / 1000000f));
                     }
 
                     sleepDuration = targetTickDurationNano-tickWorkDuration;
@@ -586,7 +626,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public boolean keyTyped(char character) {
-        System.out.println("Keytyped:"+character);
         if (character == 'u') {
             boolean useUDP = conVars.getBool("cl_udp");
             if(useUDP){
@@ -595,13 +634,28 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                 conVars.set("cl_udp",1);
             }
 
-            System.out.println("UseUDP:"+conVars.getBool("cl_udp"));
+            showMessage("UseUDP:" + conVars.getBool("cl_udp"));
         }
-        if (character == '-') {
+        if (character == 'q') {
             removeNPC();
         }
-        if (character == '+') {
+        if (character == 'w') {
             addNPC();
+        }
+        if (character == '-') {
+            camera.zoom += 0.02;
+            camera.update();
+        }
+        if (character == '+') {
+            camera.zoom -= 0.02;
+            if(camera.zoom < 0.1){
+                camera.zoom = 0.1f;
+            }
+            camera.update();
+        }
+        if (character == 'r') {
+            camera.zoom = 1;
+            camera.update();
         }
         if (character == '1') {
             showConsoleWindow();
@@ -673,6 +727,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
+        if(keycode == Input.Keys.F1){
+            showHelp();
+        }
         if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);
         if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);

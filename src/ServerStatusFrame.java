@@ -164,17 +164,11 @@ public class ServerStatusFrame extends JFrame {
 
     class TotalDataPanel extends DataPanel{
 
-        /*
-                statusData.fps = Gdx.graphics.getFramesPerSecond();
-        statusData.entityCount = entities.size();
-        statusData.currentTick = currentTick;
-        statusData.serverTime = (System.nanoTime() - serverStartTime) / 1000000000f;
-         */
-
         JLabel fps = new JLabel();
         JLabel entityCount = new JLabel();
         JLabel serverTime = new JLabel();
         JLabel currentTick = new JLabel();
+        JLabel entitySize = new JLabel();
 
         public TotalDataPanel(StatusData dataUsage){
             data = dataUsage;
@@ -182,6 +176,7 @@ public class ServerStatusFrame extends JFrame {
             setLayout(new MigLayout("wrap"));
             add(nameLabel);
             add(fps);
+            add(entitySize);
             add(entityCount);
             add(serverTime);
             add(currentTick);
@@ -218,6 +213,7 @@ public class ServerStatusFrame extends JFrame {
                 public void run() {
 
                     fps.setText("Fps: "+data.fps);
+                    entitySize.setText("Entity size: "+data.entitySize+" bytes");
                     entityCount.setText("Entities: "+data.entityCount);
                     serverTime.setText("Server time: "+data.getServerTime());
                     currentTick.setText("Tick: "+data.currentTick);
