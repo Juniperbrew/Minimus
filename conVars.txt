@@ -11,3 +11,4 @@ cl_compress_input 0
 cl_show_performance_warnings 0
 cl_check_map_collisions 1
 sv_check_map_collisions 1
+sv_max_moving_entities 10
