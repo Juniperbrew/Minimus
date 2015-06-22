@@ -5,7 +5,7 @@ import java.util.TimeZone;
 /**
  * Created by Juniperbrew on 20.6.2015.
  */
-public class Tool {
+public class Tools {
 
     private static SimpleDateFormat timeStamp = new SimpleDateFormat("HH:mm:ss");
     private static SimpleDateFormat milliTimeStamp = new SimpleDateFormat("HH:mm:ss.SSS");
@@ -32,5 +32,15 @@ public class Tool {
         //TODO Breaks after 24 hours?
         int millis = (int) (seconds*1000);
         return milliTimeStamp.format(new Date(millis));
+    }
+
+    public static float clamp(float value, float minValue,float maxValue){
+        if(value < minValue){
+            value = minValue;
+        }
+        if(value > maxValue){
+            value = maxValue;
+        }
+        return value;
     }
 }

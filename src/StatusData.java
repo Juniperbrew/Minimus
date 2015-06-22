@@ -48,19 +48,19 @@ public class StatusData {
     public String getConnectionTime(){
         String timestamp;
         if(disconnectTime>0){
-            timestamp = Tool.secondsToTimestamp(Tool.nanoToSeconds(disconnectTime - connectionTime));
+            timestamp = Tools.secondsToTimestamp(Tools.nanoToSeconds(disconnectTime - connectionTime));
         }else{
-            timestamp = Tool.secondsToTimestamp(Tool.nanoToSeconds(System.nanoTime()-connectionTime));
+            timestamp = Tools.secondsToTimestamp(Tools.nanoToSeconds(System.nanoTime() - connectionTime));
         }
         return timestamp;
     }
 
     public String getServerTime(){
-        return Tool.secondsToMilliTimestamp(serverTime);
+        return Tools.secondsToMilliTimestamp(serverTime);
     }
 
     public String getClientTime(){
-        return Tool.secondsToMilliTimestamp(clientTime);
+        return Tools.secondsToMilliTimestamp(clientTime);
     }
 
     public void setServerTime(float serverTime){

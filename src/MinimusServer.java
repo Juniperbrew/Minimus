@@ -15,12 +15,9 @@ import com.esotericsoftware.kryonet.Server;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -37,7 +34,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     Server server;
     ShapeRenderer shapeRenderer;
     HashMap<Integer,Entity> entities;
-    HashMap<Integer,Entity> npcs;
+    HashMap<Integer,EntityAI> entityAIs;
     HashMap<Connection,Integer> playerList;
     HashMap<Connection,Integer> lastInputIDProcessed;
     HashMap<Connection,Integer> connectionUpdateRate;
@@ -121,7 +118,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         entities = new HashMap<Integer, Entity>();
-        npcs = new HashMap<Integer, Entity>();
         playerList = new HashMap<Connection, Integer>();
         connectionUpdateRate = new HashMap<Connection, Integer>();
         connectionStatus = new HashMap<Connection, StatusData>();
@@ -129,6 +125,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         lastInputIDProcessed = new HashMap<Connection, Integer>();
         lastAttackDone = new HashMap<Connection, Long>();
         attackVisuals = new ArrayList<Line2D.Float>();
+        entityAIs = new HashMap<>();
         timer = new Timer();
         screenW = Gdx.graphics.getWidth();
         screenH = Gdx.graphics.getHeight();
@@ -184,13 +181,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
         Kryo kryo = new Kryo();
         kryo.register(Entity.class);
-        Output output = null;
-        try {
-            output = new Output(new FileOutputStream("file.bin"));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        kryo.writeObject(output, new Entity(1000000,1000000));
+        Output output = new Output(objectBuffer);
+        kryo.writeObject(output, new Entity(-1, 1000000,1000000));
         int size = output.position();
         output.close();
         return size;
@@ -250,8 +242,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
         server.addListener(new Listener(){
             public void connected(Connection connection){
-                Entity newPlayer = new Entity(100,100);
                 int networkID = getNextNetworkID();
+                Entity newPlayer = new Entity(networkID,100,100);
                 entities.put(networkID, newPlayer);
                 playerList.put(connection,networkID);
                 StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
@@ -360,7 +352,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
                     deadPlayer.y = 0;
                 }else{
                     entities.remove(id);
-                    npcs.remove(id);
+                    //npcs.remove(id);
                 }
             }
             attackVisuals.add(hitScan);
@@ -402,15 +394,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         int height = 50;
         float x = MathUtils.random(MAP_WIDTH-width);
         float y = MathUtils.random(MAP_HEIGHT-height);
-        Entity npc = new Entity(x,y);
+        int networkID = getNextNetworkID();
+        Entity npc = new Entity(networkID,x,y);
         npc.height = height;
         npc.width = width;
         npc.health = 90;
         int randomHeading = MathUtils.random(Enums.Heading.values().length - 1);
         npc.heading = Enums.Heading.values()[randomHeading];
-        int networkID = getNextNetworkID();
         entities.put(networkID,npc);
-        npcs.put(networkID,npc);
+        entityAIs.put(networkID,new EntityAI(npc));
         showMessage("Adding npc ID:" + networkID);
 
         Network.AddEntity addEntity = new Network.AddEntity();
@@ -420,20 +412,45 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
     }
 
     private void removeNPC(){
-        Integer[] keys = npcs.keySet().toArray(new Integer[npcs.keySet().size()]);
+        Integer[] keys = entities.keySet().toArray(new Integer[entities.keySet().size()]);
         if(keys.length != 0){
-            int removeIndex = MathUtils.random(keys.length-1);
-            showMessage("Remove index:" + removeIndex);
-            int removeID = keys[removeIndex];
-            showMessage("Removing npc ID:"+removeID);
-            npcs.remove(removeID);
-            entities.remove(removeID);
+            if(playerList.values().size() < entities.size()){
+                int removeIndex;
+                do{
+                    removeIndex = MathUtils.random(keys.length-1);
+                }while(playerList.values().contains(keys[removeIndex]));
+                showMessage("Remove index:" + removeIndex);
+                int removeID = keys[removeIndex];
+                showMessage("Removing npc ID:"+removeID);
+                entities.remove(removeID);
+            }
         }
     }
 
     private void moveNPC(float delta){
-        Entity[] npcsCopy = npcs.values().toArray(new Entity[npcs.values().size()]);
-        for(Entity e:npcsCopy){
+        if(EntityAI.movingEntityCount<conVars.getInt("sv_max_moving_entities")){
+            EntityAI[] entityAICopy = entityAIs.values().toArray(new EntityAI[entityAIs.values().size()]);
+            int startIndex = MathUtils.random(entityAICopy.length-1);
+            for (int i = 0; i < entityAICopy.length; i++) {
+                int actualIndex = (startIndex+i)%entityAICopy.length;
+                EntityAI ai = entityAICopy[actualIndex];
+                if(!ai.hasDestination){
+                    ai.setRandomDestination(MAP_WIDTH,MAP_HEIGHT);
+                    break;
+                }
+            }
+        }
+
+
+        for(EntityAI ai:entityAIs.values()){
+            ai.move(conVars.get("sv_velocity"),delta);
+        }
+        /*
+        Entity[] entitiesCopy = entities.values().toArray(new Entity[entities.values().size()]);
+        for(Entity e:entitiesCopy){
+            if(playerList.values().contains(e.id)){
+                continue;
+            }
             float x = e.x;
             float y = e.y;
             int width = e.width;
@@ -468,6 +485,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
             e.x = newX;
             e.y = newY;
         }
+        */
     }
 
     private void moveEntity(Entity e, Network.UserInput input){
@@ -574,7 +592,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
-        if(System.nanoTime()- logIntervalStarted > Tool.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
+        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();
         }
@@ -591,7 +609,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor {
         shapeRenderer.rect(0, 0, MAP_WIDTH, MAP_HEIGHT);
         shapeRenderer.setColor(1,1,1,1);
         for(Entity e: entities.values()){
-            if(!npcs.values().contains(e)){
+            if(playerList.values().contains(e.id)){
                 shapeRenderer.setColor(0,0,1,1);
                 shapeRenderer.rect(e.x, e.y, e.width, e.height);
                 shapeRenderer.setColor(1,1,1,1);

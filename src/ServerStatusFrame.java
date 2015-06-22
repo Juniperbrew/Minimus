@@ -219,7 +219,7 @@ public class ServerStatusFrame extends JFrame {
                     currentTick.setText("Tick: "+data.currentTick);
 
                     String connectionTime;
-                    connectionTime = Tool.secondsToTimestamp(Tool.nanoToSeconds(System.nanoTime()-data.connectionTime));
+                    connectionTime = Tools.secondsToTimestamp(Tools.nanoToSeconds(System.nanoTime() - data.connectionTime));
                     connectionTimeLabel.setText("Server uptime: " + connectionTime);
                     up.setText("Up: "+data.getUpload());
                     down.setText("Down: "+data.getDownload());

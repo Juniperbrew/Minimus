@@ -4,6 +4,7 @@ import java.awt.geom.Rectangle2D;
  * Created by Juniperbrew on 23.1.2015.
  */
 public class Entity {
+    public int id;
     public float x;
     public float y;
     public int width;
@@ -13,10 +14,11 @@ public class Entity {
     public Enums.Heading heading;
 
     public Entity(){
-        this(0,0);
+        this(-1,-1,-1);
     }
 
     public Entity(Entity e){
+        id = e.id;
         x = e.x;
         y = e.y;
         width = e.width;
@@ -26,7 +28,8 @@ public class Entity {
         heading = e.heading;
     }
 
-    public Entity(float x, float y) {
+    public Entity(int id, float x, float y) {
+        this.id = id;
         this.x = x;
         this.y = y;
         width = 50;

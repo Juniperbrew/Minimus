@@ -565,7 +565,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
             showMessage("Long time since last render() call:" + (System.nanoTime() - renderStart) / 1000000f);
         }
-        if(System.nanoTime()- logIntervalStarted >Tool.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
+        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();
         }
@@ -688,7 +688,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
-            Entity e = new Entity(50,50);
+            Entity e = new Entity(-1,50,50);
             s.write(client, buffer ,e);
             showMessage("Entity size is " + buffer.position() + " bytes");
             buffer.clear();
