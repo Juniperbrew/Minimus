@@ -6,21 +6,20 @@ import com.badlogic.gdx.math.MathUtils;
 public class EntityAI {
 
     private static final int MAX_RANGE = 400; //Pixels
-    public static int movingEntityCount = 0;
 
     public float destinationX;
     public float destinationY;
     public boolean hasDestination;
-    Entity entity;
+    ServerEntity entity;
 
-    public EntityAI(Entity entity){
+    public EntityAI(ServerEntity entity){
         this.entity = entity;
     }
 
     public void move(float velocity,float delta){
         if(hasDestination) {
-            float distanceX = destinationX - entity.x;
-            float distanceY = destinationY - entity.y;
+            float distanceX = destinationX - entity.getX();
+            float distanceY = destinationY - entity.getY();
 
             float distanceMoved = velocity * delta;
             float fullDistance = (float) Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2));
@@ -41,27 +40,26 @@ public class EntityAI {
 
             if (deltaX == distanceX && deltaY == distanceY) {
                 hasDestination = false;
-                movingEntityCount--;
             }
 
-            entity.x += deltaX;
-            entity.y += deltaY;
+            float newX = entity.getX()+deltaX;
+            float newY = entity.getY()+deltaY;
+            entity.moveTo(newX,newY);
         }
     }
 
     public void setDestination(float x, float y){
         hasDestination = true;
-        movingEntityCount++;
         destinationX = x;
         destinationY = y;
     }
 
     public void setRandomDestination(int mapWidth,int mapHeight){
 
-        float minX = Math.max(entity.x-MAX_RANGE,0);
-        float maxX = Math.min(entity.x+MAX_RANGE,mapWidth-entity.width);
-        float minY = Math.max(entity.y-MAX_RANGE,0);
-        float maxY = Math.min(entity.x+MAX_RANGE,mapHeight-entity.height);
+        float minX = Math.max(entity.getX()-MAX_RANGE,0);
+        float maxX = Math.min(entity.getX()+MAX_RANGE,mapWidth-entity.width);
+        float minY = Math.max(entity.getY()-MAX_RANGE,0);
+        float maxY = Math.min(entity.getY()+MAX_RANGE,mapHeight-entity.height);
         destinationX = MathUtils.random(minX,maxX);
         destinationY = MathUtils.random(minY,maxY);
         setDestination(destinationX,destinationY);

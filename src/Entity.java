@@ -9,8 +9,8 @@ public class Entity {
     public float y;
     public int width;
     public int height;
-    public short health;
-    public short maxHealth;
+    public int health;
+    public int maxHealth;
     public Enums.Heading heading;
 
     public Entity(){
@@ -26,6 +26,17 @@ public class Entity {
         health = e.health;
         maxHealth = e.maxHealth;
         heading = e.heading;
+    }
+
+    public Entity(int id, float x, float y, int width, int height, int health, int maxHealth, Enums.Heading heading){
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.health = health;
+        this.maxHealth = maxHealth;
+        this.heading = heading;
     }
 
     public Entity(int id, float x, float y) {

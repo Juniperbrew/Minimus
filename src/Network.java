@@ -93,20 +93,20 @@ public class Network {
             return me.compareTo(other);
         }
     }
-/*
-    public static class EntityUpdate implements Comparable<EntityUpdate>{
+
+    public static class EntityPositionUpdate implements Comparable<EntityPositionUpdate>{
         public float serverTime;
         public int lastProcessedInputID;
         public HashMap<Integer,Position> entities;
 
         @Override
-        public int compareTo(EntityUpdate o) {
+        public int compareTo(EntityPositionUpdate o) {
             Float me = serverTime;
             Float other = o.serverTime;
             return me.compareTo(other);
         }
     }
-*/
+
     public static class Position{
         public float x;
         public float y;
