@@ -345,27 +345,58 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
+    private HashMap<Integer, Network.Position> getChangedEntityPositions(){
+        HashMap<Integer, Network.Position> positions = new HashMap<>();
+        for(int id: movedEntities){
+            ServerEntity e = entities.get(id);
+            positions.put(id,new Network.Position(e.getX(),e.getY()));
+        }
+        return positions;
+    }
+
     private void updateClients(){
-        float serverTime = getServerTime();
-        Network.FullEntityUpdate update = new Network.FullEntityUpdate();
-        update.entities = getNetworkedEntityList(entities);
-        update.serverTime = serverTime;
-        for(Connection connection :playerList.keySet()){
-            if(lastInputIDProcessed.get(connection) != null){
-                update.lastProcessedInputID = lastInputIDProcessed.get(connection);
-            }else{
-                update.lastProcessedInputID = -1;
+        if(conVars.getBool("sv_send_full_updates")){
+            Network.FullEntityUpdate update = new Network.FullEntityUpdate();
+            update.serverTime = getServerTime();
+            update.entities = getNetworkedEntityList(entities);
+            for(Connection connection :playerList.keySet()){
+                if(lastInputIDProcessed.get(connection) != null){
+                    update.lastProcessedInputID = lastInputIDProcessed.get(connection);
+                }else{
+                    update.lastProcessedInputID = -1;
+                }
+                if(conVars.getBool("cl_udp")){
+                    int bytesSent = connection.sendUDP(update);
+                    connectionStatus.get(connection).addBytesSent(bytesSent);
+                    statusData.addBytesSent(bytesSent);
+                }else{
+                    int bytesSent = connection.sendTCP(update);
+                    connectionStatus.get(connection).addBytesSent(bytesSent);
+                    statusData.addBytesSent(bytesSent);
+                }
             }
-            if(conVars.getBool("cl_udp")){
-                int bytesSent = connection.sendUDP(update);
-                connectionStatus.get(connection).addBytesSent(bytesSent);
-                statusData.addBytesSent(bytesSent);
-            }else{
-                int bytesSent = connection.sendTCP(update);
-                connectionStatus.get(connection).addBytesSent(bytesSent);
-                statusData.addBytesSent(bytesSent);
+        }else{
+            Network.EntityPositionUpdate update = new Network.EntityPositionUpdate();
+            update.serverTime = getServerTime();
+            update.changedEntityPositions = getChangedEntityPositions();
+            for(Connection connection :playerList.keySet()){
+                if(lastInputIDProcessed.get(connection) != null){
+                    update.lastProcessedInputID = lastInputIDProcessed.get(connection);
+                }else{
+                    update.lastProcessedInputID = -1;
+                }
+                if(conVars.getBool("cl_udp")){
+                    int bytesSent = connection.sendUDP(update);
+                    connectionStatus.get(connection).addBytesSent(bytesSent);
+                    statusData.addBytesSent(bytesSent);
+                }else{
+                    int bytesSent = connection.sendTCP(update);
+                    connectionStatus.get(connection).addBytesSent(bytesSent);
+                    statusData.addBytesSent(bytesSent);
+                }
             }
         }
+
         movedEntities.clear();
     }
 
@@ -414,7 +445,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             ai.move(conVars.get("sv_velocity"),delta);
         }
 
-        System.out.println("Moving entities:"+movedEntities.size());
         if(movedEntities.size()<conVars.getInt("sv_max_moving_entities")&&entityAIs.size()>0){
             Integer[] keys = entityAIs.keySet().toArray(new Integer[entityAIs.keySet().size()]);
             int startIndex = MathUtils.random(keys.length-1);
@@ -821,7 +851,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void positionChanged(int id) {
-        showMessage("Entity "+id+" moved");
         if(!movedEntities.contains(id)){
             movedEntities.add(id);
         }

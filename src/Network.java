@@ -19,7 +19,7 @@ public class Network {
         kryo.register(Message.class);
         kryo.register(UserInput.class);
         kryo.register(UpdateRate.class);
-        //kryo.register(EntityUpdate.class);
+        kryo.register(EntityPositionUpdate.class);
         kryo.register(Position.class);
         kryo.register(HashMap.class);
         kryo.register(AssignEntity.class);
@@ -97,7 +97,7 @@ public class Network {
     public static class EntityPositionUpdate implements Comparable<EntityPositionUpdate>{
         public float serverTime;
         public int lastProcessedInputID;
-        public HashMap<Integer,Position> entities;
+        public HashMap<Integer,Position> changedEntityPositions;
 
         @Override
         public int compareTo(EntityPositionUpdate o) {
@@ -110,5 +110,12 @@ public class Network {
     public static class Position{
         public float x;
         public float y;
+
+        public Position(){}
+
+        public Position(float x, float y){
+            this.x = x;
+            this.y = y;
+        }
     }
 }
