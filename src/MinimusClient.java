@@ -192,6 +192,29 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         consoleFrame.addLine(message);
     }
 
+    private Network.FullEntityUpdate applyPartialEntityUpdate(Network.EntityPositionUpdate update){
+        HashMap<Integer, Network.Position> changedEntityPositions = update.changedEntityPositions;
+        HashMap<Integer,Entity> newEntityList = new HashMap<>();
+        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
+        for(int id: oldEntityList.keySet()){
+            Entity e = oldEntityList.get(id);
+            if(changedEntityPositions.containsKey(id)){
+                Network.Position pos = changedEntityPositions.get(id);
+                Entity movedEntity = new Entity(e);
+                movedEntity.x = pos.x;
+                movedEntity.y = pos.y;
+                newEntityList.put(id,movedEntity);
+            }else{
+                newEntityList.put(id,e);
+            }
+        }
+        Network.FullEntityUpdate newFullEntityUpdate = new Network.FullEntityUpdate();
+        newFullEntityUpdate.lastProcessedInputID = update.lastProcessedInputID;
+        newFullEntityUpdate.serverTime = update.serverTime;
+        newFullEntityUpdate.entities = newEntityList;
+        return newFullEntityUpdate;
+    }
+
     private void joinServer(){
         client = new Client(writeBuffer,objectBuffer);
         Network.register(client);
@@ -204,11 +227,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             public void received(Connection connection, Object object) {
                 logReceivedPackets(connection, object);
 
-                /*if(object instanceof Network.EntityUpdate){
-                    Network.EntityUpdate update = (Network.EntityUpdate) object;
-                    //System.out.println("Received entity update that has processed inputID:"+update.lastProcessedInputID+" ServerTime:"+update.serverTime);
-                    pendingReceivedStates.add(update);
-                }else */
+                if(object instanceof Network.EntityPositionUpdate){
+                    Network.EntityPositionUpdate update = (Network.EntityPositionUpdate) object;
+                    if(authoritativeState!=null) {
+                        pendingReceivedStates.add(applyPartialEntityUpdate(update));
+                    }else{
+                        showMessage("Received partial entity update but there is no full state");
+                    }
+                }else
                 if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
                     pendingAddedEntities.add(addEntity);
