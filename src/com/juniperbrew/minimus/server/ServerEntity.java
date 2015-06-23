@@ -1,3 +1,8 @@
+package com.juniperbrew.minimus.server;
+
+import com.juniperbrew.minimus.Entity;
+import com.juniperbrew.minimus.Enums;
+
 import java.awt.geom.Rectangle2D;
 
 /**
@@ -11,7 +16,7 @@ public class ServerEntity {
     public int height;
     private int health;
     public int maxHealth;
-    public Enums.Heading heading;
+    private Enums.Heading heading;
     EntityChangeListener listener;
 
     public ServerEntity(ServerEntity e){
@@ -62,6 +67,14 @@ public class ServerEntity {
         this.health = health;
     }
 
+    public Enums.Heading getHeading(){
+        return heading;
+    }
+
+    public void setHeading(Enums.Heading heading){
+        this.heading = heading;
+        listener.headingChanged(id);
+    }
     public void moveTo(float newX, float newY){
         x = newX;
         y = newY;
@@ -73,7 +86,7 @@ public class ServerEntity {
         listener.healthChanged(id);
     }
 
-    public Rectangle2D.Float getBounds(){
-        return new Rectangle2D.Float(x,y,width,height);
+    public Rectangle2D.Double getBounds(){
+        return new Rectangle2D.Double(x,y,width,height);
     }
 }

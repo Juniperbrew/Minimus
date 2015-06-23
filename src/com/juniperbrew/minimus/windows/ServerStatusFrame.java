@@ -1,3 +1,6 @@
+package com.juniperbrew.minimus.windows;
+
+import com.juniperbrew.minimus.Tools;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;

@@ -1,4 +1,7 @@
+package com.juniperbrew.minimus.windows;
+
 import com.esotericsoftware.kryonet.Connection;
+import com.juniperbrew.minimus.Tools;
 
 import java.net.InetSocketAddress;
 import java.util.Locale;
@@ -8,36 +11,36 @@ import java.util.Locale;
  */
 public class StatusData {
 
-    int fps;
-    int entityCount;
-    Connection connection;
-    long connectionTime;
-    long disconnectTime = 0;
-    int logIntervalSeconds;
-    int currentTick;
-    int entitySize;
+    public int fps;
+    public int entityCount;
+    public Connection connection;
+    public long connectionTime;
+    public long disconnectTime = 0;
+    public int logIntervalSeconds;
+    public int currentTick;
+    public int entitySize;
 
-    int currentInputRequest;
-    int inputQueue;
+    public int currentInputRequest;
+    public int inputQueue;
 
-    float serverTime;
-    float clientTime;
+    private float serverTime;
+    private float clientTime;
 
-    long bytesSent;
-    int packetsSent;
+    public long bytesSent;
+    public int packetsSent;
     private int bytesSentIntervalCounter;
-    int bytesSentInterval;
+    public int bytesSentInterval;
     private int packetsSentIntervalCounter;
-    int packetsSentInterval;
-    int lastSentPacketSize;
+    public int packetsSentInterval;
+    public int lastSentPacketSize;
 
-    long bytesReceived;
-    int packetsReceived;
+    public long bytesReceived;
+    public int packetsReceived;
     private int bytesReceivedIntervalCounter;
-    int bytesReceivedInterval;
+    public int bytesReceivedInterval;
     private int packetsReceivedIntervalCounter;
-    int packetsReceivedInterval;
-    int lastReceivedPacketSize;
+    public int packetsReceivedInterval;
+    public int lastReceivedPacketSize;
 
     public StatusData(Connection connection, long connectionTime, int logIntervalSeconds){
         this.connection = connection;

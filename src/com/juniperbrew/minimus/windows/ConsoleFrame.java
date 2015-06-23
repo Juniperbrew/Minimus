@@ -1,3 +1,7 @@
+package com.juniperbrew.minimus.windows;
+
+import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.server.MinimusServer;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
@@ -9,9 +13,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.ArrayList;
-import java.util.LinkedList;
 
 /**
  * Created by Juniperbrew on 20.6.2015.

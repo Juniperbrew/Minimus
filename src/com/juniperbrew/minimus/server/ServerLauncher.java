@@ -1,15 +1,13 @@
-import com.badlogic.gdx.ApplicationListener;
-import com.badlogic.gdx.Gdx;
+package com.juniperbrew.minimus.server;
+
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.badlogic.gdx.backends.lwjgl.LwjglGraphics;
+import com.juniperbrew.minimus.server.MinimusServer;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 
 /**
  * Created by Juniperbrew on 23.1.2015.

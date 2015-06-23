@@ -1,8 +1,9 @@
+package com.juniperbrew.minimus.client;
+
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -10,6 +11,18 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
+import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.Entity;
+import com.juniperbrew.minimus.Enums;
+import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Tools;
+import com.juniperbrew.minimus.components.Component;
+import com.juniperbrew.minimus.components.Heading;
+import com.juniperbrew.minimus.components.Health;
+import com.juniperbrew.minimus.components.Position;
+import com.juniperbrew.minimus.windows.ClientStatusFrame;
+import com.juniperbrew.minimus.windows.ConsoleFrame;
+import com.juniperbrew.minimus.windows.StatusData;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
@@ -32,7 +45,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     Client client;
     private int writeBuffer = 8192; //Default 8192
-    private int objectBuffer = 4096; //Default 2048
+    private int objectBuffer = 8192; //Default 2048
     ShapeRenderer shapeRenderer;
 
     //Counter to give each input request an unique id
@@ -64,36 +77,37 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     private Network.FullEntityUpdate interpFrom;//private Network.EntityUpdate interpFrom;
     private Network.FullEntityUpdate interpTo;//private Network.EntityUpdate interpTo;
 
+    private ArrayList<Network.AddEntity> pendingAddedEntities;
+    private ArrayList<Network.RemoveEntity> pendingRemovedEntities;
+
+
     int playerID;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
-
-    long lastPingRequest;
-    private ArrayList<Network.AddEntity> pendingAddedEntities;
-
     private ArrayList<Line2D.Float> attackVisuals;
     Timer timer;
-    final long ATTACK_DELAY = (long) (0.3*1000000000);
-
+    final float ATTACK_DELAY = 0.3f;
     long lastAttackDone;
-    FPSLogger fpsLogger = new FPSLogger();
+
+    long lastPingRequest;
     long renderStart;
+    long logIntervalStarted;
+    long clientStartTime;
 
     String serverIP;
 
-    StatusData statusData;
-    long logIntervalStarted;
-
-    long clientStartTime;
-    ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
-
-    ClientStatusFrame statusFrame;
     ConVars conVars;
+    StatusData statusData;
+    ClientStatusFrame statusFrame;
     ConsoleFrame consoleFrame;
 
     private OrthographicCamera camera;
 
+    ArrayList<Integer> playerList;
+
     int mapWidth;
     int mapHeight;
+
+    ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
 
     public MinimusClient(String ip){
         serverIP = ip;
@@ -106,6 +120,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         pendingReceivedStates = new ArrayList<Network.FullEntityUpdate>();
         pendingInputPacket = new ArrayList<Network.UserInput>();
         pendingAddedEntities = new ArrayList<Network.AddEntity>();
+        pendingRemovedEntities = new ArrayList<>();
+        playerList = new ArrayList<>();
         attackVisuals = new ArrayList<Line2D.Float>();
         timer = new Timer();
     }
@@ -192,7 +208,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         consoleFrame.addLine(message);
     }
 
-    private Network.FullEntityUpdate applyPartialEntityUpdate(Network.EntityPositionUpdate update){
+    private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
         HashMap<Integer, Network.Position> changedEntityPositions = update.changedEntityPositions;
         HashMap<Integer,Entity> newEntityList = new HashMap<>();
         HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
@@ -215,6 +231,42 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         return newFullEntityUpdate;
     }
 
+    private Network.FullEntityUpdate applyEntityComponentUpdate(Network.EntityComponentsUpdate update){
+        HashMap<Integer, ArrayList<Component>> changedEntityComponents = update.changedEntityComponents;
+        HashMap<Integer,Entity> newEntityList = new HashMap<>();
+        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
+        for(int id: oldEntityList.keySet()) {
+            Entity e = oldEntityList.get(id);
+            if (changedEntityComponents.containsKey(id)) {
+                ArrayList<Component> components = changedEntityComponents.get(id);
+                Entity changedEntity = new Entity(e);
+                for(Component component:components){
+                    if(component instanceof Position){
+                        Position pos = (Position) component;
+                        changedEntity.x = pos.x;
+                        changedEntity.y = pos.y;
+                    }
+                    if(component instanceof Heading) {
+                        Heading heading = (Heading) component;
+                        changedEntity.heading = heading.heading;
+                    }
+                    if(component instanceof Health) {
+                        Health health = (Health) component;
+                        changedEntity.health = health.health;
+                    }
+                }
+                newEntityList.put(id,changedEntity);
+            } else {
+                newEntityList.put(id, e);
+            }
+        }
+        Network.FullEntityUpdate newFullEntityUpdate = new Network.FullEntityUpdate();
+        newFullEntityUpdate.lastProcessedInputID = update.lastProcessedInputID;
+        newFullEntityUpdate.serverTime = update.serverTime;
+        newFullEntityUpdate.entities = newEntityList;
+        return newFullEntityUpdate;
+    }
+
     private void joinServer(){
         client = new Client(writeBuffer,objectBuffer);
         Network.register(client);
@@ -227,27 +279,45 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             public void received(Connection connection, Object object) {
                 logReceivedPackets(connection, object);
 
-                if(object instanceof Network.EntityPositionUpdate){
+                if(object instanceof Network.FullEntityUpdate){
+                    Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
+                    pendingReceivedStates.add(fullUpdate);
+                    //System.out.println("Received full update");
+                }else if(object instanceof Network.EntityPositionUpdate){
                     Network.EntityPositionUpdate update = (Network.EntityPositionUpdate) object;
                     if(authoritativeState!=null) {
-                        pendingReceivedStates.add(applyPartialEntityUpdate(update));
+                        pendingReceivedStates.add(applyEntityPositionUpdate(update));
                     }else{
-                        showMessage("Received partial entity update but there is no full state");
+                        showMessage("Received entity position update but there is no complete state to apply it to");
                     }
-                }else
-                if(object instanceof Network.AddEntity){
+                }else if(object instanceof Network.EntityComponentsUpdate){
+                    Network.EntityComponentsUpdate update = (Network.EntityComponentsUpdate) object;
+                    if(authoritativeState!=null) {
+                        pendingReceivedStates.add(applyEntityComponentUpdate(update));
+                    }else{
+                        showMessage("Received entity component update but there is no complete state to apply it to");
+                    }
+                }else if(object instanceof Network.AddPlayer){
+                    Network.AddPlayer addPlayer = (Network.AddPlayer) object;
+                    showMessage("PlayerID "+addPlayer.networkID+" added.");
+                    playerList.add(addPlayer.networkID);
+                }else if(object instanceof Network.RemovePlayer){
+                    Network.RemovePlayer removePlayer = (Network.RemovePlayer) object;
+                    showMessage("PlayerID "+removePlayer.networkID+" removed.");
+                    playerList.remove((Integer)removePlayer.networkID);
+                }else if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
                     pendingAddedEntities.add(addEntity);
+                }else if(object instanceof Network.RemoveEntity){
+                    Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
+                    pendingRemovedEntities.add(removeEntity);
                 }else if(object instanceof Network.AssignEntity){
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
                     conVars.set("sv_velocity",assign.velocity);
                     mapHeight = assign.mapHeight;
                     mapWidth = assign.mapWidth;
-                }else if(object instanceof Network.FullEntityUpdate){
-                    Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
-                    pendingReceivedStates.add(fullUpdate);
-                    //System.out.println("Received full update");
+                    playerList = assign.playerList;
                 }else if(object instanceof String){
                     String command = (String) object;
                     consoleFrame.giveCommand(command);
@@ -293,13 +363,22 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     private void createAttackVisual(){
-        if(System.nanoTime()-lastAttackDone < ATTACK_DELAY){
+        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(ATTACK_DELAY)){
             return;
         }
         lastAttackDone = System.nanoTime();
         Entity e = stateSnapshot.get(playerID);
-        float originX = e.x+e.width/2;
-        float originY = e.y+e.height/2;
+
+        float originX = 0;
+        float originY = 0;
+
+        switch(e.heading){
+            case NORTH: originX = e.x+e.width/2; originY = e.y+e.height; break;
+            case SOUTH: originX = e.x+e.width/2; originY = e.y; break;
+            case WEST: originX = e.x; originY = e.y+e.height/2; break;
+            case EAST: originX = e.x+e.width; originY = e.y+e.height/2; break;
+        }
+
         float targetX = e.x+e.width/2;
         float targetY = e.y+e.height/2;
         switch (e.heading){
@@ -342,8 +421,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     private void moveEntity(Entity e, Network.UserInput input){
-        float deltaX = 0;
-        float deltaY = 0;
+        double deltaX = 0;
+        double deltaY = 0;
         if(input.buttons.contains(Enums.Buttons.UP)){
             deltaY = conVars.get("sv_velocity") *input.msec;
             e.heading = Enums.Heading.NORTH;
@@ -379,16 +458,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     private void printStateHistory(){
-        System.out.println("#State History:");
+        showMessage("#State History:");
         int index = 0;
         Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
         for(Network.FullEntityUpdate state :stateHistoryCopy){
-            System.out.println(index+"> Time:"+state.serverTime+" InputID:"+state.lastProcessedInputID+" EntityCount:"+state.entities.size());
+            showMessage(index + "> Time:" + state.serverTime + " InputID:" + state.lastProcessedInputID + " EntityCount:" + state.entities.size());
             index++;
         }
     }
 
-    private void createStateSnapshot(float clientTime){
+    private void createStateSnapshot(double clientTime){
 
         //printStateHistory();
         //If interp delay is 0 we simply copy the latest authorative state and run clientside prediction on that
@@ -404,7 +483,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             return;
         }
 
-        float renderTime = clientTime-conVars.get("cl_interp");
+        double renderTime = clientTime-conVars.get("cl_interp");
 
         //Copy this because it's modified from network thread
         Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
@@ -440,7 +519,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             System.out.println("Interp interval:"+(interpTo.serverTime - interpFrom.serverTime));
             */
 
-            float interpAlpha;
+            double interpAlpha;
             if(interpTo.serverTime - interpFrom.serverTime != 0){
                 interpAlpha = (renderTime - interpFrom.serverTime) / (interpTo.serverTime - interpFrom.serverTime);
             }else{
@@ -455,7 +534,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
     }
 
-    private HashMap<Integer, Entity> interpolateStates(Network.FullEntityUpdate from, Network.FullEntityUpdate to, float alpha){
+    private HashMap<Integer, Entity> interpolateStates(Network.FullEntityUpdate from, Network.FullEntityUpdate to, double alpha){
         HashMap<Integer, Entity> interpEntities = new HashMap<Integer, Entity>();
         //FIXME if interpolation destination is missing entity we need to remove it from result
         for(int id: from.entities.keySet()){
@@ -481,14 +560,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         return interpEntities;
     }
 
-    private Network.Position interpolate(Entity from, Entity to, float alpha){
+    private Network.Position interpolate(Entity from, Entity to, double alpha){
         if(to == null){
             //If entity has dissapeared in next state we simply remove it without interpolation
             return null;
         }
         Network.Position interpPos = new Network.Position();
-        interpPos.x = from.x+(to.x-from.x)*alpha;
-        interpPos.y = from.y+(to.y-from.y)*alpha;
+        interpPos.x = (float)(from.x+(to.x-from.x)*alpha);
+        interpPos.y = (float)(from.y+(to.y-from.y)*alpha);
         return interpPos;
     }
 
@@ -536,6 +615,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             lastServerTime = authoritativeState.serverTime;
             //System.out.println("InputID:"+authoritativeState.lastProcessedInputID+" Time:"+authoritativeState.serverTime+" is now authoritative state.");
         }
+        //Entities will be added to latest state despite their add time
+        for(Network.AddEntity addEntity:pendingAddedEntities){
+            stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity);
+        }
+        //Entities will be removed from latest state despite their remove time
+        for(Network.RemoveEntity removeEntity:pendingRemovedEntities){
+            stateHistory.get(stateHistory.size()-1).entities.remove(removeEntity.networkID);
+        }
+        pendingAddedEntities.clear();
+        pendingRemovedEntities.clear();
     }
 
     private void doLogic(){
@@ -633,11 +722,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             //Render entities
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
                 Entity e = stateSnapshot.get(id);
-                if(id==playerID){
-                    shapeRenderer.setColor(0,0,1,1); //blue
+                if(playerList.contains(e.id)){
+                    shapeRenderer.setColor(0,0,1,1);
                 }else{
-                    shapeRenderer.setColor(1,1,1,1); //white
+                    shapeRenderer.setColor(1,1,1,1);
                 }
+                shapeRenderer.rect(e.x, e.y, e.width, e.height);
                 shapeRenderer.rect(e.x, e.y, e.width, e.height);
                 float health = 1-((float)e.health/e.maxHealth);
                 int healthWidth = (int) (e.width*health);
@@ -648,8 +738,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
             if(attackVisualsCopy.length>0){
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                shapeRenderer.setColor(1,1,1,1); //white
+                Gdx.gl20.glLineWidth(3);
+                shapeRenderer.setColor(1,0,0,1); //red
                 for(Line2D.Float line:attackVisualsCopy){
+                    //TODO getting nullpointers here when spamming attack for some time
                     shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
                 }
                 shapeRenderer.end();
@@ -665,10 +757,24 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         statusData.currentInputRequest = currentInputRequest;
         statusData.inputQueue = inputQueue.size();
 
-        //fpsLogger.log();
-
         if((System.nanoTime()-renderStart)/1000000f>30 && conVars.getBool("cl_show_performance_warnings")){
             showMessage("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
+        }
+    }
+
+    /*private void drawLine(SpriteBatch batch, int x1, int y1, int x2, int y2, int thickness) {
+        int dx = x2-x1;
+        int dy = y2-y1;
+        float dist = (float)Math.sqrt(dx*dx + dy*dy);
+        float rad = (float)Math.atan2(dy, dx);
+        batch.draw(whiteTexture,x1,y1,)
+        batch.draw(whiteTexture, x1, y1, dist, thickness, 0, 0, rad);
+    }*/
+
+    private void printPlayerList(){
+        showMessage("#Playerlist#");
+        for(int id:playerList){
+            showMessage("ID:"+id);
         }
     }
 
@@ -702,6 +808,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
         if(character == 'o'){
             sendUDP(new Network.TestPacket());
+        }
+        if(character == 'e'){
+            printStateHistory();
+        }
+        if(character == 'r'){
+            printPlayerList();
         }
         if(character == 'w'){
             boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
@@ -764,48 +876,32 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         if(character == '2'){
             showStatusWindow();
         }
-        /*
-        if(character == '0'){
-            showDebug = !showDebug;
-        }
-        if(character == '+'){
-            interpDelay += 0.05;
-            System.out.println("Interpolation delay now:"+interpDelay);
-        }
-        if(character == '-'){
-            interpDelay -= 0.05;
-            if(interpDelay<0){
-                interpDelay = 0;
-            }
-            System.out.println("Interpolation delay now:"+interpDelay);
-        }
-        if (character == '1') {
-            if(inputUpdateRate <=1){
-                inputUpdateRate /= 2;
-            }else{
-                inputUpdateRate--;
-            }
 
-        }
-        if (character == '2') {
-            if(inputUpdateRate <1){
-                inputUpdateRate *= 2;
-                if(inputUpdateRate > 1){
-                    inputUpdateRate = 1;
-                }
-            }else{
-                inputUpdateRate++;
-            }
-        }
         if (character == '3') {
-            useClientSidePrediction = !useClientSidePrediction;
-            System.out.println("UseClientSidePrediction:"+useClientSidePrediction);
+            conVars.toggleVar("cl_clientside_prediction");
+            showMessage("UseClientSidePrediction:" + conVars.getBool("cl_clientside_prediction"));
         }
         if (character == '4') {
-            compressInput = !compressInput;
-            System.out.println("CompressInput:"+compressInput);
+            conVars.toggleVar("cl_compress_input");
+            showMessage("CompressInput:" + conVars.getBool("cl_compress_input"));
         }
-        */
+        if(character == '0'){
+            conVars.toggleVar("cl_show_debug");
+            showMessage("Show debug:" + conVars.getBool("cl_show_debug"));
+        }
+
+        if(character == '+'){
+            conVars.addToVar("cl_interp",0.05);
+            showMessage("Interpolation delay now:" + conVars.get("cl_interp"));
+        }
+        if(character == '-'){
+            conVars.addToVar("cl_interp",-0.05);
+            if(conVars.get("cl_interp")<0){
+                conVars.set("cl_interp",0);
+            }
+            showMessage("Interpolation delay now:" + conVars.get("cl_interp"));
+        }
+
         return false;
     }
 

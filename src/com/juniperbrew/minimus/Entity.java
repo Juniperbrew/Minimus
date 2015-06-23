@@ -1,3 +1,5 @@
+package com.juniperbrew.minimus;
+
 import java.awt.geom.Rectangle2D;
 
 /**

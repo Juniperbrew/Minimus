@@ -1,3 +1,5 @@
+package com.juniperbrew.minimus.windows;
+
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
@@ -5,7 +7,7 @@ import javax.swing.*;
 /**
  * Created by Juniperbrew on 20.6.2015.
  */
-class ClientStatusFrame extends JFrame {
+public class ClientStatusFrame extends JFrame {
 
     JLabel runtimeLabel = new JLabel();
     JLabel fps = new JLabel();

@@ -1,5 +1,11 @@
+package com.juniperbrew.minimus;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
+import com.juniperbrew.minimus.components.Component;
+import com.juniperbrew.minimus.components.Heading;
+import com.juniperbrew.minimus.components.Health;
+import com.juniperbrew.minimus.components.Position;
 
 import javax.jws.soap.SOAPBinding;
 import java.util.ArrayList;
@@ -28,10 +34,18 @@ public class Network {
         kryo.register(UserInputs.class);
         kryo.register(FullEntityUpdate.class);
         kryo.register(AddEntity.class);
+        kryo.register(RemoveEntity.class);
         kryo.register(Entity.class);
         kryo.register(Enums.Buttons.class);
         kryo.register(Enums.Heading.class);
         kryo.register(EnumSet.class);
+        kryo.register(com.juniperbrew.minimus.components.Position.class);
+        kryo.register(Heading.class);
+        kryo.register(Health.class);
+        kryo.register(EntityComponentsUpdate.class);
+        kryo.register(PlayerList.class);
+        kryo.register(AddPlayer.class);
+        kryo.register(RemovePlayer.class);
     }
 
     public static class Message{
@@ -45,7 +59,7 @@ public class Network {
     public static class UserInput implements Comparable<UserInput>{
         public int inputID;
         public short msec;
-        EnumSet<Enums.Buttons> buttons = EnumSet.allOf(Enums.Buttons.class);
+        public EnumSet<Enums.Buttons> buttons = EnumSet.allOf(Enums.Buttons.class);
 
         @Override
         public int compareTo(UserInput o) {
@@ -57,7 +71,7 @@ public class Network {
     }
 
     public static class UserInputs{
-        ArrayList<UserInput> inputs;
+        public ArrayList<UserInput> inputs;
     }
 
     public static class TestPacket{
@@ -74,11 +88,17 @@ public class Network {
         public float velocity;
         public int mapHeight;
         public int mapWidth;
+        public ArrayList<Integer> playerList;
     }
 
     public static class AddEntity{
-        public int networkID;
+        public float serverTime;
         public Entity entity;
+    }
+
+    public static class RemoveEntity{
+        public float serverTime;
+        public int networkID;
     }
 
     public static class FullEntityUpdate implements Comparable<FullEntityUpdate>{
@@ -94,17 +114,28 @@ public class Network {
         }
     }
 
-    public static class EntityPositionUpdate implements Comparable<EntityPositionUpdate>{
+    public static class EntityPositionUpdate{
         public float serverTime;
         public int lastProcessedInputID;
         public HashMap<Integer,Position> changedEntityPositions;
+    }
 
-        @Override
-        public int compareTo(EntityPositionUpdate o) {
-            Float me = serverTime;
-            Float other = o.serverTime;
-            return me.compareTo(other);
-        }
+    public static class EntityComponentsUpdate{
+        public float serverTime;
+        public int lastProcessedInputID;
+        public HashMap<Integer,ArrayList<Component>> changedEntityComponents;
+    }
+
+    public static class PlayerList{
+        public ArrayList<Integer> playerList;
+    }
+
+    public static class AddPlayer{
+        public int networkID;
+    }
+
+    public static class RemovePlayer{
+        public int networkID;
     }
 
     public static class Position{

@@ -1,3 +1,5 @@
+package com.juniperbrew.minimus;
+
 /**
  * Created by Juniperbrew on 31.1.2015.
  */

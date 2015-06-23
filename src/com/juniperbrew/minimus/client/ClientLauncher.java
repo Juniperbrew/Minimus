@@ -1,3 +1,5 @@
+package com.juniperbrew.minimus.client;
+
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 
