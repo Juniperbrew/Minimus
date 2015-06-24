@@ -46,6 +46,7 @@ public class Network {
         kryo.register(PlayerList.class);
         kryo.register(AddPlayer.class);
         kryo.register(RemovePlayer.class);
+        kryo.register(EntityAttacking.class);
     }
 
     public static class Message{
@@ -54,6 +55,11 @@ public class Network {
 
     public static class UpdateRate{
         public int updateRate;
+    }
+
+    public static class EntityAttacking{
+        public int id;
+        public int weapon;
     }
 
     public static class UserInput implements Comparable<UserInput>{

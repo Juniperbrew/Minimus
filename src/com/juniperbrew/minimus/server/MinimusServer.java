@@ -269,6 +269,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 fullUpdate.entities = getNetworkedEntityList(entities);
                 connection.sendTCP(fullUpdate);
 
+                StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
+                connectionStatus.put(connection, dataUsage);
+
                 int networkID = getNextNetworkID();
                 int width = 50;
                 int height = 50;
@@ -280,12 +283,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 addEntity(newPlayer);
 
                 playerList.put(connection,networkID);
-                StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
-                connectionStatus.put(connection, dataUsage);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
                 Network.AddPlayer addPlayer = new Network.AddPlayer();
                 addPlayer.networkID = networkID;
-                server.sendToAllExceptTCP(connection.getID(), addPlayer);
+                sendTCPtoAllExcept(connection,addPlayer);
 
                 Network.AssignEntity assign = new Network.AssignEntity();
                 assign.networkID = networkID;
@@ -304,7 +305,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 connectionStatus.get(connection).disconnected();
                 Network.RemovePlayer removePlayer = new Network.RemovePlayer();
                 removePlayer.networkID = networkID;
-                server.sendToAllExceptTCP(connection.getID(),removePlayer);
+                sendTCPtoAllExcept(connection,removePlayer);
             }
 
             public void received (Connection connection, Object object) {
@@ -356,6 +357,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }else{
             lastAttackDone.put(connection,System.nanoTime());
             showMessage("Entity ID" + playerList.get(connection) + " is attacking");
+            Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
+            entityAttacking.id = playerList.get(connection);
+            entityAttacking.weapon = 0;
+            sendTCPtoAllExcept(connection,entityAttacking);
+
             ServerEntity e = entities.get(playerList.get(connection));
 
             float originX = 0;
@@ -451,6 +457,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         statusData.addBytesSent(bytesSent);
     }
 
+    private void sendTCPtoAllExcept(Connection connection, Object o){
+        for(Connection c:server.getConnections()){
+            if(!c.equals(connection)){
+                sendTCP(c,o);
+            }
+        }
+    }
+    private void sendTCPtoAll(Object o){
+        for(Connection c:server.getConnections()){
+            sendTCP(c,o);
+        }
+    }
+
     private void updateClients(){
         if(conVars.getInt("sv_update_type")==0){
             Network.FullEntityUpdate update = new Network.FullEntityUpdate();
@@ -543,7 +562,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Network.AddEntity addEntity = new Network.AddEntity();
         addEntity.entity=e.getEntity();
         addEntity.serverTime=getServerTime();
-        server.sendToAllTCP(addEntity);
+        sendTCPtoAll(addEntity);
     }
 
     private void removeEntity(int networkID){
@@ -558,7 +577,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Network.RemoveEntity removeEntity = new Network.RemoveEntity();
         removeEntity.networkID=networkID;
         removeEntity.serverTime=getServerTime();
-        server.sendToAllTCP(removeEntity);
+        sendTCPtoAll(removeEntity);
     }
 
     private void moveNPC(float delta){
@@ -750,6 +769,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glLineWidth(3);
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,0,0,1);
         shapeRenderer.rect(0, 0, MAP_WIDTH, MAP_HEIGHT);
@@ -773,7 +794,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
         if(attackVisualsCopy.length>0){
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            Gdx.gl20.glLineWidth(3);
             shapeRenderer.setColor(1,0,0,1); //red
             for(Line2D.Float line:attackVisualsCopy){
                 shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);

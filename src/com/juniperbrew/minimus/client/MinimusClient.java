@@ -297,6 +297,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     }else{
                         showMessage("Received entity component update but there is no complete state to apply it to");
                     }
+                }else if(object instanceof Network.EntityAttacking){
+                    Network.EntityAttacking entityAttacking = (Network.EntityAttacking) object;
+                    showMessage("PlayerID "+entityAttacking.id+" attacking with weapon "+entityAttacking.weapon);
+                    //TODO try adding the attacks to different states
+                    createAttackVisual(authoritativeState.entities.get(entityAttacking.id));
                 }else if(object instanceof Network.AddPlayer){
                     Network.AddPlayer addPlayer = (Network.AddPlayer) object;
                     showMessage("PlayerID "+addPlayer.networkID+" added.");
@@ -304,7 +309,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 }else if(object instanceof Network.RemovePlayer){
                     Network.RemovePlayer removePlayer = (Network.RemovePlayer) object;
                     showMessage("PlayerID "+removePlayer.networkID+" removed.");
-                    playerList.remove((Integer)removePlayer.networkID);
+                    playerList.remove((Integer) removePlayer.networkID);
                 }else if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
                     pendingAddedEntities.add(addEntity);
@@ -358,16 +363,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             pendingInputPacket.add(input);
         }
         if(buttons.contains(Enums.Buttons.SPACE)){
-            createAttackVisual();
+            playerAttack();
         }
     }
 
-    private void createAttackVisual(){
+    private void playerAttack(){
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(ATTACK_DELAY)){
             return;
         }
         lastAttackDone = System.nanoTime();
-        Entity e = stateSnapshot.get(playerID);
+        createAttackVisual(stateSnapshot.get(playerID));
+    }
+
+    private void createAttackVisual(Entity e){
 
         float originX = 0;
         float originY = 0;
@@ -693,6 +701,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glLineWidth(3);
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,0,0,1);
@@ -738,7 +747,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
             if(attackVisualsCopy.length>0){
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                Gdx.gl20.glLineWidth(3);
                 shapeRenderer.setColor(1,0,0,1); //red
                 for(Line2D.Float line:attackVisualsCopy){
                     //TODO getting nullpointers here when spamming attack for some time
