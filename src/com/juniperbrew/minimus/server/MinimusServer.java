@@ -346,7 +346,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             Network.UserInput[] inputListCopy = inputList.toArray(new Network.UserInput[inputList.size()]);
 
             for(Network.UserInput input : inputListCopy){
-                System.out.println("Processing input with ID:"+input.inputID+" duration:"+input.msec);
                 sharedMethods.applyInput(e,input);
                 //movePlayer(e, input);
                 if(input.buttons.contains(Enums.Buttons.SPACE)){
@@ -365,7 +364,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             return;
         }else{
             lastAttackDone.put(connection,System.nanoTime());
-            showMessage("Entity ID" + playerList.get(connection) + " is attacking");
             Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
             entityAttacking.id = playerList.get(connection);
             entityAttacking.weapon = 0;
@@ -380,7 +378,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 ServerEntity target = entities.get(id);
                 if(target.getBounds().intersectsLine(hitScan) && target != e){
                     target.reduceHealth(10);
-                    showMessage("Entity ID" + id + " now has " + target.getHealth() + " health.");
                     if(target.getHealth()<=0){
                         showMessage("Entity ID" + id + " is dead.");
                         deadEntities.add(id);
@@ -1041,7 +1038,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void healthChanged(int id) {
-        showMessage("Entity "+id+" health changed");
         if(!healthChangedEntities.contains(id)){
             healthChangedEntities.add(id);
         }

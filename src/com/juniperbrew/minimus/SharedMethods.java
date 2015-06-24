@@ -55,7 +55,7 @@ public class SharedMethods {
                 attackVisuals.remove(hitScan);
             }
         };
-        timer.schedule(task,1000);
+        timer.schedule(task,Tools.secondsToMilli(conVars.get("sv_attack_visual_timer")));
         return hitScan;
     }
 

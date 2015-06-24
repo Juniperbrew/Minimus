@@ -83,7 +83,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private Network.FullEntityUpdate interpTo;//private Network.EntityUpdate interpTo;
 
     private ArrayList<Network.AddEntity> pendingAddedEntities;
-    private ArrayList<Network.RemoveEntity> pendingRemovedEntities;
+    private ArrayList<Integer> pendingRemovedEntities;
 
 
     int playerID;
@@ -340,7 +340,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
                 }else if(object instanceof Network.EntityAttacking){
                     Network.EntityAttacking entityAttacking = (Network.EntityAttacking) object;
-                    showMessage("PlayerID "+entityAttacking.id+" attacking with weapon "+entityAttacking.weapon);
                     //TODO try adding the attacks to different states
                     Entity attackingEntity = authoritativeState.entities.get(entityAttacking.id);
                     sharedMethods.createAttackVisual(attackingEntity, attackVisuals);
@@ -362,13 +361,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     Network.RemovePlayer removePlayer = (Network.RemovePlayer) object;
                     showMessage("PlayerID "+removePlayer.networkID+" removed.");
                     playerList.remove((Integer) removePlayer.networkID);
+                    pendingRemovedEntities.add(removePlayer.networkID);
                     score.removePlayer(removePlayer.networkID);
                 }else if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
                     pendingAddedEntities.add(addEntity);
                 }else if(object instanceof Network.RemoveEntity){
                     Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
-                    pendingRemovedEntities.add(removeEntity);
+                    pendingRemovedEntities.add(removeEntity.networkID);
                 }else if(object instanceof Network.AssignEntity){
                     System.out.println("assign");
                     Network.AssignEntity assign = (Network.AssignEntity) object;
@@ -660,8 +660,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity);
         }
         //Entities will be removed from latest state despite their remove time
-        for(Network.RemoveEntity removeEntity:pendingRemovedEntities){
-            stateHistory.get(stateHistory.size()-1).entities.remove(removeEntity.networkID);
+        for(int id:pendingRemovedEntities){
+            stateHistory.get(stateHistory.size()-1).entities.remove(id);
         }
         pendingAddedEntities.clear();
         pendingRemovedEntities.clear();

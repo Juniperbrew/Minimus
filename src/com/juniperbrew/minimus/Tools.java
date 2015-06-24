@@ -36,6 +36,10 @@ public class Tools {
         return milliTimeStamp.format(new Date(millis));
     }
 
+    public static int secondsToMilli(double seconds){
+        return (int) (seconds*1000);
+    }
+
     public static double clamp(double value, double minValue,double maxValue){
         if(value < minValue){
             value = minValue;
