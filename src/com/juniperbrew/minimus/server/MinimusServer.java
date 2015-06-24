@@ -367,16 +367,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 case EAST: originX = e.getX()+e.width; originY = e.getY()+e.height/2; break;
             }
 
-            double targetX = e.getX()+e.width/2;
-            double targetY = e.getY()+e.height/2;
+            float targetX = e.getX()+e.width/2;
+            float targetY = e.getY()+e.height/2;
             switch (e.getHeading()){
                 case NORTH: targetY += 200; break;
                 case SOUTH: targetY -= 200; break;
                 case EAST: targetX += 200; break;
                 case WEST: targetX -= 200; break;
             }
-            final Line2D.Float hitScan = new Line2D.Float((float)originX,(float)originY,(float)targetX,(float)targetY);
-            ArrayList<Integer> deadEntities = new ArrayList<Integer>();
+            final Line2D.Float hitScan = new Line2D.Float(originX,originY,targetX,targetY);
+            ArrayList<Integer> deadEntities = new ArrayList<>();
             for(int id:entities.keySet()){
                 ServerEntity target = entities.get(id);
                 if(target.getBounds().intersectsLine(hitScan) && target != e){
