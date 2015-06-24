@@ -3,3 +3,4 @@ build/**
 wireshark.bat
 .gradle/**
 *.iml
+serverlist.txt

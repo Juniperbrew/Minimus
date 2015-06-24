@@ -6,6 +6,9 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
@@ -37,8 +40,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -112,20 +113,35 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
     SharedMethods sharedMethods;
 
+    Texture spriteSheet;
+
+    TextureRegion up;
+    TextureRegion down;
+    TextureRegion right;
+    SpriteBatch batch;
+
     public MinimusClient(String ip){
         serverIP = ip;
     }
 
     private void initialize(){
-        inputQueue = new ArrayList<Network.UserInput>();
+        inputQueue = new ArrayList<>();
         shapeRenderer = new ShapeRenderer();
-        stateHistory = new ArrayList<Network.FullEntityUpdate>();
-        pendingReceivedStates = new ArrayList<Network.FullEntityUpdate>();
-        pendingInputPacket = new ArrayList<Network.UserInput>();
-        pendingAddedEntities = new ArrayList<Network.AddEntity>();
+        stateHistory = new ArrayList<>();
+        pendingReceivedStates = new ArrayList<>();
+        pendingInputPacket = new ArrayList<>();
+        pendingAddedEntities = new ArrayList<>();
         pendingRemovedEntities = new ArrayList<>();
         playerList = new ArrayList<>();
-        attackVisuals = new ArrayList<Line2D.Float>();
+        attackVisuals = new ArrayList<>();
+        spriteSheet = new Texture(Gdx.files.internal("spritesheetAlpha.png"));
+        System.out.println("Spritesheet width:" +spriteSheet.getWidth());
+        System.out.println("Spritesheet height:" +spriteSheet.getHeight());
+        down = new TextureRegion(spriteSheet,171,129,16,22);
+        up = new TextureRegion(spriteSheet,526,133,16,22);
+        right = new TextureRegion(spriteSheet,857,128,16,23);
+
+        batch = new SpriteBatch();
     }
 
     private void logIntervalElapsed(){
@@ -658,6 +674,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
     }
 
+    private TextureRegion getTexture(Enums.Heading heading){
+        switch(heading){
+            case NORTH: return up;
+            case SOUTH: return down;
+            case WEST: if(!right.isFlipX()){right.flip(true,false);}return right;
+            case EAST: if(right.isFlipX()){right.flip(true,false);}return right;
+        }
+        return null;
+    }
+
     @Override
     public void render() {
         if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
@@ -672,6 +698,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         doLogic();
         centerCameraOnPlayer();
         shapeRenderer.setProjectionMatrix(camera.combined);
+        batch.setProjectionMatrix(camera.combined);
 
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -684,6 +711,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         shapeRenderer.end();
 
         statusFrame.update();
+
 
         if(stateSnapshot !=null){
             if(conVars.getBool("cl_show_debug")) {
@@ -706,17 +734,28 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             //Render entities
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
                 Entity e = stateSnapshot.get(id);
+                float health = 1-((float)e.getHealth()/e.maxHealth);
                 if(playerList.contains(e.id)){
-                    shapeRenderer.setColor(0,0,1,1);
+                    batch.begin();
+                    batch.draw(getTexture(e.getHeading()), e.getX(), e.getY(), e.width, e.height);
+                    batch.end();
+                    int healthbarWidth = e.width+20;
+                    int healthbarHeight = 10;
+                    int healthbarXOffset = -10;
+                    int healthbarYOffset = e.width+10;
+                    shapeRenderer.setColor(0,1,0,1);
+                    shapeRenderer.rect(e.getX()+healthbarXOffset, e.getY()+healthbarYOffset, healthbarWidth,healthbarHeight);
+                    shapeRenderer.setColor(1,0,0,1);
+                    float healthWidth = healthbarWidth*health;
+                    shapeRenderer.rect(e.getX()+healthbarXOffset, e.getY()+healthbarYOffset, healthWidth,healthbarHeight);
                 }else{
                     shapeRenderer.setColor(1,1,1,1);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                    float healthWidth = e.width*health;
+                    shapeRenderer.setColor(1,0,0,1); //red
+                    shapeRenderer.rect(e.getX(),e.getY(),healthWidth,e.height);
                 }
-                shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
-                shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
-                float health = 1-((float)e.getHealth()/e.maxHealth);
-                int healthWidth = (int) (e.width*health);
-                shapeRenderer.setColor(1,0,0,1); //red
-                shapeRenderer.rect(e.getX(),e.getY(),healthWidth,e.height);
             }
             shapeRenderer.end();
             Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
@@ -744,15 +783,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             showMessage("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
         }
     }
-
-    /*private void drawLine(SpriteBatch batch, int x1, int y1, int x2, int y2, int thickness) {
-        int dx = x2-x1;
-        int dy = y2-y1;
-        float dist = (float)Math.sqrt(dx*dx + dy*dy);
-        float rad = (float)Math.atan2(dy, dx);
-        batch.draw(whiteTexture,x1,y1,)
-        batch.draw(whiteTexture, x1, y1, dist, thickness, 0, 0, rad);
-    }*/
 
     private void printPlayerList(){
         showMessage("#Playerlist#");
