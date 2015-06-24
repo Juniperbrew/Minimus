@@ -4,14 +4,19 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.TreeMap;
 
 /**
  * Created by Juniperbrew on 20.6.2015.
  */
 public class ConVars {
 
-    private HashMap<String,Double> vars = new HashMap<>();
+    private TreeMap<String,Double> vars = new TreeMap<>();
 
     public ConVars(){
         readVars();
@@ -21,12 +26,16 @@ public class ConVars {
         return vars.containsKey(varName);
     }
 
-    public String getVarList(){
+    public String getVarDump(){
         StringBuilder list = new StringBuilder();
         for(String varName:vars.keySet()){
             list.append(varName + " = " + vars.get(varName)+"\n");
         }
         return list.toString();
+    }
+
+    public ArrayList<String> getVarList(){
+        return new ArrayList<>(vars.keySet());
     }
 
     public void set(String varName, double varValue){
