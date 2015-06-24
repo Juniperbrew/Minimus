@@ -2,11 +2,18 @@ package com.juniperbrew.minimus.client;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.juniperbrew.minimus.windows.ServerSelector;
+import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -15,17 +22,17 @@ public class ClientLauncher {
 
     static boolean useJFrame = false;
 
-    public static void main(String[] args) {
-
+    public void connect(String ip){
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
+        final MinimusClient minimusClient = new MinimusClient(ip);
+
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            final MinimusClient minimusClient = new MinimusClient(args[0]);
             frame.setTitle(minimusClient.getClass().getSimpleName());
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
@@ -64,7 +71,15 @@ public class ClientLauncher {
             frame.setLocation(frame.getX(), 0);
             frame.setVisible(true);
         }else{
-            new LwjglApplication(new MinimusClient(args[0]) ,cfg);
+            new LwjglApplication(minimusClient ,cfg);
         }
+    }
+
+    public void exit(){
+        System.exit(0);
+    }
+
+    public static void main(String[] args) throws IOException {
+        new ServerSelector(new ClientLauncher());
     }
 }
