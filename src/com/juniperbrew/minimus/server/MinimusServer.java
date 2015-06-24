@@ -19,6 +19,7 @@ import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
@@ -74,8 +75,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     HashMap<Connection,Long> lastAttackDone = new HashMap<>();
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
-    final long ATTACK_DELAY = (long) (0.3*1000000000);
-    Timer timer = new Timer();
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
     long logIntervalStarted;
@@ -99,10 +98,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     int pendingEntityAdds = 0;
     int pendingEntityRemovals = 0;
 
+    SharedMethods sharedMethods;
+
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         screenW = Gdx.graphics.getWidth();
         screenH = Gdx.graphics.getHeight();
+        sharedMethods = new SharedMethods(conVars,MAP_WIDTH,MAP_HEIGHT);
 
         for (int i = 0; i < 20; i++) {
             addNPC();
@@ -247,7 +249,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private HashMap<Integer,Entity> getNetworkedEntityList(HashMap<Integer,ServerEntity> serverEntities){
         HashMap<Integer,Entity> entities = new HashMap<>();
         for(int id:serverEntities.keySet()){
-            entities.put(id,serverEntities.get(id).getEntity());
+            entities.put(id,serverEntities.get(id).getNetworkEntity());
         }
         return entities;
     }
@@ -338,8 +340,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             Network.UserInput[] inputListCopy = inputList.toArray(new Network.UserInput[inputList.size()]);
 
             for(Network.UserInput input : inputListCopy){
-                //System.out.println("Processing input with ID:"+input.inputID+" duration:"+input.msec);
-                movePlayer(e, input);
+                System.out.println("Processing input with ID:"+input.inputID+" duration:"+input.msec);
+                sharedMethods.applyInput(e,input);
+                //movePlayer(e, input);
                 if(input.buttons.contains(Enums.Buttons.SPACE)){
                     attackWithEntity(connection);
                 }
@@ -352,7 +355,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void attackWithEntity(Connection connection){
         if(lastAttackDone.get(connection)==null){
             lastAttackDone.put(connection,System.nanoTime());
-        }else if(System.nanoTime()-lastAttackDone.get(connection)<ATTACK_DELAY){ //1 second attack delay
+        }else if(System.nanoTime()-lastAttackDone.get(connection)<Tools.secondsToNano(conVars.get("sv_attack_delay"))){ //1 second attack delay
             return;
         }else{
             lastAttackDone.put(connection,System.nanoTime());
@@ -364,24 +367,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
             ServerEntity e = entities.get(playerList.get(connection));
 
-            float originX = 0;
-            float originY = 0;
-            switch(e.getHeading()){
-                case NORTH: originX = e.getX()+e.width/2; originY = e.getY()+e.height; break;
-                case SOUTH: originX = e.getX()+e.width/2; originY = e.getY(); break;
-                case WEST: originX = e.getX(); originY = e.getY()+e.height/2; break;
-                case EAST: originX = e.getX()+e.width; originY = e.getY()+e.height/2; break;
-            }
+            final Line2D.Float hitScan = sharedMethods.createAttackVisual(e,attackVisuals);
 
-            float targetX = e.getX()+e.width/2;
-            float targetY = e.getY()+e.height/2;
-            switch (e.getHeading()){
-                case NORTH: targetY += 200; break;
-                case SOUTH: targetY -= 200; break;
-                case EAST: targetX += 200; break;
-                case WEST: targetX -= 200; break;
-            }
-            final Line2D.Float hitScan = new Line2D.Float(originX,originY,targetX,targetY);
             ArrayList<Integer> deadEntities = new ArrayList<>();
             for(int id:entities.keySet()){
                 ServerEntity target = entities.get(id);
@@ -404,14 +391,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     removeEntity(id);
                 }
             }
-            attackVisuals.add(hitScan);
-            TimerTask task = new TimerTask() {
-                @Override
-                public void run() {
-                    attackVisuals.remove(hitScan);
-                }
-            };
-            timer.schedule(task,1000);
         }
     }
 
@@ -560,7 +539,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         entities.put(e.id,e);
 
         Network.AddEntity addEntity = new Network.AddEntity();
-        addEntity.entity=e.getEntity();
+        addEntity.entity=e.getNetworkEntity();
         addEntity.serverTime=getServerTime();
         sendTCPtoAll(addEntity);
     }
@@ -642,25 +621,24 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         */
     }
 
-    private void movePlayer(ServerEntity e, Network.UserInput input){
+    /*private void movePlayer(ServerEntity e, Network.UserInput input){
         double deltaX = 0;
         double deltaY = 0;
         if(input.buttons.contains(Enums.Buttons.UP)){
             deltaY = conVars.get("sv_velocity") *input.msec;
-            e.setHeading(Enums.Heading.NORTH);
         }
         if(input.buttons.contains(Enums.Buttons.DOWN)){
             deltaY = -1* conVars.get("sv_velocity") *input.msec;
-            e.setHeading(Enums.Heading.SOUTH);
         }
         if(input.buttons.contains(Enums.Buttons.LEFT)){
             deltaX = -1* conVars.get("sv_velocity") *input.msec;
-            e.setHeading(Enums.Heading.WEST);
         }
         if(input.buttons.contains(Enums.Buttons.RIGHT)){
             deltaX = conVars.get("sv_velocity") *input.msec;
-            e.setHeading(Enums.Heading.EAST);
         }
+
+        SharedMethods.setHeading(e,input.buttons);
+
         if(conVars.getBool("sv_check_map_collisions")) {
             if (e.getX() + e.width + deltaX > MAP_WIDTH) {
                 deltaX = MAP_WIDTH - e.getX() - e.width;
@@ -679,7 +657,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         double newX = e.getX()+deltaX;
         double newY = e.getY()+deltaY;
         e.moveTo((float)newX,(float)newY);
-    }
+    }*/
 
     private int getNextNetworkID(){
         return networkIDCounter++;

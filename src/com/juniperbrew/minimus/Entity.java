@@ -7,13 +7,13 @@ import java.awt.geom.Rectangle2D;
  */
 public class Entity {
     public int id;
-    public float x;
-    public float y;
+    private float x;
+    private float y;
     public int width;
     public int height;
-    public int health;
+    private int health;
     public int maxHealth;
-    public Enums.Heading heading;
+    private Enums.Heading heading;
 
     public Entity(){
         this(-1,-1,-1);
@@ -50,6 +50,31 @@ public class Entity {
         health = 100;
         maxHealth = 100;
         heading = Enums.Heading.SOUTH;
+    }
+
+    public Enums.Heading getHeading(){
+        return heading;
+    }
+    public void setHeading(Enums.Heading heading){
+        this.heading = heading;
+    }
+    public float getX(){
+        return x;
+    }
+    public float getY(){
+        return y;
+    }
+    public int getHealth(){
+        return health;
+    }
+
+    public void moveTo(float newX, float newY){
+        x = newX;
+        y = newY;
+    }
+
+    public void setHealth(int health){
+        this.health = health;
     }
 
     public Rectangle2D.Float getBounds(){

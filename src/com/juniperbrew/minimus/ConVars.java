@@ -89,7 +89,6 @@ public class ConVars {
             while((line = reader.readLine()) != null){
                 String[] splits = line.split(" ");
                 vars.put(splits[0], Double.valueOf(splits[1]));
-                System.out.println(line);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();

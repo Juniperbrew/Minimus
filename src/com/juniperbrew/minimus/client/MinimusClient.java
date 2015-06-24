@@ -15,11 +15,13 @@ import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
+import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -84,9 +86,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     int playerID;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ArrayList<Line2D.Float> attackVisuals;
-    Timer timer;
-    final float ATTACK_DELAY = 0.3f;
     long lastAttackDone;
+
+    Network.UserInput previousInput;
 
     long lastPingRequest;
     long renderStart;
@@ -108,6 +110,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     int mapHeight;
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
+    SharedMethods sharedMethods;
 
     public MinimusClient(String ip){
         serverIP = ip;
@@ -123,7 +126,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         pendingRemovedEntities = new ArrayList<>();
         playerList = new ArrayList<>();
         attackVisuals = new ArrayList<Line2D.Float>();
-        timer = new Timer();
     }
 
     private void logIntervalElapsed(){
@@ -217,8 +219,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             if(changedEntityPositions.containsKey(id)){
                 Network.Position pos = changedEntityPositions.get(id);
                 Entity movedEntity = new Entity(e);
-                movedEntity.x = pos.x;
-                movedEntity.y = pos.y;
+                movedEntity.moveTo(pos.x,pos.y);
                 newEntityList.put(id,movedEntity);
             }else{
                 newEntityList.put(id,e);
@@ -243,16 +244,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 for(Component component:components){
                     if(component instanceof Position){
                         Position pos = (Position) component;
-                        changedEntity.x = pos.x;
-                        changedEntity.y = pos.y;
+                        changedEntity.moveTo(pos.x,pos.y);
                     }
                     if(component instanceof Heading) {
                         Heading heading = (Heading) component;
-                        changedEntity.heading = heading.heading;
+                        changedEntity.setHeading(heading.heading);
                     }
                     if(component instanceof Health) {
                         Health health = (Health) component;
-                        changedEntity.health = health.health;
+                        changedEntity.setHealth(health.health);
                     }
                 }
                 newEntityList.put(id,changedEntity);
@@ -301,7 +301,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     Network.EntityAttacking entityAttacking = (Network.EntityAttacking) object;
                     showMessage("PlayerID "+entityAttacking.id+" attacking with weapon "+entityAttacking.weapon);
                     //TODO try adding the attacks to different states
-                    createAttackVisual(authoritativeState.entities.get(entityAttacking.id));
+                    Entity attackingEntity = authoritativeState.entities.get(entityAttacking.id);
+                    sharedMethods.createAttackVisual(attackingEntity,attackVisuals);
                 }else if(object instanceof Network.AddPlayer){
                     Network.AddPlayer addPlayer = (Network.AddPlayer) object;
                     showMessage("PlayerID "+addPlayer.networkID+" added.");
@@ -323,6 +324,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     mapHeight = assign.mapHeight;
                     mapWidth = assign.mapWidth;
                     playerList = assign.playerList;
+                    sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
                 }else if(object instanceof String){
                     String command = (String) object;
                     consoleFrame.giveCommand(command);
@@ -368,43 +370,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     }
 
     private void playerAttack(){
-        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(ATTACK_DELAY)){
+        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
         lastAttackDone = System.nanoTime();
-        createAttackVisual(stateSnapshot.get(playerID));
-    }
-
-    private void createAttackVisual(Entity e){
-
-        float originX = 0;
-        float originY = 0;
-
-        switch(e.heading){
-            case NORTH: originX = e.x+e.width/2; originY = e.y+e.height; break;
-            case SOUTH: originX = e.x+e.width/2; originY = e.y; break;
-            case WEST: originX = e.x; originY = e.y+e.height/2; break;
-            case EAST: originX = e.x+e.width; originY = e.y+e.height/2; break;
-        }
-
-        float targetX = e.x+e.width/2;
-        float targetY = e.y+e.height/2;
-        switch (e.heading){
-            case NORTH: targetY += 200; break;
-            case SOUTH: targetY -= 200; break;
-            case EAST: targetX += 200; break;
-            case WEST: targetX -= 200; break;
-        }
-
-        final Line2D.Float hitScan = new Line2D.Float(originX,originY,targetX,targetY);
-        attackVisuals.add(hitScan);
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                attackVisuals.remove(hitScan);
-            }
-        };
-        timer.schedule(task,1000);
+        sharedMethods.createAttackVisual(stateSnapshot.get(playerID), attackVisuals);
     }
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
@@ -424,45 +394,51 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.print("Predicting player inputID:" + input.inputID);
-            moveEntity(state.get(playerID),input);
+            sharedMethods.applyInput(state.get(playerID),input);
         }
     }
 
-    private void moveEntity(Entity e, Network.UserInput input){
-        double deltaX = 0;
-        double deltaY = 0;
-        if(input.buttons.contains(Enums.Buttons.UP)){
-            deltaY = conVars.get("sv_velocity") *input.msec;
-            e.heading = Enums.Heading.NORTH;
-        }
-        if(input.buttons.contains(Enums.Buttons.DOWN)){
-            deltaY = -1* conVars.get("sv_velocity") *input.msec;
-            e.heading = Enums.Heading.SOUTH;
-        }
-        if(input.buttons.contains(Enums.Buttons.LEFT)){
-            deltaX = -1* conVars.get("sv_velocity") *input.msec;
-            e.heading = Enums.Heading.WEST;
-        }
-        if(input.buttons.contains(Enums.Buttons.RIGHT)){
-            deltaX = conVars.get("sv_velocity") *input.msec;
-            e.heading = Enums.Heading.EAST;
-        }
-        if(conVars.getBool("cl_check_map_collisions")){
-            if(e.x+e.width+deltaX>mapWidth){
-                deltaX = mapWidth-e.x-e.width;
-            }
-            if(e.x+deltaX<0){
-                deltaX = 0-e.x;
-            }
-            if(e.y+e.height+deltaY>mapHeight){
-                deltaY = mapHeight-e.y-e.height;
-            }
-            if(e.y+deltaY<0){
-                deltaY = 0-e.y;
+    private void setHeading(ServerEntity e, EnumSet<Enums.Buttons> buttons){
+
+        if(buttons.contains(Enums.Buttons.UP)){
+            if(buttons.contains(Enums.Buttons.LEFT)&&e.getHeading()== Enums.Heading.WEST){
+                e.setHeading(Enums.Heading.WEST);
+            }else if(buttons.contains(Enums.Buttons.RIGHT)&&e.getHeading()== Enums.Heading.EAST){
+                e.setHeading(Enums.Heading.EAST);
+            }else{
+                e.setHeading(Enums.Heading.NORTH);
             }
         }
-        e.x += deltaX;
-        e.y += deltaY;
+
+        if(buttons.contains(Enums.Buttons.DOWN)){
+            if(buttons.contains(Enums.Buttons.LEFT)&&e.getHeading()== Enums.Heading.WEST){
+                e.setHeading(Enums.Heading.WEST);
+            }else if(buttons.contains(Enums.Buttons.RIGHT)&&e.getHeading()== Enums.Heading.EAST){
+                e.setHeading(Enums.Heading.EAST);
+            }else{
+                e.setHeading(Enums.Heading.SOUTH);
+            }
+        }
+
+        if(buttons.contains(Enums.Buttons.LEFT)){
+            if(buttons.contains(Enums.Buttons.UP)&&e.getHeading()== Enums.Heading.NORTH){
+                e.setHeading(Enums.Heading.NORTH);
+            }else if(buttons.contains(Enums.Buttons.DOWN)&&e.getHeading()== Enums.Heading.SOUTH){
+                e.setHeading(Enums.Heading.SOUTH);
+            }else{
+                e.setHeading(Enums.Heading.WEST);
+            }
+        }
+
+        if(buttons.contains(Enums.Buttons.RIGHT)){
+            if(buttons.contains(Enums.Buttons.UP)&&e.getHeading()== Enums.Heading.NORTH){
+                e.setHeading(Enums.Heading.NORTH);
+            }else if(buttons.contains(Enums.Buttons.DOWN)&&e.getHeading()== Enums.Heading.SOUTH){
+                e.setHeading(Enums.Heading.SOUTH);
+            }else{
+                e.setHeading(Enums.Heading.EAST);
+            }
+        }
     }
 
     private void printStateHistory(){
@@ -553,8 +529,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 //System.out.println("Interpolating from ("+fromPos.x+","+fromPos.y+") to ("+toPos.x+","+toPos.y+") Result ("+interpPos.x+","+interpPos.y+")");
                 if (interpPos != null){
                     Entity interpEntity = new Entity(fromPos);
-                    interpEntity.x = interpPos.x;
-                    interpEntity.y = interpPos.y;
+                    interpEntity.moveTo(interpPos.x,interpPos.y);
                     interpEntities.put(id, interpEntity);
                 }
             }else{
@@ -574,8 +549,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             return null;
         }
         Network.Position interpPos = new Network.Position();
-        interpPos.x = (float)(from.x+(to.x-from.x)*alpha);
-        interpPos.y = (float)(from.y+(to.y-from.y)*alpha);
+        interpPos.x = (float)(from.getX()+(to.getX()-from.getX())*alpha);
+        interpPos.y = (float)(from.getY()+(to.getY()-from.getY())*alpha);
         return interpPos;
     }
 
@@ -715,15 +690,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
                 for (Entity e : interpFrom.entities.values()) {
-                    shapeRenderer.rect(e.x, e.y, 50, 50);
+                    shapeRenderer.rect(e.getX(), e.getY(), 50, 50);
                 }
                 shapeRenderer.setColor(0, 1, 0, 1); //green
                 for (Entity e : interpTo.entities.values()) {
-                    shapeRenderer.rect(e.x, e.y, 50, 50);
+                    shapeRenderer.rect(e.getX(), e.getY(), 50, 50);
                 }
                 shapeRenderer.setColor(0, 0, 1, 1); //blue
                 for (Entity e : authoritativeState.entities.values()) {
-                    shapeRenderer.rect(e.x, e.y, 50, 50);
+                    shapeRenderer.rect(e.getX(), e.getY(), 50, 50);
                 }
                 shapeRenderer.end();
             }
@@ -736,12 +711,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                 }else{
                     shapeRenderer.setColor(1,1,1,1);
                 }
-                shapeRenderer.rect(e.x, e.y, e.width, e.height);
-                shapeRenderer.rect(e.x, e.y, e.width, e.height);
-                float health = 1-((float)e.health/e.maxHealth);
+                shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                float health = 1-((float)e.getHealth()/e.maxHealth);
                 int healthWidth = (int) (e.width*health);
                 shapeRenderer.setColor(1,0,0,1); //red
-                shapeRenderer.rect(e.x,e.y,healthWidth,e.height);
+                shapeRenderer.rect(e.getX(),e.getY(),healthWidth,e.height);
             }
             shapeRenderer.end();
             Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
@@ -841,12 +816,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
             int totalEntitySize = 0;
 
-            s.write(client, buffer ,e.heading);
+            s.write(client, buffer ,e.getHeading());
             totalEntitySize += buffer.position();
             showMessage("Heading size is " + buffer.position() + " bytes");
             buffer.clear();
 
-            s.write(client, buffer ,e.health);
+            s.write(client, buffer ,e.getHealth());
             totalEntitySize += buffer.position();
             showMessage("Health size is " + buffer.position() + " bytes");
             buffer.clear();
@@ -856,12 +831,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             showMessage("Maxhealth size is " + buffer.position() + " bytes");
             buffer.clear();
 
-            s.write(client, buffer ,e.x);
+            s.write(client, buffer ,e.getX());
             totalEntitySize += buffer.position();
             showMessage("X size is " + buffer.position() + " bytes");
             buffer.clear();
 
-            s.write(client, buffer ,e.y);
+            s.write(client, buffer ,e.getY());
             totalEntitySize += buffer.position();
             showMessage("Y size is " + buffer.position() + " bytes");
             buffer.clear();
@@ -919,7 +894,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
             player = stateSnapshot.get(playerID);
         }
         if(player != null){
-            camera.position.set(player.x+player.width/2f, player.y+player.height/2, 0);
+            camera.position.set(player.getX()+player.width/2f, player.getY()+player.height/2, 0);
         }else{
             camera.position.set(mapWidth/2f, mapHeight/2f, 0);
         }

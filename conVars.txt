@@ -13,3 +13,4 @@ cl_check_map_collisions 1
 sv_check_map_collisions 1
 sv_max_moving_entities 10
 sv_update_type 2
+sv_attack_delay 0.3
