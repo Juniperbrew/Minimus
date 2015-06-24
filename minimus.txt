@@ -2,8 +2,8 @@ TODO add 360 degree turning
 TODO add hitscan weapon sword with swinging line animation
 TODO add projectile weapon (bow)
 TODO show hitscan weapon use on all clients
-TODO console autocomplete and reverse history with down key
 
+DONE console autocomplete and reverse history with down key
 DONE have server track what entities have changed and what attributes have changed
 DONE have server limit max entities that can move at once
 DONE make entities pick a destination, walk there and wait untill they get another destination
