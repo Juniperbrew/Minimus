@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.Net;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -19,6 +20,7 @@ import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.components.Component;
@@ -26,6 +28,7 @@ import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
+import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.ServerStatusFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 
@@ -38,14 +41,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Timer;
-import java.util.TimerTask;
 
 
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusServer implements ApplicationListener, InputProcessor, EntityChangeListener {
+public class MinimusServer implements ApplicationListener, InputProcessor, EntityChangeListener, Score.ScoreChangeListener {
 
     Server server;
     ShapeRenderer shapeRenderer;
@@ -99,6 +100,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     int pendingEntityRemovals = 0;
 
     SharedMethods sharedMethods;
+
+    Score score = new Score(this);
+    Scoreboard scoreboard = new Scoreboard(score);
 
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
@@ -285,6 +289,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 addEntity(newPlayer);
 
                 playerList.put(connection,networkID);
+                score.addPlayer(networkID);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
                 Network.AddPlayer addPlayer = new Network.AddPlayer();
                 addPlayer.networkID = networkID;
@@ -304,6 +309,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 int networkID = playerList.get(connection);
                 entities.remove(networkID);
                 playerList.remove(connection);
+                score.removePlayer(networkID);
                 connectionStatus.get(connection).disconnected();
                 Network.RemovePlayer removePlayer = new Network.RemovePlayer();
                 removePlayer.networkID = networkID;
@@ -386,9 +392,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     //Respawn dead player
                     ServerEntity deadPlayer = entities.get(id);
                     deadPlayer.restoreMaxHealth();
-                    deadPlayer.moveTo(0, 0);
+                    float x = MathUtils.random(MAP_WIDTH-deadPlayer.width);
+                    float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
+                    deadPlayer.moveTo(x,y);
+                    addDeath(id);
+                    addPlayerKill(e.id);
                 }else{
                     removeEntity(id);
+                    addNpcKill(e.id);
                 }
             }
         }
@@ -792,6 +803,43 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         statusData.setServerTime((System.nanoTime() - serverStartTime) / 1000000000f);
     }
 
+    private void addPlayerKill(int id){
+        score.addPlayerKill(id);
+        Network.AddPlayerKill addPlayerKill = new Network.AddPlayerKill();
+        addPlayerKill.id = id;
+        sendTCPtoAll(addPlayerKill);
+    }
+    private void addNpcKill(int id){
+        score.addNpcKill(id);
+        Network.AddNpcKill addNpcKill = new Network.AddNpcKill();
+        addNpcKill.id = id;
+        sendTCPtoAll(addNpcKill);
+    }
+    private void addDeath(int id){
+        score.addDeath(id);
+        Network.AddDeath addDeath = new Network.AddDeath();
+        addDeath.id = id;
+        sendTCPtoAll(addDeath);
+    }
+
+    public void showScoreboard(){
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                scoreboard.setVisible(true);
+            }
+        }).start();
+    }
+
     public void showConsoleWindow(){
         //TODO
         //We need to delay showing the window or else
@@ -845,6 +893,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
         if (character == 'w') {
             pendingEntityAdds++;
+        }
+        if (character == 's') {
+            showScoreboard();
         }
         if (character == '-') {
             camera.zoom += 0.05;
@@ -1007,5 +1058,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         if(!changedEntities.contains(id)){
             changedEntities.add(id);
         }
+    }
+
+    @Override
+    public void scoreChanged() {
+        scoreboard.updateScoreboard();
     }
 }

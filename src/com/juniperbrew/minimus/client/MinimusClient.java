@@ -18,6 +18,7 @@ import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.components.Component;
@@ -27,6 +28,7 @@ import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
+import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.StatusData;
 
 import java.awt.geom.Line2D;
@@ -44,7 +46,7 @@ import java.util.Iterator;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusClient implements ApplicationListener, InputProcessor {
+public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener {
 
     Client client;
     private int writeBuffer = 8192; //Default 8192
@@ -120,6 +122,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
     TextureRegion right;
     SpriteBatch batch;
 
+    Scoreboard scoreboard;
+    Score score;
+
     public MinimusClient(String ip){
         serverIP = ip;
     }
@@ -142,6 +147,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         right = new TextureRegion(spriteSheet,857,128,16,23);
 
         batch = new SpriteBatch();
+        score = new Score(this);
+        scoreboard = new Scoreboard(score);
     }
 
     private void logIntervalElapsed(){
@@ -186,6 +193,24 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     e.printStackTrace();
                 }
                 consoleFrame.setVisible(true);
+            }
+        }).start();
+    }
+
+    public void showScoreboard(){
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                scoreboard.setVisible(true);
             }
         }).start();
     }
@@ -318,15 +343,26 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     showMessage("PlayerID "+entityAttacking.id+" attacking with weapon "+entityAttacking.weapon);
                     //TODO try adding the attacks to different states
                     Entity attackingEntity = authoritativeState.entities.get(entityAttacking.id);
-                    sharedMethods.createAttackVisual(attackingEntity,attackVisuals);
+                    sharedMethods.createAttackVisual(attackingEntity, attackVisuals);
+                }else if(object instanceof Network.AddDeath){
+                    Network.AddDeath addDeath = (Network.AddDeath) object;
+                    score.addDeath(addDeath.id);
+                }else if(object instanceof Network.AddPlayerKill){
+                    Network.AddPlayerKill addPlayerKill = (Network.AddPlayerKill) object;
+                    score.addPlayerKill(addPlayerKill.id);
+                }else if(object instanceof Network.AddNpcKill){
+                    Network.AddNpcKill addNpcKill = (Network.AddNpcKill) object;
+                    score.addNpcKill(addNpcKill.id);
                 }else if(object instanceof Network.AddPlayer){
                     Network.AddPlayer addPlayer = (Network.AddPlayer) object;
                     showMessage("PlayerID "+addPlayer.networkID+" added.");
                     playerList.add(addPlayer.networkID);
+                    score.addPlayer(addPlayer.networkID);
                 }else if(object instanceof Network.RemovePlayer){
                     Network.RemovePlayer removePlayer = (Network.RemovePlayer) object;
                     showMessage("PlayerID "+removePlayer.networkID+" removed.");
                     playerList.remove((Integer) removePlayer.networkID);
+                    score.removePlayer(removePlayer.networkID);
                 }else if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
                     pendingAddedEntities.add(addEntity);
@@ -334,13 +370,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
                     Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
                     pendingRemovedEntities.add(removeEntity);
                 }else if(object instanceof Network.AssignEntity){
+                    System.out.println("assign");
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
+                    System.out.println("assign");
                     conVars.set("sv_velocity",assign.velocity);
                     mapHeight = assign.mapHeight;
                     mapWidth = assign.mapWidth;
                     playerList = assign.playerList;
                     sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
+                    for(int id : playerList){
+                        score.addPlayer(id);
+                    }
                 }else if(object instanceof String){
                     String command = (String) object;
                     consoleFrame.giveCommand(command);
@@ -686,6 +727,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
+        Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"]");
         if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
             showMessage("Long time since last render() call:" + (System.nanoTime() - renderStart) / 1000000f);
         }
@@ -827,6 +869,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         }
         if(character == 'r'){
             printPlayerList();
+        }
+        if(character == 's'){
+            showScoreboard();
         }
         if(character == 'w'){
             boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
@@ -972,4 +1017,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor {
         return false;
     }
 
+    @Override
+    public void scoreChanged() {
+        scoreboard.updateScoreboard();
+    }
 }

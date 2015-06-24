@@ -11,3 +11,4 @@ q	print entity size
 0	toggle debug
 +	increase interpolation
 -	decrease interpolation
+s	show scoreboard

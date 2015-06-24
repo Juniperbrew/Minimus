@@ -5,9 +5,7 @@ import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
-import com.juniperbrew.minimus.components.Position;
 
-import javax.jws.soap.SOAPBinding;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -47,6 +45,9 @@ public class Network {
         kryo.register(AddPlayer.class);
         kryo.register(RemovePlayer.class);
         kryo.register(EntityAttacking.class);
+        kryo.register(AddPlayerKill.class);
+        kryo.register(AddNpcKill.class);
+        kryo.register(AddDeath.class);
     }
 
     public static class Message{
@@ -60,6 +61,16 @@ public class Network {
     public static class EntityAttacking{
         public int id;
         public int weapon;
+    }
+
+    public static class AddPlayerKill {
+        public int id;
+    }
+    public static class AddNpcKill {
+        public int id;
+    }
+    public static class AddDeath {
+        public int id;
     }
 
     public static class UserInput implements Comparable<UserInput>{
