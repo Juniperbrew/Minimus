@@ -13,6 +13,7 @@ ECHO !upToDate!
 IF NOT "!upToDate!" == "Already up-to-date." (
 copy /y build\install\Minimus\bin\serverlist.txt ..\serverlist.txt
 call gradlew installDist
-move ..\serverlist.txt build\install\Minimus\bin\serverlist.txt
+copy /y ..\serverlist.txt build\install\Minimus\bin\serverlist.txt
+del ..\serverlist.txt
 )
 )
