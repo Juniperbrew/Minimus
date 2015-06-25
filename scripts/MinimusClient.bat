@@ -18,4 +18,4 @@ copy /y Minimus\build\install\Minimus\bin\serverlist.txt serverlist.txt
 )
 
 cd build/install/Minimus/bin
-MinimusServer
+Minimus
