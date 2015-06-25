@@ -9,9 +9,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -24,9 +22,12 @@ import java.util.ArrayList;
 public class ServerSelector extends JFrame {
 
     final String SERVER_LIST = "serverlist.txt";
+    JComboBox dropDownMenu;
+    ClientLauncher launcher;
 
     public ServerSelector(final ClientLauncher launcher) throws IOException {
         super("Select server");
+        this.launcher = launcher;
         setLayout(new MigLayout());
         addWindowListener(new WindowAdapter() {
             @Override
@@ -36,20 +37,21 @@ public class ServerSelector extends JFrame {
                 launcher.exit();
             }
         });
-        final JComboBox dropDownMenu = new JComboBox(getServers());
+        dropDownMenu = new JComboBox(getServers());
         dropDownMenu.setEditable(true);
+        dropDownMenu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e){
+                if(e.getActionCommand().equals("comboBoxEdited")){
+                    serverSelected();
+                }
+            }
+        });
         JButton connectButton = new JButton("Connect");
         connectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String ip = dropDownMenu.getSelectedItem().toString();
-                boolean connected = launcher.connect(ip);
-                dispose();
-                if(connected){
-                    addServer(ip);
-                }else{
-                    System.exit(0);
-                }
+                serverSelected();
             }
         });
         add(dropDownMenu);
@@ -57,6 +59,17 @@ public class ServerSelector extends JFrame {
         pack();
         setLocationRelativeTo(null);
         setVisible(true);
+    }
+
+    private void serverSelected(){
+        String ip = dropDownMenu.getSelectedItem().toString();
+        boolean connected = launcher.connect(ip);
+        dispose();
+        if(connected){
+            addServer(ip);
+        }else{
+            System.exit(0);
+        }
     }
 
     private void addServer(String server){
