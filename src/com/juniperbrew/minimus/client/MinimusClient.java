@@ -990,7 +990,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        //System.out.println("Mouse position X:"+screenX+" Y:"+screenY);
+        System.out.println("Mouse position X:"+screenX+" Y:"+screenY);
         return false;
     }
 
