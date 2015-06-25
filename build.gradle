@@ -25,6 +25,15 @@ dependencies {
     compile "com.esotericsoftware:kryonet:2.22.0-RC1"
 }
 
+installApp {
+    into('bin') {
+        from '.'
+        include 'clientHelp.txt'
+        include 'conVars.txt'
+        include 'spritesheetAlpha.png'
+    }
+}
+
 sourceSets {
     main {
         java {
