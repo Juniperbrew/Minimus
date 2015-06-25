@@ -2,4 +2,5 @@
 call MinimusUpdate
 
 cd minimus/build/install/Minimus/bin
-MinimusServer
+call MinimusServer
+PAUSE
