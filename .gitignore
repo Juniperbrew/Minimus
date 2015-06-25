@@ -4,3 +4,4 @@ wireshark.bat
 .gradle/**
 *.iml
 serverlist.txt
+spritesheet.png
