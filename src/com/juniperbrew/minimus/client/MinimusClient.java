@@ -56,42 +56,40 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     //Counter to give each input request an unique id
     private int currentInputRequest = 0;
     //Input requests that haven't been sent yet
-    ArrayList<Network.UserInput> pendingInputPacket;
+    ArrayList<Network.UserInput> pendingInputPacket = new ArrayList<>();
     //How many times per second we gather all created inputs and send them to server
     //float inputUpdateRate =20;
     private long lastInputSent;
     //Sent input requests that haven't been acknowledged on server yet
-    ArrayList<Network.UserInput> inputQueue;
+    ArrayList<Network.UserInput> inputQueue = new ArrayList<>();
 
     //Network thread adds new states to this list
-    ArrayList<Network.FullEntityUpdate> pendingReceivedStates;//ArrayList<Network.EntityUpdate> pendingReceivedStates;
+    ArrayList<Network.FullEntityUpdate> pendingReceivedStates = new ArrayList<>();
     //Stored states used for interpolation, each time a state snapshot is created we remove all states older than clientTime-interpolation,
     //one older state than this is still stored in interpFrom untill we reach the next interpolation interval
-    ArrayList<Network.FullEntityUpdate> stateHistory;//ArrayList<Network.EntityUpdate> stateHistory;
+    ArrayList<Network.FullEntityUpdate> stateHistory = new ArrayList<>();
     //This stores the state with latest servertime, should be same as last state in stateHistory
-    Network.FullEntityUpdate authoritativeState;//Network.EntityUpdate authoritativeState;
+    Network.FullEntityUpdate authoritativeState;
     //This is basically authoritativeState.serverTime
     float lastServerTime;
     //System.nanoTime() for when authoritativeState is changed
     long lastAuthoritativeStateReceived;
 
     //This is what we render
-    private HashMap<Integer,Entity> stateSnapshot;
+    private HashMap<Integer,Entity> stateSnapshot = new HashMap<>();
 
     //StateSnapshot is an interpolation between these two states
-    private Network.FullEntityUpdate interpFrom;//private Network.EntityUpdate interpFrom;
-    private Network.FullEntityUpdate interpTo;//private Network.EntityUpdate interpTo;
+    private Network.FullEntityUpdate interpFrom;
+    private Network.FullEntityUpdate interpTo;
 
-    private ArrayList<Network.AddEntity> pendingAddedEntities;
-    private ArrayList<Integer> pendingRemovedEntities;
+    private ArrayList<Network.AddEntity> pendingAddedEntities = new ArrayList<>();
+    private ArrayList<Integer> pendingRemovedEntities = new ArrayList<>();
 
 
     int playerID;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
-    private ArrayList<Line2D.Float> attackVisuals;
+    private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     long lastAttackDone;
-
-    Network.UserInput previousInput;
 
     long lastPingRequest;
     long renderStart;
@@ -107,7 +105,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private OrthographicCamera camera;
 
-    ArrayList<Integer> playerList;
+    ArrayList<Integer> playerList = new ArrayList<>();
 
     int mapWidth;
     int mapHeight;
@@ -125,30 +123,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Scoreboard scoreboard;
     Score score;
 
-    public MinimusClient(String ip){
+    public MinimusClient(String ip) throws IOException {
         serverIP = ip;
-    }
-
-    private void initialize(){
-        inputQueue = new ArrayList<>();
-        shapeRenderer = new ShapeRenderer();
-        stateHistory = new ArrayList<>();
-        pendingReceivedStates = new ArrayList<>();
-        pendingInputPacket = new ArrayList<>();
-        pendingAddedEntities = new ArrayList<>();
-        pendingRemovedEntities = new ArrayList<>();
-        playerList = new ArrayList<>();
-        attackVisuals = new ArrayList<>();
-        spriteSheet = new Texture(Gdx.files.internal("spritesheetAlpha.png"));
-        System.out.println("Spritesheet width:" +spriteSheet.getWidth());
-        System.out.println("Spritesheet height:" +spriteSheet.getHeight());
-        down = new TextureRegion(spriteSheet,171,129,16,22);
-        up = new TextureRegion(spriteSheet,526,133,16,22);
-        right = new TextureRegion(spriteSheet,857,128,16,23);
-
-        batch = new SpriteBatch();
+        conVars = new ConVars();
+        consoleFrame = new ConsoleFrame(conVars);
+        clientStartTime = System.nanoTime();
+        statusData = new StatusData(null,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
+        statusFrame = new ClientStatusFrame(statusData);
         score = new Score(this);
         scoreboard = new Scoreboard(score);
+        joinServer();
     }
 
     private void logIntervalElapsed(){
@@ -168,15 +152,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         int w = Gdx.graphics.getWidth();
         camera = new OrthographicCamera(h, w);
         centerCameraOnPlayer();
-
-        conVars = new ConVars();
-        consoleFrame = new ConsoleFrame(conVars);
-        clientStartTime = System.nanoTime();
-        statusData = new StatusData(null,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
-        statusFrame = new ClientStatusFrame(statusData);
-        initialize();
-        joinServer();
         Gdx.input.setInputProcessor(this);
+        spriteSheet = new Texture(Gdx.files.internal("spritesheetAlpha.png"));
+        System.out.println("Spritesheet width:" +spriteSheet.getWidth());
+        System.out.println("Spritesheet height:" +spriteSheet.getHeight());
+        down = new TextureRegion(spriteSheet,171,129,16,22);
+        up = new TextureRegion(spriteSheet,526,133,16,22);
+        right = new TextureRegion(spriteSheet,857,128,16,23);
+
+        batch = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
     }
 
     public void showConsoleWindow(){
@@ -308,7 +293,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return newFullEntityUpdate;
     }
 
-    private void joinServer(){
+    private void joinServer() throws IOException {
         client = new Client(writeBuffer,objectBuffer);
         Network.register(client);
         client.addListener(new Listener() {
@@ -389,11 +374,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         });
         client.start();
-        try {
-            client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
     }
 
 

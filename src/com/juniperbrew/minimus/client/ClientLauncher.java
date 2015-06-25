@@ -22,13 +22,20 @@ public class ClientLauncher {
 
     static boolean useJFrame = false;
 
-    public void connect(String ip){
+    public boolean connect(String ip){
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
-        final MinimusClient minimusClient = new MinimusClient(ip);
+        MinimusClient client = null;
+        try{
+            client = new MinimusClient(ip);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        final MinimusClient minimusClient = client;
 
         if(useJFrame) {
 
@@ -73,6 +80,7 @@ public class ClientLauncher {
         }else{
             new LwjglApplication(minimusClient ,cfg);
         }
+        return true;
     }
 
     public void exit(){
