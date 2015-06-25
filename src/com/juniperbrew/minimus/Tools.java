@@ -1,3 +1,5 @@
+package com.juniperbrew.minimus;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -15,8 +17,8 @@ public class Tools {
         milliTimeStamp.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
-    public static long secondsToNano(int seconds){
-        return seconds*1000000000l;
+    public static long secondsToNano(double seconds){
+        return (long)(seconds*1000000000l);
     }
 
     public static int nanoToSeconds(long nano){
@@ -34,7 +36,11 @@ public class Tools {
         return milliTimeStamp.format(new Date(millis));
     }
 
-    public static float clamp(float value, float minValue,float maxValue){
+    public static int secondsToMilli(double seconds){
+        return (int) (seconds*1000);
+    }
+
+    public static double clamp(double value, double minValue,double maxValue){
         if(value < minValue){
             value = minValue;
         }

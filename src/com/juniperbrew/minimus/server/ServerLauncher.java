@@ -1,5 +1,8 @@
+package com.juniperbrew.minimus.server;
+
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.juniperbrew.minimus.server.MinimusServer;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,7 +12,7 @@ import java.awt.event.ActionListener;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class ClientLauncher {
+public class ServerLauncher {
 
     static boolean useJFrame = false;
 
@@ -23,8 +26,8 @@ public class ClientLauncher {
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            final MinimusClient minimusClient = new MinimusClient(args[0]);
-            frame.setTitle(minimusClient.getClass().getSimpleName());
+            final MinimusServer minimusServer = new MinimusServer();
+            frame.setTitle(minimusServer.getClass().getSimpleName());
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
 
@@ -35,14 +38,14 @@ public class ClientLauncher {
             consoleItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    minimusClient.showConsoleWindow();
+                    minimusServer.showConsoleWindow();
                 }
             });
-            JMenuItem serverStatusItem = new JMenuItem("Client status");
+            JMenuItem serverStatusItem = new JMenuItem("Server status");
             serverStatusItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    minimusClient.showStatusWindow();
+                    minimusServer.showServerStatusWindow();
                 }
             });
             windowsMenu.add(consoleItem);
@@ -55,14 +58,14 @@ public class ClientLauncher {
             canvas.setSize(cfg.width, cfg.height);
             frame.add(canvas);
 
-            new LwjglApplication(minimusClient, cfg, canvas);
+            new LwjglApplication(minimusServer, cfg, canvas);
 
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setLocation(frame.getX(), 0);
             frame.setVisible(true);
         }else{
-            new LwjglApplication(new MinimusClient(args[0]) ,cfg);
+            new LwjglApplication(new MinimusServer() ,cfg);
         }
     }
 }

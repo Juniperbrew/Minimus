@@ -1,35 +1,39 @@
-import com.badlogic.gdx.ApplicationListener;
-import com.badlogic.gdx.Gdx;
+package com.juniperbrew.minimus.client;
+
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.badlogic.gdx.backends.lwjgl.LwjglGraphics;
+import com.juniperbrew.minimus.windows.ServerSelector;
+import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class ServerLauncher {
+public class ClientLauncher {
 
     static boolean useJFrame = false;
 
-    public static void main(String[] args) {
-
+    public void connect(String ip){
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
+        final MinimusClient minimusClient = new MinimusClient(ip);
+
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            final MinimusServer minimusServer = new MinimusServer();
-            frame.setTitle(minimusServer.getClass().getSimpleName());
+            frame.setTitle(minimusClient.getClass().getSimpleName());
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
 
@@ -40,14 +44,14 @@ public class ServerLauncher {
             consoleItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    minimusServer.showConsoleWindow();
+                    minimusClient.showConsoleWindow();
                 }
             });
-            JMenuItem serverStatusItem = new JMenuItem("Server status");
+            JMenuItem serverStatusItem = new JMenuItem("Client status");
             serverStatusItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    minimusServer.showServerStatusWindow();
+                    minimusClient.showStatusWindow();
                 }
             });
             windowsMenu.add(consoleItem);
@@ -60,14 +64,22 @@ public class ServerLauncher {
             canvas.setSize(cfg.width, cfg.height);
             frame.add(canvas);
 
-            new LwjglApplication(minimusServer, cfg, canvas);
+            new LwjglApplication(minimusClient, cfg, canvas);
 
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setLocation(frame.getX(), 0);
             frame.setVisible(true);
         }else{
-            new LwjglApplication(new MinimusServer() ,cfg);
+            new LwjglApplication(minimusClient ,cfg);
         }
+    }
+
+    public void exit(){
+        System.exit(0);
+    }
+
+    public static void main(String[] args) throws IOException {
+        new ServerSelector(new ClientLauncher());
     }
 }

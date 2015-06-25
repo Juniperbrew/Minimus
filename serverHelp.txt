@@ -10,3 +10,4 @@ r	reset zoom
 4	increase tickrate
 8	lower updaterate
 9	increase updaterate
+s	show scoreboard

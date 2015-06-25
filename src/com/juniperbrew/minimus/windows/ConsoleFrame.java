@@ -1,3 +1,7 @@
+package com.juniperbrew.minimus.windows;
+
+import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.server.MinimusServer;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
@@ -9,9 +13,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.ArrayList;
-import java.util.LinkedList;
 
 /**
  * Created by Juniperbrew on 20.6.2015.
@@ -21,14 +23,16 @@ public class ConsoleFrame extends JFrame {
     JTextArea textArea = new JTextArea();
     ConVars conVars;
     ArrayList<String> commandHistory = new ArrayList<>();
-    int historyIndex = 0;
-    int maxHistory = 20;
+    private int historyIndex = 0;
+    int maxHistory = 10;
     final String HELP = "Commands:\n" +
                             "help:\t display this message\n" +
                             "cvarlist:\t list all vars\n" +
-                            "send:\t send command to all clients";
+                            "send:\t send command to all clients\n" +
+                            "dumphistory:\t print console command history";
 
     MinimusServer minimusServer;
+    private static final String COMMIT_ACTION = "commit";
 
     public ConsoleFrame(ConVars conVars, MinimusServer minimusServer){
         this(conVars);
@@ -50,6 +54,7 @@ public class ConsoleFrame extends JFrame {
         setLayout(new MigLayout("wrap"));
         setPreferredSize(new Dimension(800, 400));
 
+
         textArea.setEditable(false);
         DefaultCaret caret = (DefaultCaret)textArea.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
@@ -57,6 +62,18 @@ public class ConsoleFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(textArea);
         add(scrollPane, "grow,push");
         final JTextField textField = new JTextField();
+
+        Autocomplete autoComplete = new Autocomplete(textField, conVars.getVarList());
+        textField.getDocument().addDocumentListener(autoComplete);
+
+        // Without this, cursor always leaves text field
+        textField.setFocusTraversalKeysEnabled(false);
+
+        // Maps the tab key to the commit action, which finishes the autocomplete
+    // when given a suggestion
+        textField.getInputMap().put(KeyStroke.getKeyStroke("TAB"), COMMIT_ACTION);
+        textField.getActionMap().put(COMMIT_ACTION, autoComplete.new CommitAction());
+
         textField.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -73,8 +90,14 @@ public class ConsoleFrame extends JFrame {
                 super.keyPressed(e);
                 if (e.getKeyCode() == KeyEvent.VK_UP) {
                     if (!commandHistory.isEmpty()) {
-                        textField.setText(commandHistory.get(historyIndex % commandHistory.size()));
                         historyIndex++;
+                        textField.setText(commandHistory.get(getHistoryIndex()));
+                    }
+                }
+                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    if (!commandHistory.isEmpty()) {
+                        historyIndex--;
+                        textField.setText(commandHistory.get(getHistoryIndex()));
                     }
                 }
             }
@@ -88,6 +111,30 @@ public class ConsoleFrame extends JFrame {
         });
         add(textField, "growx,pushx");
         pack();
+    }
+
+    private int getHistoryIndex(){
+        int a = historyIndex;
+        int b = commandHistory.size();
+        return (a % b + b) % b;
+    }
+
+    private String dumpCommandHistory(){
+        StringBuilder b = new StringBuilder();
+        b.append("#Command history#\n");
+        b.append("Index:" + historyIndex+"\n");
+        if(!commandHistory.isEmpty())b.append("Mod index:" + getHistoryIndex() + "\n");
+        for (int i = 0; i < commandHistory.size(); i++) {
+            String s = commandHistory.get(i);
+            b.append(i + ":");
+            if(i==getHistoryIndex()){
+                b.append(">");
+            }else{
+                b.append(" ");
+            }
+            b.append(s+"\n");
+        }
+        return b.toString();
     }
 
     public void giveCommand(String command){
@@ -114,8 +161,12 @@ public class ConsoleFrame extends JFrame {
             }
             return;
         }
+        if(splits[0].equals("dumphistory")){
+            addLine(dumpCommandHistory());
+            return;
+        }
         if(splits[0].equals("cvarlist")){
-            addLine(conVars.getVarList());
+            addLine(conVars.getVarDump());
             return;
         }
         if(splits[0].equals("help")){

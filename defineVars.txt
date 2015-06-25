@@ -1,0 +1,6 @@
+#name type defaultValue minValue maxValue
+sv_velocity float 0.1 0 1
+sv_tickrate int 60 1 200
+sv_updaterate int 2 1 200
+sv_udp boolean 1
+sv_log_interval_seconds int 2 1 60

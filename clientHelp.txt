@@ -1,6 +1,14 @@
 p	send test TCP packet
 o	send test UDP packet
+e	show state history
 w	toggle performance warnings
+r	print player IDs
 q	print entity size
 1	show console
 2	show status
+3	toggle clientside prediction
+4	toggle compress input
+0	toggle debug
++	increase interpolation
+-	decrease interpolation
+s	show scoreboard

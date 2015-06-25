@@ -1,7 +1,11 @@
+package com.juniperbrew.minimus;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
+import com.juniperbrew.minimus.components.Component;
+import com.juniperbrew.minimus.components.Heading;
+import com.juniperbrew.minimus.components.Health;
 
-import javax.jws.soap.SOAPBinding;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -19,7 +23,7 @@ public class Network {
         kryo.register(Message.class);
         kryo.register(UserInput.class);
         kryo.register(UpdateRate.class);
-        //kryo.register(EntityUpdate.class);
+        kryo.register(EntityPositionUpdate.class);
         kryo.register(Position.class);
         kryo.register(HashMap.class);
         kryo.register(AssignEntity.class);
@@ -28,10 +32,22 @@ public class Network {
         kryo.register(UserInputs.class);
         kryo.register(FullEntityUpdate.class);
         kryo.register(AddEntity.class);
+        kryo.register(RemoveEntity.class);
         kryo.register(Entity.class);
         kryo.register(Enums.Buttons.class);
         kryo.register(Enums.Heading.class);
         kryo.register(EnumSet.class);
+        kryo.register(com.juniperbrew.minimus.components.Position.class);
+        kryo.register(Heading.class);
+        kryo.register(Health.class);
+        kryo.register(EntityComponentsUpdate.class);
+        kryo.register(PlayerList.class);
+        kryo.register(AddPlayer.class);
+        kryo.register(RemovePlayer.class);
+        kryo.register(EntityAttacking.class);
+        kryo.register(AddPlayerKill.class);
+        kryo.register(AddNpcKill.class);
+        kryo.register(AddDeath.class);
     }
 
     public static class Message{
@@ -42,10 +58,25 @@ public class Network {
         public int updateRate;
     }
 
+    public static class EntityAttacking{
+        public int id;
+        public int weapon;
+    }
+
+    public static class AddPlayerKill {
+        public int id;
+    }
+    public static class AddNpcKill {
+        public int id;
+    }
+    public static class AddDeath {
+        public int id;
+    }
+
     public static class UserInput implements Comparable<UserInput>{
         public int inputID;
         public short msec;
-        EnumSet<Enums.Buttons> buttons = EnumSet.allOf(Enums.Buttons.class);
+        public EnumSet<Enums.Buttons> buttons = EnumSet.allOf(Enums.Buttons.class);
 
         @Override
         public int compareTo(UserInput o) {
@@ -57,7 +88,7 @@ public class Network {
     }
 
     public static class UserInputs{
-        ArrayList<UserInput> inputs;
+        public ArrayList<UserInput> inputs;
     }
 
     public static class TestPacket{
@@ -74,11 +105,17 @@ public class Network {
         public float velocity;
         public int mapHeight;
         public int mapWidth;
+        public ArrayList<Integer> playerList;
     }
 
     public static class AddEntity{
-        public int networkID;
+        public float serverTime;
         public Entity entity;
+    }
+
+    public static class RemoveEntity{
+        public float serverTime;
+        public int networkID;
     }
 
     public static class FullEntityUpdate implements Comparable<FullEntityUpdate>{
@@ -94,21 +131,39 @@ public class Network {
         }
     }
 
-    public static class EntityPositionUpdate implements Comparable<EntityPositionUpdate>{
+    public static class EntityPositionUpdate{
         public float serverTime;
         public int lastProcessedInputID;
-        public HashMap<Integer,Position> entities;
+        public HashMap<Integer,Position> changedEntityPositions;
+    }
 
-        @Override
-        public int compareTo(EntityPositionUpdate o) {
-            Float me = serverTime;
-            Float other = o.serverTime;
-            return me.compareTo(other);
-        }
+    public static class EntityComponentsUpdate{
+        public float serverTime;
+        public int lastProcessedInputID;
+        public HashMap<Integer,ArrayList<Component>> changedEntityComponents;
+    }
+
+    public static class PlayerList{
+        public ArrayList<Integer> playerList;
+    }
+
+    public static class AddPlayer{
+        public int networkID;
+    }
+
+    public static class RemovePlayer{
+        public int networkID;
     }
 
     public static class Position{
         public float x;
         public float y;
+
+        public Position(){}
+
+        public Position(float x, float y){
+            this.x = x;
+            this.y = y;
+        }
     }
 }
