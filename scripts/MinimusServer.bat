@@ -11,9 +11,9 @@ set upToDate=
 for /f "delims=" %%a in ('git pull') do @set upToDate=%%a
 ECHO !upToDate!
 IF NOT "!upToDate!" == "Already up-to-date." (
-move ..\serverlist.txt build\install\Minimus\bin\serverlist.txt
-call gradlew installDist
 copy /y Minimus\build\install\Minimus\bin\serverlist.txt serverlist.txt
+call gradlew installDist
+move ..\serverlist.txt build\install\Minimus\bin\serverlist.txt
 )
 )
 
