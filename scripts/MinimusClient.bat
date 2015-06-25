@@ -1,5 +1,5 @@
 @echo off
 call MinimusUpdate
 
-cd build/install/Minimus/bin
+cd minimus/build/install/Minimus/bin
 Minimus
