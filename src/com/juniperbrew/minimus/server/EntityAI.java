@@ -11,8 +11,8 @@ public class EntityAI {
 
     private static final int MAX_RANGE = 400; //Pixels
 
-    public double destinationX;
-    public double destinationY;
+    public float destinationX;
+    public float destinationY;
     public boolean hasDestination;
     ServerEntity entity;
 
@@ -52,10 +52,22 @@ public class EntityAI {
         }
     }
 
-    public void setDestination(double x, double y){
+    public void setDestination(float x, float y){
         hasDestination = true;
         destinationX = x;
         destinationY = y;
+        setRotation();
+    }
+
+    private void setRotation(){
+        float entityOrigoX = entity.getX()+ entity.width/2;
+        float entityOrigoY = entity.getY()+ entity.height/2;
+        float destinationOrigoX = destinationX+entity.width/2;
+        float destinationOrigoY = destinationY+entity.height/2;
+        float deltaX = destinationOrigoX - entityOrigoX;
+        float deltaY = destinationOrigoY - entityOrigoY;
+        int degrees = (int) (MathUtils.radiansToDegrees*MathUtils.atan2(deltaY,deltaX));
+        entity.setRotation(degrees);
     }
 
     public void setRandomDestination(int mapWidth,int mapHeight){

@@ -13,7 +13,7 @@ public class Entity {
     public int height;
     private int health;
     public int maxHealth;
-    private Enums.Heading heading;
+    private int rotation;
 
     public Entity(){
         this(-1,-1,-1);
@@ -27,7 +27,7 @@ public class Entity {
         height = e.height;
         health = e.health;
         maxHealth = e.maxHealth;
-        heading = e.heading;
+        rotation = e.rotation;
     }
 
     public Entity(int id, float x, float y, int width, int height, int health, int maxHealth, Enums.Heading heading){
@@ -38,7 +38,7 @@ public class Entity {
         this.height = height;
         this.health = health;
         this.maxHealth = maxHealth;
-        this.heading = heading;
+
     }
 
     public Entity(int id, float x, float y) {
@@ -49,14 +49,36 @@ public class Entity {
         height = 50;
         health = 100;
         maxHealth = 100;
-        heading = Enums.Heading.SOUTH;
+        rotation = -90;
     }
 
     public Enums.Heading getHeading(){
-        return heading;
+        if(rotation>=-45 || rotation <45){
+            return Enums.Heading.EAST;
+        }else if(rotation>=45 && rotation<135){
+            return Enums.Heading.NORTH;
+        }else if(rotation>=135 || rotation<-135){
+            return Enums.Heading.WEST;
+        }else if(rotation>=-135 && rotation<-45){
+            return Enums.Heading.SOUTH;
+        }
+        return null;
     }
+    public void setRotation(int degrees){
+        this.rotation = degrees;
+    }
+
+    public int getRotation(){
+        return rotation;
+    }
+
     public void setHeading(Enums.Heading heading){
-        this.heading = heading;
+        switch(heading){
+            case EAST: rotation = 0; break;
+            case SOUTH: rotation = -90; break;
+            case WEST: rotation = 180; break;
+            case NORTH: rotation = 90; break;
+        }
     }
     public float getX(){
         return x;

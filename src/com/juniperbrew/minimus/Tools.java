@@ -49,4 +49,8 @@ public class Tools {
         }
         return value;
     }
+
+    public static int inverseRotation(int degrees){
+        return Math.abs(360-degrees);
+    }
 }

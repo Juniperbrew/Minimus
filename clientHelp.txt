@@ -1,7 +1,7 @@
 p	send test TCP packet
 o	send test UDP packet
 e	show state history
-w	toggle performance warnings
+y	toggle performance warnings
 r	print player IDs
 q	print entity size
 1	show console
@@ -11,4 +11,4 @@ q	print entity size
 0	toggle debug
 +	increase interpolation
 -	decrease interpolation
-s	show scoreboard
+u	show scoreboard

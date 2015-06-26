@@ -8,4 +8,5 @@ public interface EntityChangeListener {
     public void positionChanged(int id);
     public void healthChanged(int id);
     public void headingChanged(int id);
+    public void rotationChanged(int id);
 }

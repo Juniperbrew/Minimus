@@ -27,6 +27,7 @@ import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
+import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.ServerStatusFrame;
@@ -61,6 +62,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     ArrayList<Integer> posChangedEntities = new ArrayList<>();
     ArrayList<Integer> healthChangedEntities = new ArrayList<>();
     ArrayList<Integer> headingChangedEntities = new ArrayList<>();
+    ArrayList<Integer> rotationChangedEntities = new ArrayList<>();
     ArrayList<Integer> changedEntities = new ArrayList<>();
 
     private int networkIDCounter = 1;
@@ -348,7 +350,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             for(Network.UserInput input : inputListCopy){
                 sharedMethods.applyInput(e,input);
                 //movePlayer(e, input);
-                if(input.buttons.contains(Enums.Buttons.SPACE)){
+                if(input.buttons.contains(Enums.Buttons.MOUSE1)){
                     attackWithEntity(connection);
                 }
                 lastInputIDProcessed.put(connection,input.inputID);
@@ -427,6 +429,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             if(healthChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
                 components.add(new Health(e.getHealth()));
+            }
+            if(rotationChangedEntities.contains(id)){
+                ServerEntity e = entities.get(id);
+                components.add(new Rotation(e.getRotation()));
             }
         }
         return changedComponents;
@@ -769,11 +775,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             }else{
                 shapeRenderer.setColor(1,1,1,1);
             }
-            shapeRenderer.rect((float)e.getX(), (float)e.getY(), e.width, e.height);
+            shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
             float health = 1-((float)e.getHealth()/e.maxHealth);
             int healthWidth = (int) (e.width*health);
             shapeRenderer.setColor(1,0,0,1); //red
-            shapeRenderer.rect((float)e.getX(),(float)e.getY(),healthWidth,e.height);
+            shapeRenderer.rect(e.getX(),e.getY(),e.width/2,e.height/2,healthWidth,e.height,1,1,e.getRotation());
         }
         shapeRenderer.end();
 
@@ -1050,6 +1056,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     public void headingChanged(int id) {
         if(!headingChangedEntities.contains(id)){
             headingChangedEntities.add(id);
+        }
+        if(!changedEntities.contains(id)){
+            changedEntities.add(id);
+        }
+    }
+
+    @Override
+    public void rotationChanged(int id) {
+        if(!rotationChangedEntities.contains(id)){
+            rotationChangedEntities.add(id);
         }
         if(!changedEntities.contains(id)){
             changedEntities.add(id);

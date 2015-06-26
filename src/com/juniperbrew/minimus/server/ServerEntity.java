@@ -31,9 +31,15 @@ public class ServerEntity extends Entity {
         listener.healthChanged(id);
     }
 
+    public void setRotation(int degrees){
+        super.setRotation(degrees);
+        listener.rotationChanged(id);
+    }
+
     public void setHeading(Enums.Heading heading){
         super.setHeading(heading);
         listener.headingChanged(id);
+        System.out.println(id+": heading updated");
     }
     public void moveTo(float newX, float newY){
         super.moveTo(newX, newY);

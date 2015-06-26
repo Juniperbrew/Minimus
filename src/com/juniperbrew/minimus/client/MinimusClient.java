@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -25,6 +26,7 @@ import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
+import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
@@ -123,6 +125,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Scoreboard scoreboard;
     Score score;
 
+    //float mouseX;
+    //float mouseY;
+
+    int windowHeight;
+    int windowWidth;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -148,9 +156,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     
     @Override
     public void create() {
-        int h = Gdx.graphics.getHeight();
-        int w = Gdx.graphics.getWidth();
-        camera = new OrthographicCamera(h, w);
+        windowHeight = Gdx.graphics.getHeight();
+        windowWidth = Gdx.graphics.getWidth();
+        camera = new OrthographicCamera(windowWidth,windowHeight);
         centerCameraOnPlayer();
         Gdx.input.setInputProcessor(this);
         spriteSheet = new Texture(Gdx.files.internal("spritesheetAlpha.png"));
@@ -280,6 +288,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         Health health = (Health) component;
                         changedEntity.setHealth(health.health);
                     }
+                    if(component instanceof Rotation){
+                        Rotation rotation = (Rotation) component;
+                        changedEntity.setRotation(rotation.degrees);
+                    }
                 }
                 newEntityList.put(id,changedEntity);
             } else {
@@ -393,16 +405,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void pollInput(short delta){
-        if(buttons.size()>0){
-            int inputRequestID = getNextInputRequestID();
-            Network.UserInput input = new Network.UserInput();
-            input.msec = delta;
-            input.buttons = buttons.clone();
-            input.inputID = inputRequestID;
-            inputQueue.add(input);
-            pendingInputPacket.add(input);
-        }
-        if(buttons.contains(Enums.Buttons.SPACE)){
+        //TODO only save input if mouse has moved or button pressed
+        //if(buttons.size()>0){
+        int inputRequestID = getNextInputRequestID();
+        Network.UserInput input = new Network.UserInput();
+        input.msec = delta;
+        input.buttons = buttons.clone();
+        input.inputID = inputRequestID;
+        input.mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
+        input.mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
+        inputQueue.add(input);
+        pendingInputPacket.add(input);
+        //}
+        if(buttons.contains(Enums.Buttons.MOUSE1)){
             playerAttack();
         }
     }
@@ -696,7 +711,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private TextureRegion getTexture(Enums.Heading heading){
+    private TextureRegion getTexture(Entity e){
+        Enums.Heading heading = e.getHeading();
         switch(heading){
             case NORTH: return up;
             case SOUTH: return down;
@@ -741,15 +757,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
                 for (Entity e : interpFrom.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), 50, 50);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                 }
                 shapeRenderer.setColor(0, 1, 0, 1); //green
                 for (Entity e : interpTo.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), 50, 50);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                 }
                 shapeRenderer.setColor(0, 0, 1, 1); //blue
                 for (Entity e : authoritativeState.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), 50, 50);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                 }
                 shapeRenderer.end();
             }
@@ -760,7 +776,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 float health = 1-((float)e.getHealth()/e.maxHealth);
                 if(playerList.contains(e.id)){
                     batch.begin();
-                    batch.draw(getTexture(e.getHeading()), e.getX(), e.getY(), e.width, e.height);
+                    batch.draw(down,e.getX(),e.getY(),e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
                     batch.end();
                     int healthbarWidth = e.width+20;
                     int healthbarHeight = 10;
@@ -773,11 +789,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     shapeRenderer.rect(e.getX()+healthbarXOffset, e.getY()+healthbarYOffset, healthWidth,healthbarHeight);
                 }else{
                     shapeRenderer.setColor(1,1,1,1);
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                     float healthWidth = e.width*health;
                     shapeRenderer.setColor(1,0,0,1); //red
-                    shapeRenderer.rect(e.getX(),e.getY(),healthWidth,e.height);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, healthWidth, e.height, 1, 1, e.getRotation());
                 }
             }
             shapeRenderer.end();
@@ -824,6 +839,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);
         if(keycode == Input.Keys.DOWN)buttons.add(Enums.Buttons.DOWN);
         if(keycode == Input.Keys.SPACE)buttons.add(Enums.Buttons.SPACE);
+        if(keycode == Input.Keys.W)buttons.add(Enums.Buttons.W);
+        if(keycode == Input.Keys.A)buttons.add(Enums.Buttons.A);
+        if(keycode == Input.Keys.S)buttons.add(Enums.Buttons.S);
+        if(keycode == Input.Keys.D)buttons.add(Enums.Buttons.D);
         return false;
     }
 
@@ -834,6 +853,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.UP)buttons.remove(Enums.Buttons.UP);
         if(keycode == Input.Keys.DOWN)buttons.remove(Enums.Buttons.DOWN);
         if(keycode == Input.Keys.SPACE)buttons.remove(Enums.Buttons.SPACE);
+        if(keycode == Input.Keys.W)buttons.remove(Enums.Buttons.W);
+        if(keycode == Input.Keys.A)buttons.remove(Enums.Buttons.A);
+        if(keycode == Input.Keys.S)buttons.remove(Enums.Buttons.S);
+        if(keycode == Input.Keys.D)buttons.remove(Enums.Buttons.D);
         return false;
     }
 
@@ -851,10 +874,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(character == 'r'){
             printPlayerList();
         }
-        if(character == 's'){
+        if(character == 'u'){
             showScoreboard();
         }
-        if(character == 'w'){
+        if(character == 'y'){
             boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
             if(showPerformanceWarnings){
                 conVars.set("cl_show_performance_warnings",false);
@@ -959,6 +982,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void resize(int width, int height) {
+        windowWidth = width;
+        windowHeight = windowHeight;
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         centerCameraOnPlayer();
@@ -975,11 +1000,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if(button == 0){
+            buttons.add(Enums.Buttons.MOUSE1);
+        }
         return false;
     }
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        if(button == 0){
+            buttons.remove(Enums.Buttons.MOUSE1);
+        }
         return false;
     }
 
@@ -990,7 +1021,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        System.out.println("Mouse position X:"+screenX+" Y:"+screenY);
         return false;
     }
 

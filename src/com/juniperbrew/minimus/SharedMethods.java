@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.juniperbrew.minimus.server.ServerEntity;
 
 import java.awt.geom.Line2D;
@@ -28,24 +29,20 @@ public class SharedMethods {
 
     public Line2D.Float createAttackVisual(Entity e, final ArrayList<Line2D.Float> attackVisuals){
 
-        float originX = 0;
-        float originY = 0;
+        float originX = e.getX()+e.width/2;
+        float originY = e.getY()+e.height/2;
 
-        switch(e.getHeading()){
-            case NORTH: originX = e.getX()+e.width/2; originY = e.getY()+e.height; break;
-            case SOUTH: originX = e.getX()+e.width/2; originY = e.getY(); break;
-            case WEST: originX = e.getX(); originY = e.getY()+e.height/2; break;
-            case EAST: originX = e.getX()+e.width; originY = e.getY()+e.height/2; break;
-        }
+        int laserLength = 200;
+        int laserStartDistanceX = e.width/2;
+        int laserStartDistanceY = e.height/2;
 
-        float targetX = e.getX()+e.width/2;
-        float targetY = e.getY()+e.height/2;
-        switch (e.getHeading()){
-            case NORTH: targetY += 200; break;
-            case SOUTH: targetY -= 200; break;
-            case EAST: targetX += 200; break;
-            case WEST: targetX -= 200; break;
-        }
+        float sina = MathUtils.sinDeg(e.getRotation());
+        float cosa = MathUtils.cosDeg(e.getRotation());
+
+        originX += cosa*laserStartDistanceX;
+        originY += sina*laserStartDistanceY;
+        float targetX = originX + cosa*laserLength;
+        float targetY = originY + sina*laserLength;
 
         final Line2D.Float hitScan = new Line2D.Float(originX,originY,targetX,targetY);
         attackVisuals.add(hitScan);
@@ -59,23 +56,25 @@ public class SharedMethods {
         return hitScan;
     }
 
-    public void applyInput(Entity e, Network.UserInput input){
+    public void applyCompassInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;
+        float velocity = (float)conVars.get("sv_velocity");
+
+        setCompassHeading(e, input.buttons);
+
         if(input.buttons.contains(Enums.Buttons.UP)){
-            deltaY = (float)conVars.get("sv_velocity") *input.msec;
+            deltaY = velocity *input.msec;
         }
         if(input.buttons.contains(Enums.Buttons.DOWN)){
-            deltaY = -1* (float)conVars.get("sv_velocity") *input.msec;
+            deltaY = -1* velocity *input.msec;
         }
         if(input.buttons.contains(Enums.Buttons.LEFT)){
-            deltaX = -1* (float)conVars.get("sv_velocity") *input.msec;
+            deltaX = -1* velocity *input.msec;
         }
         if(input.buttons.contains(Enums.Buttons.RIGHT)){
-            deltaX = (float)conVars.get("sv_velocity") *input.msec;
+            deltaX = velocity *input.msec;
         }
-
-        setHeading(e, input.buttons);
 
         if(conVars.getBool("sv_check_map_collisions")) {
             if (e.getX() + e.width + deltaX > mapWidth) {
@@ -97,7 +96,66 @@ public class SharedMethods {
         e.moveTo(newX,newY);
     }
 
-    public void setHeading(Entity e, EnumSet<Enums.Buttons> buttons){
+    public void applyInput(Entity e, Network.UserInput input){
+        float deltaX = 0;
+        float deltaY = 0;
+        float velocity = (float)conVars.get("sv_velocity");
+
+        setRotation(e, input);
+
+        float distance = velocity * input.msec;
+        int direction = e.getRotation();
+
+        if(input.buttons.contains(Enums.Buttons.W)){
+            deltaX = MathUtils.cosDeg(direction)*distance;
+            deltaY = MathUtils.sinDeg(direction)*distance;
+        }
+        if(input.buttons.contains(Enums.Buttons.S)){
+            deltaX += MathUtils.cosDeg(direction-180)*distance;
+            deltaY += MathUtils.sinDeg(direction-180)*distance;
+        }
+        if(input.buttons.contains(Enums.Buttons.A)){
+            deltaX += MathUtils.cosDeg(direction+90)*distance;
+            deltaY += MathUtils.sinDeg(direction+90)*distance;
+        }
+        if(input.buttons.contains(Enums.Buttons.D)){
+            deltaX += MathUtils.cosDeg(direction-90)*distance;
+            deltaY += MathUtils.sinDeg(direction-90)*distance;
+        }
+
+
+        if(conVars.getBool("sv_check_map_collisions")) {
+            if (e.getX() + e.width + deltaX > mapWidth) {
+                deltaX = mapWidth - e.getX() - e.width;
+            }
+            if (e.getX() + deltaX < 0) {
+                deltaX = 0 - e.getX();
+            }
+            if (e.getY() + e.height + deltaY > mapHeight) {
+                deltaY = mapHeight - e.getY() - e.height;
+            }
+            if (e.getY() + deltaY < 0) {
+                deltaY = 0 - e.getY();
+            }
+        }
+
+        float newX = e.getX()+deltaX;
+        float newY = e.getY()+deltaY;
+        e.moveTo(newX,newY);
+    }
+
+    public void setRotation(Entity e, Network.UserInput input){
+        float mouseX = input.mouseX;
+        float mouseY = input.mouseY;
+        float playerX = e.getX() + e.width/2;
+        float playerY = e.getY() + e.height/2;
+        float deltaX = mouseX - playerX;
+        float deltaY = mouseY - playerY;
+        int degrees = (int) (MathUtils.radiansToDegrees*MathUtils.atan2(deltaY,deltaX));
+        e.setRotation(degrees);
+    }
+
+    public void setCompassHeading(Entity e, EnumSet<Enums.Buttons> buttons){
 
         if(buttons.contains(Enums.Buttons.UP)){
             if(buttons.contains(Enums.Buttons.LEFT)&&e.getHeading()== Enums.Heading.WEST){

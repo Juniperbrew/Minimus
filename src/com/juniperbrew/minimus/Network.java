@@ -5,6 +5,7 @@ import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
+import com.juniperbrew.minimus.components.Rotation;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -48,6 +49,7 @@ public class Network {
         kryo.register(AddPlayerKill.class);
         kryo.register(AddNpcKill.class);
         kryo.register(AddDeath.class);
+        kryo.register(Rotation.class);
     }
 
     public static class Message{
@@ -77,6 +79,8 @@ public class Network {
         public int inputID;
         public short msec;
         public EnumSet<Enums.Buttons> buttons = EnumSet.allOf(Enums.Buttons.class);
+        public float mouseX;
+        public float mouseY;
 
         @Override
         public int compareTo(UserInput o) {
@@ -84,7 +88,6 @@ public class Network {
             Integer other = o.inputID;
             return me.compareTo(other);
         }
-
     }
 
     public static class UserInputs{
