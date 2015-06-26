@@ -5,3 +5,4 @@ wireshark.bat
 *.iml
 serverlist.txt
 spritesheet.png
+.DS_Store
