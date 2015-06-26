@@ -15,6 +15,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by Juniperbrew on 24.6.2015.
@@ -24,6 +25,7 @@ public class ServerSelector extends JFrame {
     final String SERVER_LIST = "serverlist.txt";
     JComboBox dropDownMenu;
     ClientLauncher launcher;
+    String[] serverlist;
 
     public ServerSelector(final ClientLauncher launcher) throws IOException {
         super("Select server");
@@ -37,7 +39,8 @@ public class ServerSelector extends JFrame {
                 launcher.exit();
             }
         });
-        dropDownMenu = new JComboBox(getServers());
+        serverlist = getServers();
+        dropDownMenu = new JComboBox(serverlist);
         dropDownMenu.setEditable(true);
         dropDownMenu.addActionListener(new ActionListener() {
             @Override
@@ -65,8 +68,10 @@ public class ServerSelector extends JFrame {
         String ip = dropDownMenu.getSelectedItem().toString();
         boolean connected = launcher.connect(ip);
         dispose();
-        if(connected){
-            addServer(ip);
+        if(connected) {
+            if (!Arrays.asList(serverlist).contains(ip)){
+                addServer(ip);
+            }
         }else{
             System.exit(0);
         }
