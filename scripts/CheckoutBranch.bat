@@ -2,10 +2,11 @@
 Setlocal EnableDelayedExpansion
 
 cd minimus
-git pull
+git fetch
+git branch -a
 
-set /p version="Enter version: "
-git checkout %version%
+set /p branch="Enter branch: "
+git checkout %branch%
 
 copy /y build\install\Minimus\bin\serverlist.txt ..\serverlist.txt
 call gradlew installDist
