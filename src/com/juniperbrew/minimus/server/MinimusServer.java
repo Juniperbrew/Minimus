@@ -723,6 +723,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 removeEntity(id);
             }
         }
+        pendingDeadEntities.clear();
     }
 
     private void startSimulation(){
