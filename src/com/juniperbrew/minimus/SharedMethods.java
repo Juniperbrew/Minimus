@@ -1,8 +1,10 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.juniperbrew.minimus.server.ServerEntity;
 
+import javax.sound.sampled.Line;
 import java.awt.geom.Line2D;
 import java.awt.image.ConvolveOp;
 import java.util.ArrayList;
@@ -27,7 +29,7 @@ public class SharedMethods {
         timer = new Timer();
     }
 
-    public Line2D.Float createAttackVisual(Entity e, final ArrayList<Line2D.Float> attackVisuals){
+    public Line2D.Float createLaserAttackVisual(Entity e, final ArrayList<Line2D.Float> attackVisuals){
 
         float originX = e.getX()+e.width/2;
         float originY = e.getY()+e.height/2;
@@ -54,6 +56,19 @@ public class SharedMethods {
         };
         timer.schedule(task,Tools.secondsToMilli(conVars.get("sv_attack_visual_timer")));
         return hitScan;
+    }
+
+    public Projectile createRocketAttackVisual(Entity e){
+        float originX = e.getX()+e.width/2;
+        float originY = e.getY()+e.height/2;
+        int rocketStartDistanceX = e.width/2;
+        int rocketStartDistanceY = e.height/2;
+        float sina = MathUtils.sinDeg(e.getRotation());
+        float cosa = MathUtils.cosDeg(e.getRotation());
+
+        originX += cosa*rocketStartDistanceX;
+        originY += sina*rocketStartDistanceY;
+        return new Projectile(originX,originY,500,300,e.getRotation(),e.id);
     }
 
     public void applyCompassInput(Entity e, Network.UserInput input){
@@ -103,7 +118,9 @@ public class SharedMethods {
 
         setRotation(e, input);
 
-        float distance = velocity * input.msec;
+        float delta = input.msec/1000f;
+
+        float distance = velocity * delta;
         int direction = e.getRotation();
 
         if(input.buttons.contains(Enums.Buttons.W)){
@@ -196,5 +213,28 @@ public class SharedMethods {
                 e.setHeading(Enums.Heading.EAST);
             }
         }
+    }
+
+    public void renderAttackVisuals(ShapeRenderer shapeRenderer, ArrayList<Line2D.Float> attackVisuals){
+        Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
+        if(attackVisualsCopy.length>0){
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(1,0,0,1); //red
+            for(Line2D.Float line:attackVisualsCopy){
+                //TODO getting nullpointers here when spamming attack for some time
+                shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
+            }
+            shapeRenderer.end();
+        }
+    }
+
+    public void renderProjectiles(ShapeRenderer shapeRenderer, ArrayList<Projectile> projectiles){
+        Projectile[] projectilesCopy = projectiles.toArray(new Projectile[projectiles.size()]);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0,1,0,1);
+        for(Projectile projectile: projectilesCopy){
+            shapeRenderer.circle(projectile.getX(),projectile.getY(),5);
+        }
+        shapeRenderer.end();
     }
 }

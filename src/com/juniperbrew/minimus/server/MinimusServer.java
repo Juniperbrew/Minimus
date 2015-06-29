@@ -4,7 +4,6 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.Net;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -20,6 +19,7 @@ import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
@@ -78,6 +78,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     HashMap<Connection,Long> lastAttackDone = new HashMap<>();
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
+    private ArrayList<Projectile> projectiles = new ArrayList<>();
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
     long logIntervalStarted;
@@ -100,6 +101,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     int pendingEntityAdds = 0;
     int pendingEntityRemovals = 0;
+
+    ArrayList<Integer> pendingDeadEntities = new ArrayList<>();
 
     SharedMethods sharedMethods;
 
@@ -351,7 +354,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 sharedMethods.applyInput(e,input);
                 //movePlayer(e, input);
                 if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-                    attackWithEntity(connection);
+                    attackWithEntity(connection,0);
+                }
+                if(input.buttons.contains(Enums.Buttons.MOUSE2)){
+                    attackWithEntity(connection,1);
                 }
                 lastInputIDProcessed.put(connection,input.inputID);
                 inputList.remove(input); //FIXME we are removing this element from the original arraylist
@@ -359,7 +365,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
-    private void attackWithEntity(Connection connection){
+    private void attackWithEntity(Connection connection, int weapon){
         if(lastAttackDone.get(connection)==null){
             lastAttackDone.put(connection,System.nanoTime());
         }else if(System.nanoTime()-lastAttackDone.get(connection)<Tools.secondsToNano(conVars.get("sv_attack_delay"))){ //1 second attack delay
@@ -368,38 +374,26 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             lastAttackDone.put(connection,System.nanoTime());
             Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
             entityAttacking.id = playerList.get(connection);
-            entityAttacking.weapon = 0;
+            entityAttacking.weapon = weapon;
             sendTCPtoAllExcept(connection,entityAttacking);
 
             ServerEntity e = entities.get(playerList.get(connection));
 
-            final Line2D.Float hitScan = sharedMethods.createAttackVisual(e,attackVisuals);
+            if(weapon == 0){
+                final Line2D.Float hitScan = sharedMethods.createLaserAttackVisual(e, attackVisuals);
 
-            ArrayList<Integer> deadEntities = new ArrayList<>();
-            for(int id:entities.keySet()){
-                ServerEntity target = entities.get(id);
-                if(target.getBounds().intersectsLine(hitScan) && target != e){
-                    target.reduceHealth(10);
-                    if(target.getHealth()<=0){
-                        showMessage("Entity ID" + id + " is dead.");
-                        deadEntities.add(id);
+                for(int id:entities.keySet()){
+                    ServerEntity target = entities.get(id);
+                    if(target.getBounds().intersectsLine(hitScan) && target != e){
+                        target.reduceHealth(10);
+                        if(target.getHealth()<=0){
+                            entityKilled(e.id,id);
+                        }
                     }
                 }
             }
-            for(int id: deadEntities){
-                if(playerList.values().contains(id)){
-                    //Respawn dead player
-                    ServerEntity deadPlayer = entities.get(id);
-                    deadPlayer.restoreMaxHealth();
-                    float x = MathUtils.random(MAP_WIDTH-deadPlayer.width);
-                    float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
-                    deadPlayer.moveTo(x,y);
-                    addDeath(id);
-                    addPlayerKill(e.id);
-                }else{
-                    removeEntity(id);
-                    addNpcKill(e.id);
-                }
+            if(weapon == 1){
+                projectiles.add(sharedMethods.createRocketAttackVisual(e));
             }
         }
     }
@@ -673,8 +667,63 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         e.moveTo((float)newX,(float)newY);
     }*/
 
+    private void entityKilled(int killerID, int deadID){
+        showMessage("Entity ID" + deadID + " is dead.");
+        pendingDeadEntities.add(deadID);
+        if(playerList.containsKey(deadID)){
+            score.addPlayerKill(killerID);
+            score.addDeath(deadID);
+            //Respawn dead player
+            ServerEntity deadPlayer = entities.get(deadID);
+            deadPlayer.restoreMaxHealth();
+            float x = MathUtils.random(MAP_WIDTH-deadPlayer.width);
+            float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
+            deadPlayer.moveTo(x,y);
+        }else{
+            score.addNpcKill(killerID);
+        }
+    }
+
+    private void updateProjectiles(float delta){
+        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
+        for(Projectile projectile:projectiles){
+            Line2D.Float movedPath = projectile.move(delta);
+
+            for(int id:entities.keySet()){
+                ServerEntity target = entities.get(id);
+                if(target.getBounds().intersectsLine(movedPath) && target != entities.get(projectile.ownerID)){
+                    projectile.destroyed = true;
+                    target.reduceHealth(10);
+                    if(target.getHealth()<=0){
+                        entityKilled(projectile.ownerID,target.id);
+                    }
+                }
+            }
+            if(projectile.destroyed){
+                destroyedProjectiles.add(projectile);
+            }
+        }
+        projectiles.removeAll(destroyedProjectiles);
+    }
+
     private int getNextNetworkID(){
         return networkIDCounter++;
+    }
+
+    private void updateDeadEntities(){
+
+        for(int id: pendingDeadEntities){
+            if(playerList.values().contains(id)){
+                //Respawn dead player
+                ServerEntity deadPlayer = entities.get(id);
+                deadPlayer.restoreMaxHealth();
+                float x = MathUtils.random(MAP_WIDTH-deadPlayer.width);
+                float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
+                deadPlayer.moveTo(x,y);
+            }else{
+                removeEntity(id);
+            }
+        }
     }
 
     private void startSimulation(){
@@ -691,6 +740,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     }
                     tickStartTime=System.nanoTime();
                     currentTick++;
+                    float delta = tickActualDuration/1000000000f;
 
 
                     if(System.nanoTime()-lastPingUpdate>10*1000000000l){
@@ -710,10 +760,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     }
                     pendingEntityRemovals = 0;
 
+                    updateDeadEntities();
+
                     processCommands();
                     float processCommandsCheckpoint = (System.nanoTime()-tickStartTime)/1000000f;
 
-                    moveNPC(tickActualDuration/1000000f);
+                    updateProjectiles(delta);
+                    moveNPC(delta);
                     float moveNpcCheckpoint = (System.nanoTime()-tickStartTime)/1000000f;
 
                     if(System.nanoTime()-lastUpdateSent>(1000000000/conVars.getInt("sv_updaterate"))){
@@ -783,15 +836,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
         shapeRenderer.end();
 
-        Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
-        if(attackVisualsCopy.length>0){
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(1,0,0,1); //red
-            for(Line2D.Float line:attackVisualsCopy){
-                shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
-            }
-            shapeRenderer.end();
-        }
+        sharedMethods.renderAttackVisuals(shapeRenderer,attackVisuals);
+        sharedMethods.renderProjectiles(shapeRenderer,projectiles);
 
         updateStatusData();
     }

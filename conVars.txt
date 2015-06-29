@@ -1,4 +1,4 @@
-sv_velocity 0.1
+sv_velocity 100
 sv_tickrate 60
 sv_updaterate 10
 cl_udp 1

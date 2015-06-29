@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -19,6 +18,7 @@ import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
@@ -91,6 +91,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int playerID;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
+    private ArrayList<Projectile> projectiles = new ArrayList<>();
     long lastAttackDone;
 
     long lastPingRequest;
@@ -339,7 +340,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     Network.EntityAttacking entityAttacking = (Network.EntityAttacking) object;
                     //TODO try adding the attacks to different states
                     Entity attackingEntity = authoritativeState.entities.get(entityAttacking.id);
-                    sharedMethods.createAttackVisual(attackingEntity, attackVisuals);
+                    if(entityAttacking.weapon == 0){
+                        sharedMethods.createLaserAttackVisual(attackingEntity, attackVisuals);
+                    }else if(entityAttacking.weapon == 1){
+                        projectiles.add(sharedMethods.createRocketAttackVisual(attackingEntity));
+                    }
+
                 }else if(object instanceof Network.AddDeath){
                     Network.AddDeath addDeath = (Network.AddDeath) object;
                     score.addDeath(addDeath.id);
@@ -418,16 +424,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         pendingInputPacket.add(input);
         //}
         if(buttons.contains(Enums.Buttons.MOUSE1)){
-            playerAttack();
+            playerAttackLaser();
+        }
+        if(buttons.contains(Enums.Buttons.MOUSE2)){
+            playerAttackRocket();
         }
     }
 
-    private void playerAttack(){
+    private void playerAttackLaser(){
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
         lastAttackDone = System.nanoTime();
-        sharedMethods.createAttackVisual(stateSnapshot.get(playerID), attackVisuals);
+        sharedMethods.createLaserAttackVisual(stateSnapshot.get(playerID), attackVisuals);
+    }
+
+    private void playerAttackRocket(){
+        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
+            return;
+        }
+        lastAttackDone = System.nanoTime();
+        projectiles.add(sharedMethods.createRocketAttackVisual(stateSnapshot.get(playerID)));
     }
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
@@ -695,6 +712,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             lastInputSent = System.nanoTime();
         }
+        //Update projectiles
+        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
+        for(Projectile projectile:projectiles){
+            projectile.move(delta);
+            if(projectile.destroyed){
+                destroyedProjectiles.add(projectile);
+            }
+        }
+        projectiles.removeAll(destroyedProjectiles);
+
+
         float checkpoint2 = (System.nanoTime()-logicStart)/1000000f;
 
         //Dont pollInput or create snapshot if we have no state from server
@@ -796,16 +824,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
             }
             shapeRenderer.end();
-            Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
-            if(attackVisualsCopy.length>0){
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                shapeRenderer.setColor(1,0,0,1); //red
-                for(Line2D.Float line:attackVisualsCopy){
-                    //TODO getting nullpointers here when spamming attack for some time
-                    shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
-                }
-                shapeRenderer.end();
-            }
+            sharedMethods.renderAttackVisuals(shapeRenderer,attackVisuals);
+            sharedMethods.renderProjectiles(shapeRenderer,projectiles);
         }
 
         if(stateSnapshot!=null){
@@ -1003,6 +1023,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(button == 0){
             buttons.add(Enums.Buttons.MOUSE1);
         }
+        if(button == 1){
+            buttons.add(Enums.Buttons.MOUSE2);
+        }
         return false;
     }
 
@@ -1010,6 +1033,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         if(button == 0){
             buttons.remove(Enums.Buttons.MOUSE1);
+        }
+        if(button == 1){
+            buttons.remove(Enums.Buttons.MOUSE2);
         }
         return false;
     }

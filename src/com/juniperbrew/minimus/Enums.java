@@ -5,7 +5,7 @@ package com.juniperbrew.minimus;
  */
 public class Enums{
     public enum Buttons {
-        UP,DOWN,LEFT,RIGHT,SPACE,W,A,S,D,MOUSE1;
+        UP,DOWN,LEFT,RIGHT,SPACE,W,A,S,D,MOUSE1,MOUSE2;
     }
     public enum Heading {
         NORTH,SOUTH,WEST,EAST;
