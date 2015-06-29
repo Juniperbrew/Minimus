@@ -5,6 +5,8 @@ cd minimus
 git fetch
 git branch -a
 
+ECHO NOTE: Using this will disable auto updates until CheckoutBranch.bat is used
+
 set /p branch="Enter branch: "
 
 set /p date="Enter date: "
