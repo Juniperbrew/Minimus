@@ -88,7 +88,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private ArrayList<Integer> pendingRemovedEntities = new ArrayList<>();
 
 
-    int playerID;
+    int playerID = -1;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
@@ -131,6 +131,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     int windowHeight;
     int windowWidth;
+
+    boolean titleSet;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -752,7 +754,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void render() {
-        Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"]");
+        if(playerID != -1 && !titleSet){
+            Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"] "+sharedMethods.VERSION_NAME);
+            titleSet = true;
+        }
         if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
             showMessage("Long time since last render() call:" + (System.nanoTime() - renderStart) / 1000000f);
         }

@@ -122,7 +122,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void create() {
-
         conVars = new ConVars();
         consoleFrame = new ConsoleFrame(conVars,this);
 

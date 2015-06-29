@@ -2,6 +2,7 @@ package com.juniperbrew.minimus.client;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.windows.ServerSelector;
 import net.miginfocom.swing.MigLayout;
 
@@ -36,6 +37,7 @@ public class ClientLauncher {
             return false;
         }
         final MinimusClient minimusClient = client;
+        cfg.title = minimusClient.getClass().getSimpleName()+" "+ SharedMethods.VERSION_NAME;
 
         if(useJFrame) {
 
