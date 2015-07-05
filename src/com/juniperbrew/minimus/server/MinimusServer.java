@@ -584,94 +584,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
             }
         }
-
-        /*
-        Entity[] entitiesCopy = entities.values().toArray(new Entity[entities.values().size()]);
-        for(Entity e:entitiesCopy){
-            if(playerList.values().contains(e.id)){
-                continue;
-            }
-            float x = e.x;
-            float y = e.y;
-            int width = e.width;
-            int height = e.height;
-
-            float newX = x;
-            float newY = y;
-
-            switch(e.heading){
-                case NORTH: newY += conVars.get("sv_velocity")*delta; break;
-                case SOUTH: newY -= conVars.get("sv_velocity")*delta; break;
-                case WEST: newX -= conVars.get("sv_velocity")*delta; break;
-                case EAST: newX += conVars.get("sv_velocity")*delta; break;
-            }
-            if(newX+width > MAP_WIDTH && e.heading==Enums.Heading.EAST){
-                e.heading = Enums.Heading.WEST;
-                newX = MAP_WIDTH-width;
-            }
-            if(newX<0 && e.heading== Enums.Heading.WEST){
-                e.heading = Enums.Heading.EAST;
-                newX = 0;
-            }
-            if(newY+height>MAP_HEIGHT && e.heading== Enums.Heading.NORTH){
-                e.heading = Enums.Heading.SOUTH;
-                newY = MAP_HEIGHT-height;
-            }
-            if(newY<0 && e.heading== Enums.Heading.SOUTH){
-                e.heading = Enums.Heading.NORTH;
-                newY = 0;
-            }
-
-            e.x = newX;
-            e.y = newY;
-        }
-        */
     }
-
-    /*private void movePlayer(ServerEntity e, Network.UserInput input){
-        double deltaX = 0;
-        double deltaY = 0;
-        if(input.buttons.contains(Enums.Buttons.UP)){
-            deltaY = conVars.get("sv_velocity") *input.msec;
-        }
-        if(input.buttons.contains(Enums.Buttons.DOWN)){
-            deltaY = -1* conVars.get("sv_velocity") *input.msec;
-        }
-        if(input.buttons.contains(Enums.Buttons.LEFT)){
-            deltaX = -1* conVars.get("sv_velocity") *input.msec;
-        }
-        if(input.buttons.contains(Enums.Buttons.RIGHT)){
-            deltaX = conVars.get("sv_velocity") *input.msec;
-        }
-
-        SharedMethods.setHeading(e,input.buttons);
-
-        if(conVars.getBool("sv_check_map_collisions")) {
-            if (e.getX() + e.width + deltaX > MAP_WIDTH) {
-                deltaX = MAP_WIDTH - e.getX() - e.width;
-            }
-            if (e.getX() + deltaX < 0) {
-                deltaX = 0 - e.getX();
-            }
-            if (e.getY() + e.height + deltaY > MAP_HEIGHT) {
-                deltaY = MAP_HEIGHT - e.getY() - e.height;
-            }
-            if (e.getY() + deltaY < 0) {
-                deltaY = 0 - e.getY();
-            }
-        }
-
-        double newX = e.getX()+deltaX;
-        double newY = e.getY()+deltaY;
-        e.moveTo((float)newX,(float)newY);
-    }*/
 
     private void entityKilled(int killerID, int deadID){
         showMessage("Entity ID" + deadID + " is dead.");
         pendingDeadEntities.add(deadID);
         if(playerList.containsKey(deadID)){
-            score.addPlayerKill(killerID);
-            score.addDeath(deadID);
+            addPlayerKill(killerID);
+            addDeath(deadID);
             //Respawn dead player
             ServerEntity deadPlayer = entities.get(deadID);
             deadPlayer.restoreMaxHealth();
@@ -679,7 +599,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
             deadPlayer.moveTo(x,y);
         }else{
-            score.addNpcKill(killerID);
+            addNpcKill(killerID);
         }
     }
 
