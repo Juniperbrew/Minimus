@@ -330,6 +330,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
             public void received (Connection connection, Object object) {
                 logReceivedPackets(connection,object);
+
                 if (object instanceof Network.HomemadePing) {
                     StatusData status = connectionStatus.get(connection);
                     Network.HomemadePing ping = (Network.HomemadePing)object;
@@ -341,11 +342,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                         ping.isReply = true;
                         connection.sendTCP(ping);
                     }
-                }
-                if(object instanceof Network.Message){
-                    //Handle messages
-                }
-                if(object instanceof Network.UserInputs){
+                }else if(object instanceof Network.UserInputs){
                     Network.UserInputs inputPacket = (Network.UserInputs) object;
                     if(inputQueue.get(connection)!=null){
                         inputQueue.get(connection).addAll(inputPacket.inputs);

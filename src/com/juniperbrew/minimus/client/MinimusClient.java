@@ -334,8 +334,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         ping.isReply = true;
                         sendTCP(ping);
                     }
-                }
-                if(object instanceof Network.FullEntityUpdate){
+                }else if(object instanceof Network.FullEntityUpdate){
                     Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
                     pendingReceivedStates.add(fullUpdate);
                     //System.out.println("Received full update");
@@ -625,6 +624,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 if (interpPos != null){
                     Entity interpEntity = new Entity(fromPos);
                     interpEntity.moveTo(interpPos.x,interpPos.y);
+                    Entity authorativeEntity = authoritativeState.entities.get(id);
+                    if(authorativeEntity != null){
+                        interpEntity.setHealth(authorativeEntity.getHealth());
+                    }
                     interpEntities.put(id, interpEntity);
                 }
             }else{

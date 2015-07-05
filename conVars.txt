@@ -15,9 +15,9 @@ sv_max_moving_entities 1000
 sv_update_type 2
 sv_attack_delay 0.3
 sv_attack_visual_timer 0.5
-sv_min_packet_delay 0
-cl_min_packet_delay 0
-sv_max_packet_delay 0
-cl_max_packet_delay 0
+sv_min_packet_delay 0.025
+cl_min_packet_delay 0.025
+sv_max_packet_delay 0.025
+cl_max_packet_delay 0.025
 sv_ping_update_delay 1
 cl_ping_update_delay 1

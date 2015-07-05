@@ -1,6 +1,7 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO remove health interpolation
+TODO store data usage in logfile [connection time, max players, (max/average/min) entities, (max/avg) packets/s, (max/avg) kb/s, (max/avg) packet size, packets (sent/received), bytes (sent/received),(max/average/min) ping,(max/average/min) homemadePing]
 
+DONE remove health interpolation
 DONE add projectile weapon (bow)
 DONE add 360 degree turning
 DONE show hitscan weapon use on all clients
