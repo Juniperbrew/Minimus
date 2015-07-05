@@ -2,6 +2,7 @@ package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.server.MinimusServer;
 

@@ -18,6 +18,7 @@ import com.esotericsoftware.kryonet.Server;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
+import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
@@ -85,7 +86,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     ServerStatusFrame serverStatusFrame;
     ConsoleFrame consoleFrame;
-    StatusData statusData;
+    StatusData serverData;
 
     ConVars conVars;
 
@@ -122,6 +123,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void create() {
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         conVars = new ConVars();
         consoleFrame = new ConsoleFrame(conVars,this);
 
@@ -130,15 +132,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         resize(h,w);
 
         serverStartTime = System.nanoTime();
-        statusData = new StatusData(null,serverStartTime,conVars.getInt("cl_log_interval_seconds"));
-        serverStatusFrame = new ServerStatusFrame(statusData);
+        serverData = new StatusData(null,serverStartTime,conVars.getInt("cl_log_interval_seconds"));
+        serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
         initialize();
         startSimulation();
         Gdx.input.setInputProcessor(this);
 
-        statusData.entitySize = measureObject(new Entity(-1, 1000000, 1000000));
-        showMessage("Kryo entity size:" + statusData.entitySize + "bytes");
+        serverData.entitySize = measureObject(new Entity(-1, 1000000, 1000000));
+        showMessage("Kryo entity size:" + serverData.entitySize + "bytes");
         showMessage("0 entityComponents size:" + measureObject(createComponentList(0,true,true,true)) + "bytes");
         showMessage("pos entityComponents size:" + measureObject(createComponentList(1,true,false,false)) + "bytes");
         showMessage("heading entityComponents size:" + measureObject(createComponentList(1,false,true,false)) + "bytes");
@@ -216,12 +218,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         KryoSerialization s = (KryoSerialization) server.getSerialization();
         s.write(connection, buffer ,packet);
         connectionStatus.get(connection).addBytesReceived(buffer.position());
-        statusData.addBytesReceived(buffer.position());
+        serverData.addBytesReceived(buffer.position());
         buffer.clear();
     }
 
     private void logIntervalElapsed(){
-        statusData.intervalElapsed();
+        serverData.intervalElapsed();
         for(StatusData dataUsage : connectionStatus.values()){
             dataUsage.intervalElapsed();
         }
@@ -264,10 +266,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     public void updateHomemadeReturnTripTime (Connection connection) {
         StatusData status = connectionStatus.get(connection);
-        Network.HomemadePing ping = new Network.HomemadePing();
-        ping.id = status.lastPingID++;
-        status.lastPingSendTime = System.currentTimeMillis();
-        connection.sendTCP(ping);
+        if(status != null){
+            Network.HomemadePing ping = new Network.HomemadePing();
+            ping.id = status.lastPingID++;
+            status.lastPingSendTime = System.currentTimeMillis();
+            sendTCP(connection,ping);
+        }
     }
 
     private void startServer(){
@@ -301,6 +305,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 addEntity(newPlayer);
 
                 playerList.put(connection,networkID);
+                serverData.addPlayer();
                 score.addPlayer(networkID);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
                 Network.AddPlayer addPlayer = new Network.AddPlayer();
@@ -321,6 +326,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 int networkID = playerList.get(connection);
                 entities.remove(networkID);
                 playerList.remove(connection);
+                serverData.removePlayer();
                 score.removePlayer(networkID);
                 connectionStatus.get(connection).disconnected();
                 Network.RemovePlayer removePlayer = new Network.RemovePlayer();
@@ -446,7 +452,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             changedComponents.put(id,components);
             if(posChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Position((float)e.getX(),(float)e.getY()));
+                components.add(new Position(e.getX(),e.getY()));
             }
             if(headingChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
@@ -467,13 +473,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void sendUDP(Connection connection, Object o){
         int bytesSent = connection.sendUDP(o);
         connectionStatus.get(connection).addBytesSent(bytesSent);
-        statusData.addBytesSent(bytesSent);
+        serverData.addBytesSent(bytesSent);
     }
 
     private void sendTCP(Connection connection, Object o){
         int bytesSent = connection.sendTCP(o);
         connectionStatus.get(connection).addBytesSent(bytesSent);
-        statusData.addBytesSent(bytesSent);
+        serverData.addBytesSent(bytesSent);
     }
 
     private void sendTCPtoAllExcept(Connection connection, Object o){
@@ -680,7 +686,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void startSimulation(){
-        new Thread(new Runnable(){
+        Thread thread = new Thread(new Runnable(){
             @Override
             public void run() {
 
@@ -697,7 +703,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
 
                     if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
-                        System.out.println("Updating pings");
                         for(Connection c:server.getConnections()){
                             c.updateReturnTripTime();
                             updateHomemadeReturnTripTime(c);
@@ -751,7 +756,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     tickEndTime=System.nanoTime();
                 }
             }
-        }).start();
+        });
+        thread.start();
     }
 
     @Override
@@ -800,10 +806,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         for(Connection c:inputQueue.keySet()){
             connectionStatus.get(c).inputQueue = inputQueue.get(c).size();
         }
-        statusData.fps = Gdx.graphics.getFramesPerSecond();
-        statusData.entityCount = entities.size();
-        statusData.currentTick = currentTick;
-        statusData.setServerTime((System.nanoTime() - serverStartTime) / 1000000000f);
+        serverData.fps = Gdx.graphics.getFramesPerSecond();
+        serverData.setEntityCount(entities.size());
+        serverData.currentTick = currentTick;
+        serverData.setServerTime((System.nanoTime() - serverStartTime) / 1000000000f);
     }
 
     private void addPlayerKill(int id){
@@ -915,6 +921,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             camera.zoom = 1;
             camera.update();
         }
+        if(character == 'i'){
+            serverData.writeLog("serverLog");
+        }
         if (character == '1') {
             showConsoleWindow();
         }
@@ -984,7 +993,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     @Override
     public void resume() {}
     @Override
-    public void dispose() {}
+    public void dispose() {
+        serverData.writeLog("serverLog");
+    }
 
     @Override
     public boolean keyDown(int keycode) {

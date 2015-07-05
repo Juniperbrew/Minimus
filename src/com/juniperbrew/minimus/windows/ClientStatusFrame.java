@@ -93,7 +93,7 @@ public class ClientStatusFrame extends JFrame {
                 download.setText("Down: "+data.getDownload());
                 upload.setText("Up: "+data.getUpload());
                 fps.setText("FPS: "+data.fps);
-                entityCount.setText("Entities: "+data.entityCount);
+                entityCount.setText("Entities: "+data.getEntityCount());
                 serverTime.setText("Server time: "+data.getServerTime());
                 clientTime.setText("Client time: "+data.getClientTime());
                 currentInputRequest.setText("Current input request: "+data.currentInputRequest);
@@ -106,14 +106,14 @@ public class ClientStatusFrame extends JFrame {
                 packetsPerSecondSent.setText("Current  packets/s sent: " + data.getPacketsSentPerSecond());
                 bytesPerSecondSent.setText("Current bytes/s sent: " + data.getBytesSentPerSecond());
                 averageSentPacketSize.setText("Average sent packet size: " + data.getAverageSentPacketSize());
-                lastSentPacketSize.setText("Last sent packet size: "+ data.lastSentPacketSize);
+                lastSentPacketSize.setText("Last sent packet size: "+ data.getLastSentPacketSize());
 
                 packetsReceived.setText("Packets received: " + data.packetsReceived);
                 bytesReceived.setText("Bytes received: " + data.bytesReceived);
                 packetsPerSecondReceived.setText("Current packets/s received: " + data.getPacketsReceivedPerSecond());
                 bytesPerSecondReceived.setText("Current bytes/s received: " + data.getBytesReceivedPerSecond());
                 averageReceivedPacketSize.setText("Average received packet size: " + data.getAverageReceivedPacketSize());
-                lastReceivedPacketSize.setText("Last received packet size: " + data.lastReceivedPacketSize);
+                lastReceivedPacketSize.setText("Last received packet size: " + data.getLastReceivedPacketSize());
                 pack();
             }
         });

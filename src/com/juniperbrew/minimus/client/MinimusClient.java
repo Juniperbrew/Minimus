@@ -17,6 +17,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
+import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
@@ -156,6 +157,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     
     @Override
     public void create() {
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client"));
         windowHeight = Gdx.graphics.getHeight();
         windowWidth = Gdx.graphics.getWidth();
         camera = new OrthographicCamera(windowWidth,windowHeight);
@@ -715,7 +717,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float delta = Gdx.graphics.getDeltaTime();
 
         if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
-            System.out.println("Checking ping");
             client.updateReturnTripTime();
             updateHomemadeReturnTripTime();
             lastPingRequest = System.nanoTime();
@@ -940,6 +941,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(character == 'u'){
             showScoreboard();
         }
+        if(character == 'i'){
+            statusData.writeLog("clientLog");
+        }
         if(character == 'y'){
             boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
             if(showPerformanceWarnings){
@@ -1059,7 +1063,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public void resume() {}
 
     @Override
-    public void dispose() {}
+    public void dispose() {
+        statusData.writeLog("clientLog");
+    }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
