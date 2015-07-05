@@ -16,6 +16,8 @@ public class ClientStatusFrame extends JFrame {
     JLabel clientTime = new JLabel();
     JLabel currentInputRequest = new JLabel();
     JLabel inputQueue = new JLabel();
+    JLabel ping = new JLabel();
+    JLabel homemadePing = new JLabel();
     JLabel download = new JLabel();
     JLabel upload = new JLabel();
 
@@ -60,6 +62,8 @@ public class ClientStatusFrame extends JFrame {
         add(clientTime);
         add(currentInputRequest);
         add(inputQueue);
+        add(ping);
+        add(homemadePing);
         add(new JSeparator(),"pushx, growx");
 
         add(packetsSent);
@@ -94,6 +98,8 @@ public class ClientStatusFrame extends JFrame {
                 clientTime.setText("Client time: "+data.getClientTime());
                 currentInputRequest.setText("Current input request: "+data.currentInputRequest);
                 inputQueue.setText("Input queue: "+data.inputQueue);
+                ping.setText("Ping: "+data.getPing());
+                homemadePing.setText("Homemade ping:" + data.homemadeReturnTripTime);
 
                 packetsSent.setText("Packets sent: " + data.packetsSent);
                 bytesSent.setText("Bytes sent: " + data.bytesSent);

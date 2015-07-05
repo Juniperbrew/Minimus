@@ -126,9 +126,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Scoreboard scoreboard;
     Score score;
 
-    //float mouseX;
-    //float mouseY;
-
     int windowHeight;
     int windowWidth;
 
@@ -139,11 +136,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         conVars = new ConVars();
         consoleFrame = new ConsoleFrame(conVars);
         clientStartTime = System.nanoTime();
-        statusData = new StatusData(null,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
-        statusFrame = new ClientStatusFrame(statusData);
         score = new Score(this);
         scoreboard = new Scoreboard(score);
         joinServer();
+        statusData = new StatusData(client,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
+        statusFrame = new ClientStatusFrame(statusData);
     }
 
     private void logIntervalElapsed(){
@@ -308,10 +305,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return newFullEntityUpdate;
     }
 
+    public void updateHomemadeReturnTripTime () {
+        Network.HomemadePing ping = new Network.HomemadePing();
+        ping.id = statusData.lastPingID++;
+        statusData.lastPingSendTime = System.currentTimeMillis();
+        sendTCP(ping);
+    }
+
     private void joinServer() throws IOException {
         client = new Client(writeBuffer,objectBuffer);
         Network.register(client);
-        client.addListener(new Listener() {
+        Listener listener = new Listener() {
 
             @Override
             public void connected(Connection connection){
@@ -320,6 +324,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             public void received(Connection connection, Object object) {
                 logReceivedPackets(connection, object);
 
+                if (object instanceof Network.HomemadePing) {
+                    Network.HomemadePing ping = (Network.HomemadePing)object;
+                    if (ping.isReply) {
+                        if (ping.id == statusData.lastPingID - 1) {
+                            statusData.homemadeReturnTripTime = (int)(System.currentTimeMillis() - statusData.lastPingSendTime);
+                        }
+                    } else {
+                        ping.isReply = true;
+                        sendTCP(ping);
+                    }
+                }
                 if(object instanceof Network.FullEntityUpdate){
                     Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
                     pendingReceivedStates.add(fullUpdate);
@@ -389,7 +404,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     consoleFrame.giveCommand(command);
                 }
             }
-        });
+        };
+        double minPacketDelay = conVars.get("sv_min_packet_delay");
+        double maxPacketDelay = conVars.get("sv_max_packet_delay");
+        if(maxPacketDelay > 0){
+            int msMinDelay = (int) (minPacketDelay*1000);
+            int msMaxDelay = (int) (maxPacketDelay*1000);
+            Listener.LagListener lagListener = new Listener.LagListener(msMinDelay,msMaxDelay,listener);
+            client.addListener(lagListener);
+        }else{
+            client.addListener(listener);
+        }
+
         client.start();
         client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
     }
@@ -685,10 +711,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float checkpoint0 = (System.nanoTime()-logicStart)/1000000f;
         float delta = Gdx.graphics.getDeltaTime();
 
-        //Request ping update every 10 seconds
-        if(System.nanoTime()-lastPingRequest>10*1000000000l){
+        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
             System.out.println("Checking ping");
             client.updateReturnTripTime();
+            updateHomemadeReturnTripTime();
             lastPingRequest = System.nanoTime();
         }
 

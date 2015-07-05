@@ -262,6 +262,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         return entities;
     }
 
+    public void updateHomemadeReturnTripTime (Connection connection) {
+        StatusData status = connectionStatus.get(connection);
+        Network.HomemadePing ping = new Network.HomemadePing();
+        ping.id = status.lastPingID++;
+        status.lastPingSendTime = System.currentTimeMillis();
+        connection.sendTCP(ping);
+    }
+
     private void startServer(){
         server = new Server(writeBuffer,objectBuffer);
         Network.register(server);
@@ -272,7 +280,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             e.printStackTrace();
         }
 
-        server.addListener(new Listener(){
+        Listener listener = new Listener(){
             public void connected(Connection connection){
 
                 Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
@@ -322,6 +330,18 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
             public void received (Connection connection, Object object) {
                 logReceivedPackets(connection,object);
+                if (object instanceof Network.HomemadePing) {
+                    StatusData status = connectionStatus.get(connection);
+                    Network.HomemadePing ping = (Network.HomemadePing)object;
+                    if (ping.isReply) {
+                        if (ping.id == status.lastPingID - 1) {
+                            status.homemadeReturnTripTime = (int)(System.currentTimeMillis() - status.lastPingSendTime);
+                        }
+                    } else {
+                        ping.isReply = true;
+                        connection.sendTCP(ping);
+                    }
+                }
                 if(object instanceof Network.Message){
                     //Handle messages
                 }
@@ -336,7 +356,17 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     }
                 }
             }
-        });
+        };
+        double minPacketDelay = conVars.get("sv_min_packet_delay");
+        double maxPacketDelay = conVars.get("sv_max_packet_delay");
+        if(maxPacketDelay > 0){
+            int msMinDelay = (int) (minPacketDelay*1000);
+            int msMaxDelay = (int) (maxPacketDelay*1000);
+            Listener.LagListener lagListener = new Listener.LagListener(msMinDelay,msMaxDelay,listener);
+            server.addListener(lagListener);
+        }else{
+            server.addListener(listener);
+        }
     }
 
     private float getServerTime(){
@@ -669,10 +699,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     float delta = tickActualDuration/1000000000f;
 
 
-                    if(System.nanoTime()-lastPingUpdate>10*1000000000l){
+                    if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
                         System.out.println("Updating pings");
                         for(Connection c:server.getConnections()){
                             c.updateReturnTripTime();
+                            updateHomemadeReturnTripTime(c);
                         }
                         lastPingUpdate = System.nanoTime();
                     }

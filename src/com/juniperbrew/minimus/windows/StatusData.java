@@ -42,6 +42,10 @@ public class StatusData {
     public int packetsReceivedInterval;
     public int lastReceivedPacketSize;
 
+    public int lastPingID;
+    public long lastPingSendTime;
+    public int homemadeReturnTripTime;
+
     public StatusData(Connection connection, long connectionTime, int logIntervalSeconds){
         this.connection = connection;
         this.connectionTime = connectionTime;

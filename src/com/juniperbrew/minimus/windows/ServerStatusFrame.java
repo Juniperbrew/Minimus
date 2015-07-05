@@ -90,6 +90,7 @@ public class ServerStatusFrame extends JFrame {
         JLabel hostName = new JLabel();
         JLabel ipLabel = new JLabel();
         JLabel pingLabel = new JLabel();
+        JLabel homemadePingLabel = new JLabel();
         JLabel inputQueue = new JLabel();
 
         public ConnectionDataPanel(String name, StatusData dataUsage){
@@ -103,6 +104,7 @@ public class ServerStatusFrame extends JFrame {
             add(connectionTimeLabel);
             add(inputQueue);
             add(pingLabel);
+            add(homemadePingLabel);
             add(down);
             add(up);
 
@@ -142,8 +144,9 @@ public class ServerStatusFrame extends JFrame {
                     if(data.disconnectTime > 0){
                         pingLabel.setText("Ping: DISCONNECTED");
                     }else{
-                        pingLabel.setText("Ping:"+data.getPing());
+                        pingLabel.setText("Ping: "+data.getPing());
                     }
+                    homemadePingLabel.setText("Homemade ping:" + data.homemadeReturnTripTime);
                     connectionTimeLabel.setText("Connection time:" + data.getConnectionTime());
 
                     packetsSent.setText("Packets sent:" + data.packetsSent);

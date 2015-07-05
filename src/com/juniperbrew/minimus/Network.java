@@ -50,10 +50,16 @@ public class Network {
         kryo.register(AddNpcKill.class);
         kryo.register(AddDeath.class);
         kryo.register(Rotation.class);
+        kryo.register(HomemadePing.class);
     }
 
     public static class Message{
         public String text;
+    }
+
+    public static class HomemadePing{
+        public int id;
+        public boolean isReply;
     }
 
     public static class UpdateRate{
