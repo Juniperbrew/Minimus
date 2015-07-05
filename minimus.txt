@@ -1,6 +1,7 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO add projectile weapon (bow)
+TODO remove health interpolation
 
+DONE add projectile weapon (bow)
 DONE add 360 degree turning
 DONE show hitscan weapon use on all clients
 DONE console autocomplete and reverse history with down key

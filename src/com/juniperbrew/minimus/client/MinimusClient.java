@@ -737,15 +737,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             lastInputSent = System.nanoTime();
         }
-        //Update projectiles
-        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
-        for(Projectile projectile:projectiles){
-            projectile.move(delta);
-            if(projectile.destroyed){
-                destroyedProjectiles.add(projectile);
-            }
-        }
-        projectiles.removeAll(destroyedProjectiles);
+
+        updateProjectiles(delta);
 
 
         float checkpoint2 = (System.nanoTime()-logicStart)/1000000f;
@@ -762,6 +755,25 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showMessage("Send input:" + (checkpoint2 - checkpoint1) + "ms");
             showMessage("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
         }
+    }
+
+    private void updateProjectiles(float delta){
+
+        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
+        for(Projectile projectile:projectiles){
+            Line2D.Float movedPath = projectile.move(delta);
+
+            for(int id:stateSnapshot.keySet()){
+                Entity target = stateSnapshot.get(id);
+                if(target.getBounds().intersectsLine(movedPath) && target != stateSnapshot.get(projectile.ownerID)){
+                    projectile.destroyed = true;
+                }
+            }
+            if(projectile.destroyed){
+                destroyedProjectiles.add(projectile);
+            }
+        }
+        projectiles.removeAll(destroyedProjectiles);
     }
 
     private TextureRegion getTexture(Entity e){
