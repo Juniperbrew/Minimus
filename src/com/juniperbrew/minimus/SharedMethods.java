@@ -30,24 +30,21 @@ public class SharedMethods {
         timer = new Timer();
     }
 
-    public Line2D.Float createLaserAttackVisual(Entity e, final ArrayList<Line2D.Float> attackVisuals){
-
-        float originX = e.getX()+e.width/2;
-        float originY = e.getY()+e.height/2;
+    public Line2D.Float createLaserAttackVisual(float x, float y, int deg, final ArrayList<Line2D.Float> attackVisuals){
 
         int laserLength = 200;
-        int laserStartDistanceX = e.width/2;
-        int laserStartDistanceY = e.height/2;
+        int laserStartDistanceX = 25;
+        int laserStartDistanceY = 25;
 
-        float sina = MathUtils.sinDeg(e.getRotation());
-        float cosa = MathUtils.cosDeg(e.getRotation());
+        float sina = MathUtils.sinDeg(deg);
+        float cosa = MathUtils.cosDeg(deg);
 
-        originX += cosa*laserStartDistanceX;
-        originY += sina*laserStartDistanceY;
-        float targetX = originX + cosa*laserLength;
-        float targetY = originY + sina*laserLength;
+        x += cosa*laserStartDistanceX;
+        y += sina*laserStartDistanceY;
+        float targetX = x + cosa*laserLength;
+        float targetY = y + sina*laserLength;
 
-        final Line2D.Float hitScan = new Line2D.Float(originX,originY,targetX,targetY);
+        final Line2D.Float hitScan = new Line2D.Float(x,y,targetX,targetY);
         attackVisuals.add(hitScan);
         TimerTask task = new TimerTask() {
             @Override
@@ -59,17 +56,15 @@ public class SharedMethods {
         return hitScan;
     }
 
-    public Projectile createRocketAttackVisual(Entity e){
-        float originX = e.getX()+e.width/2;
-        float originY = e.getY()+e.height/2;
-        int rocketStartDistanceX = e.width/2;
-        int rocketStartDistanceY = e.height/2;
-        float sina = MathUtils.sinDeg(e.getRotation());
-        float cosa = MathUtils.cosDeg(e.getRotation());
+    public Projectile createRocketAttackVisual(float x, float y, int deg, int entityId){
+        int rocketStartDistanceX = 25;
+        int rocketStartDistanceY = 25;
+        float sina = MathUtils.sinDeg(deg);
+        float cosa = MathUtils.cosDeg(deg);
 
-        originX += cosa*rocketStartDistanceX;
-        originY += sina*rocketStartDistanceY;
-        return new Projectile(originX,originY,500,300,e.getRotation(),e.id);
+        x += cosa*rocketStartDistanceX;
+        y += sina*rocketStartDistanceY;
+        return new Projectile(x,y,500,300,deg,entityId);
     }
 
     public void applyCompassInput(Entity e, Network.UserInput input){

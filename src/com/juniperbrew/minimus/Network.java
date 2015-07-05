@@ -63,6 +63,9 @@ public class Network {
     public static class EntityAttacking{
         public int id;
         public int weapon;
+        public int deg;
+        public float x;
+        public float y;
     }
 
     public static class AddPlayerKill {

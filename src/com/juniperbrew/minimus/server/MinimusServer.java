@@ -371,15 +371,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             return;
         }else{
             lastAttackDone.put(connection,System.nanoTime());
+
+            ServerEntity e = entities.get(playerList.get(connection));
+
             Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
+            entityAttacking.x = e.getCenterX();
+            entityAttacking.y = e.getCenterY();
+            entityAttacking.deg = e.getRotation();
             entityAttacking.id = playerList.get(connection);
             entityAttacking.weapon = weapon;
             sendTCPtoAllExcept(connection,entityAttacking);
 
-            ServerEntity e = entities.get(playerList.get(connection));
-
             if(weapon == 0){
-                final Line2D.Float hitScan = sharedMethods.createLaserAttackVisual(e, attackVisuals);
+                final Line2D.Float hitScan = sharedMethods.createLaserAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
 
                 for(int id:entities.keySet()){
                     ServerEntity target = entities.get(id);
@@ -392,8 +396,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
             }
             if(weapon == 1){
-                projectiles.add(sharedMethods.createRocketAttackVisual(e));
+                Projectile projectile = sharedMethods.createRocketAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id);
+                projectiles.add(projectile);
             }
+
         }
     }
 

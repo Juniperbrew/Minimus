@@ -339,15 +339,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         showMessage("Received entity component update but there is no complete state to apply it to");
                     }
                 }else if(object instanceof Network.EntityAttacking){
-                    Network.EntityAttacking entityAttacking = (Network.EntityAttacking) object;
-                    //TODO try adding the attacks to different states
-                    Entity attackingEntity = authoritativeState.entities.get(entityAttacking.id);
-                    if(entityAttacking.weapon == 0){
-                        sharedMethods.createLaserAttackVisual(attackingEntity, attackVisuals);
-                    }else if(entityAttacking.weapon == 1){
-                        projectiles.add(sharedMethods.createRocketAttackVisual(attackingEntity));
+                    Network.EntityAttacking attack = (Network.EntityAttacking) object;
+                    if(attack.weapon == 0){
+                        sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
+                    }else if(attack.weapon == 1){
+                        projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
                     }
-
                 }else if(object instanceof Network.AddDeath){
                     Network.AddDeath addDeath = (Network.AddDeath) object;
                     score.addDeath(addDeath.id);
@@ -426,27 +423,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         pendingInputPacket.add(input);
         //}
         if(buttons.contains(Enums.Buttons.MOUSE1)){
-            playerAttackLaser();
+            playerAttackLaser(stateSnapshot.get(playerID));
         }
         if(buttons.contains(Enums.Buttons.MOUSE2)){
-            playerAttackRocket();
+            playerAttackRocket(stateSnapshot.get(playerID));
         }
     }
 
-    private void playerAttackLaser(){
+    private void playerAttackLaser(Entity player){
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
         lastAttackDone = System.nanoTime();
-        sharedMethods.createLaserAttackVisual(stateSnapshot.get(playerID), attackVisuals);
+        sharedMethods.createLaserAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(), attackVisuals);
     }
 
-    private void playerAttackRocket(){
+    private void playerAttackRocket(Entity player){
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
         lastAttackDone = System.nanoTime();
-        projectiles.add(sharedMethods.createRocketAttackVisual(stateSnapshot.get(playerID)));
+        projectiles.add(sharedMethods.createRocketAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(),player.id));
     }
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
