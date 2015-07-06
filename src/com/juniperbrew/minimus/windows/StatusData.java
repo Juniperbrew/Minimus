@@ -5,11 +5,13 @@ import com.juniperbrew.minimus.Tools;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
+import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
@@ -330,13 +332,12 @@ public class StatusData {
         if(!file.exists()){
             writeTitle = true;
         }else{
-            try(BufferedReader reader = new BufferedReader(new FileReader(file))){
+            try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String firstLine = reader.readLine();
-                System.out.println(firstLine);
-                if(!firstLine.equals(title)){
+                if (!firstLine.equals(title)) {
                     writeTitle = true;
                 }
-            } catch (IOException e) {
+            }catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -344,6 +345,9 @@ public class StatusData {
         if(writeTitle){
             try(PrintWriter writer = new PrintWriter(new FileWriter(file,true))){
                 writer.println(title);
+            } catch (FileNotFoundException e){
+                System.out.println(e);
+                System.out.println("Could not write to logfile probably because it is in use elsewhere.");
             } catch (IOException e) {
                 e.printStackTrace();
             }

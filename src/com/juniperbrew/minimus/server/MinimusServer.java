@@ -704,7 +704,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                     if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
                         for(Connection c:server.getConnections()){
-                            c.updateReturnTripTime();
+                            serverData.updatePing();
                             updateFakePing(c);
                         }
                         lastPingUpdate = System.nanoTime();
