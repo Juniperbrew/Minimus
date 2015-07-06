@@ -2,6 +2,10 @@ package com.juniperbrew.minimus.client;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.windows.ServerSelector;
 import net.miginfocom.swing.MigLayout;

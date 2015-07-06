@@ -36,7 +36,9 @@ import com.juniperbrew.minimus.windows.StatusData;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -286,55 +288,65 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
         Listener listener = new Listener(){
             public void connected(Connection connection){
-
-                Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
-                fullUpdate.entities = getNetworkedEntityList(entities);
-                connection.sendTCP(fullUpdate);
-
-                StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
-                connectionStatus.put(connection, dataUsage);
-
-                int networkID = getNextNetworkID();
-                int width = 50;
-                int height = 50;
-                float x = MathUtils.random(MAP_WIDTH-width);
-                float y = MathUtils.random(MAP_HEIGHT-height);
-                ServerEntity newPlayer = new ServerEntity(networkID,x,y,MinimusServer.this);
-                newPlayer.width = width;
-                newPlayer.height = height;
-                addEntity(newPlayer);
-
-                playerList.put(connection,networkID);
-                serverData.addPlayer();
-                score.addPlayer(networkID);
-                serverStatusFrame.addConnection(connection.toString(),dataUsage);
-                Network.AddPlayer addPlayer = new Network.AddPlayer();
-                addPlayer.networkID = networkID;
-                sendTCPtoAllExcept(connection,addPlayer);
-
-                Network.AssignEntity assign = new Network.AssignEntity();
-                assign.networkID = networkID;
-                assign.velocity = (float)conVars.get("sv_velocity");
-                assign.mapHeight = MAP_HEIGHT;
-                assign.mapWidth = MAP_WIDTH;
-                assign.playerList = new ArrayList<>(playerList.values());
-                connection.sendTCP(assign);
             }
 
             @Override
             public void disconnected(Connection connection){
-                int networkID = playerList.get(connection);
-                entities.remove(networkID);
-                playerList.remove(connection);
-                serverData.removePlayer();
-                score.removePlayer(networkID);
-                connectionStatus.get(connection).disconnected();
-                Network.RemovePlayer removePlayer = new Network.RemovePlayer();
-                removePlayer.networkID = networkID;
-                sendTCPtoAllExcept(connection,removePlayer);
+                if(playerList.containsKey(connection)){
+                    int networkID = playerList.get(connection);
+                    entities.remove(networkID);
+                    playerList.remove(connection);
+                    serverData.removePlayer();
+                    score.removePlayer(networkID);
+                    connectionStatus.get(connection).disconnected();
+                    Network.RemovePlayer removePlayer = new Network.RemovePlayer();
+                    removePlayer.networkID = networkID;
+                    sendTCPtoAllExcept(connection,removePlayer);
+                }
             }
 
             public void received (Connection connection, Object object) {
+
+                if (object instanceof Network.SpawnRequest){
+                    int networkID = getNextNetworkID();
+                    playerList.put(connection,networkID);
+                    Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
+                    fullUpdate.entities = getNetworkedEntityList(entities);
+                    connection.sendTCP(fullUpdate);
+
+                    StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
+                    connectionStatus.put(connection, dataUsage);
+
+                    int width = 50;
+                    int height = 50;
+                    float x = MathUtils.random(MAP_WIDTH-width);
+                    float y = MathUtils.random(MAP_HEIGHT-height);
+                    ServerEntity newPlayer = new ServerEntity(networkID,x,y,MinimusServer.this);
+                    newPlayer.width = width;
+                    newPlayer.height = height;
+                    addEntity(newPlayer);
+
+                    serverData.addPlayer();
+                    score.addPlayer(networkID);
+                    serverStatusFrame.addConnection(connection.toString(),dataUsage);
+                    Network.AddPlayer addPlayer = new Network.AddPlayer();
+                    addPlayer.networkID = networkID;
+                    sendTCPtoAllExcept(connection,addPlayer);
+
+                    Network.AssignEntity assign = new Network.AssignEntity();
+                    assign.networkID = networkID;
+                    assign.velocity = (float)conVars.get("sv_velocity");
+                    assign.mapHeight = MAP_HEIGHT;
+                    assign.mapWidth = MAP_WIDTH;
+                    assign.playerList = new ArrayList<>(playerList.values());
+                    connection.sendTCP(assign);
+                }
+                if (object instanceof Network.SendFile){
+                    Network.SendFile sendFile = (Network.SendFile) object;
+                    receiveFile(connection, sendFile.fileName, sendFile.data);
+                    return;
+                }
+
                 logReceivedPackets(connection,object);
 
                 if (object instanceof Network.FakePing) {
@@ -483,14 +495,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void sendTCPtoAllExcept(Connection connection, Object o){
-        for(Connection c:server.getConnections()){
+        for(Connection c:playerList.keySet()){
             if(!c.equals(connection)){
                 sendTCP(c,o);
             }
         }
     }
     private void sendTCPtoAll(Object o){
-        for(Connection c:server.getConnections()){
+        for(Connection c:playerList.keySet()){
             sendTCP(c,o);
         }
     }
@@ -703,7 +715,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
 
                     if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
-                        for(Connection c:server.getConnections()){
+                        for(Connection c:playerList.keySet()){
                             connectionStatus.get(c).updatePing();
                             updateFakePing(c);
                         }
@@ -883,6 +895,29 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 serverStatusFrame.setVisible(true);
             }
         }).start();
+    }
+
+    private void receiveFile(Connection c, String fileName, byte[] data){
+        String folderName = Tools.getUserDataDirectory()+ File.separator+"receivedfiles"+File.separator+c.getRemoteAddressUDP().getHostName()+File.separator;
+        File folder = new File(folderName);
+        folder.mkdirs();
+        File file = new File(folderName+fileName);
+        try {
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(data);
+            fos.close();
+        }
+        catch(FileNotFoundException ex)   {
+            System.out.println("FileNotFoundException : " + ex);
+            return;
+        }
+        catch(IOException ioe)  {
+            System.out.println("IOException : " + ioe);
+            return;
+        }
+        Network.FileReceived fileReceived = new Network.FileReceived();
+        fileReceived.fileName = fileName;
+        c.sendTCP(fileReceived);
     }
 
     @Override

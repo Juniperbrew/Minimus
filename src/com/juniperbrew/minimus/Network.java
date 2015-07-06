@@ -51,11 +51,17 @@ public class Network {
         kryo.register(AddDeath.class);
         kryo.register(Rotation.class);
         kryo.register(FakePing.class);
+        kryo.register(SendFile.class);
+        kryo.register(FileReceived.class);
+        kryo.register(byte[].class);
+        kryo.register(SpawnRequest.class);
     }
 
     public static class Message{
         public String text;
     }
+
+    public static class SpawnRequest{}
 
     public static class FakePing {
         public int id;
@@ -64,6 +70,15 @@ public class Network {
 
     public static class UpdateRate{
         public int updateRate;
+    }
+
+    public static class SendFile{
+        public String fileName;
+        public byte[] data;
+    }
+
+    public static class FileReceived{
+        public String fileName;
     }
 
     public static class EntityAttacking{

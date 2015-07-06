@@ -383,15 +383,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     score.removePlayer(removePlayer.networkID);
                 }else if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
+                    System.out.println("Adding entity "+addEntity.entity.id);
                     pendingAddedEntities.add(addEntity);
                 }else if(object instanceof Network.RemoveEntity){
                     Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
                     pendingRemovedEntities.add(removeEntity.networkID);
                 }else if(object instanceof Network.AssignEntity){
-                    System.out.println("assign");
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
-                    System.out.println("assign");
                     conVars.set("sv_velocity",assign.velocity);
                     mapHeight = assign.mapHeight;
                     mapWidth = assign.mapWidth;
@@ -419,6 +418,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         client.start();
         client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
+        client.sendTCP(new Network.SpawnRequest());
     }
 
 
