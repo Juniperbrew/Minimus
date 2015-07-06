@@ -1,6 +1,7 @@
 package com.juniperbrew.minimus.windows;
 
 import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.server.MinimusServer;
 import net.miginfocom.swing.MigLayout;
 
@@ -13,6 +14,10 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -111,6 +116,7 @@ public class ConsoleFrame extends JFrame {
         });
         add(textField, "growx,pushx");
         pack();
+        runAutoexec();
     }
 
     private int getHistoryIndex(){
@@ -144,6 +150,20 @@ public class ConsoleFrame extends JFrame {
 
     public void addLine(String line){
         textArea.append(line+"\n");
+    }
+
+    public void runAutoexec(){
+        addLine("Running autoexec..");
+        try(BufferedReader reader = new BufferedReader(new FileReader(Tools.getUserDataDirectory()+"autoexec.txt"))){
+            String line;
+            while((line = reader.readLine()) != null){
+                parseCommand(line);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void parseCommand(String command){

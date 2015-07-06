@@ -51,10 +51,6 @@ public class Tools {
         return value;
     }
 
-    public static int inverseRotation(int degrees){
-        return Math.abs(360-degrees);
-    }
-
     public static String getUserDataDirectory() {
         return System.getProperty("user.home") + File.separator + ".minimus" + File.separator;
     }
