@@ -272,19 +272,30 @@ public class StatusData {
         setLastReceivedPacketSize(bytes);
     }
 
-    public void writeLog(String logname){
-        File file = new File("logs\\"+logname+".csv");
+    public void writeLog(boolean server){
+        String logname;
+        if(server){
+            logname = "serverLog";
+        }else{
+            logname = "clientLog";
+        }
+        File file = new File(Tools.getUserDataDirectory()+"logs\\"+logname+".csv");
         file.getParentFile().mkdirs();
 
         StringBuilder bTitle = new StringBuilder();
         bTitle.append("Date;");
         bTitle.append("ConnectionTime;");
-        bTitle.append("MaxPing;");
-        bTitle.append("MaxFakePing;");
-        bTitle.append("AveragePing;");
-        bTitle.append("AverageFakePing;");
+        if(!server){
+            bTitle.append("IP;");
+            bTitle.append("MaxPing;");
+            bTitle.append("MaxFakePing;");
+            bTitle.append("AveragePing;");
+            bTitle.append("AverageFakePing;");
+        }
         bTitle.append("MaxEntityCount;");
-        bTitle.append("MaxPlayerCount;");
+        if(server){
+            bTitle.append("MaxPlayerCount;");
+        }
         bTitle.append("MaxBytesSentPerSecond;");
         bTitle.append("MaxBytesReceivedPerSecond;");
         bTitle.append("AverageBytesSentPerSecond;");
@@ -306,12 +317,17 @@ public class StatusData {
         String date = format.format(Calendar.getInstance().getTime());
         bData.append(date+";");
         bData.append(getConnectionTime()+";");
-        bData.append(maxPing+";");
-        bData.append(maxFakePing+";");
-        bData.append(averageData.getAveragePing()+";");
-        bData.append(averageData.getAverageFakePing()+";");
+        if(!server){
+            bData.append(getUdpAddress()+";");
+            bData.append(maxPing+";");
+            bData.append(maxFakePing+";");
+            bData.append(averageData.getAveragePing()+";");
+            bData.append(averageData.getAverageFakePing()+";");
+        }
         bData.append(maxEntityCount+";");
-        bData.append(maxPlayerCount+";");
+        if(server){
+            bData.append(maxPlayerCount+";");
+        }
         bData.append(maxBytesSentPerSecond+";");
         bData.append(maxBytesReceivedPerSecond+";");
         bData.append(averageData.getAverageBytesSentPerSecond()+";");

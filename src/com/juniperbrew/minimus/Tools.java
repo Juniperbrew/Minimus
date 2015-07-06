@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -52,5 +53,9 @@ public class Tools {
 
     public static int inverseRotation(int degrees){
         return Math.abs(360-degrees);
+    }
+
+    public static String getUserDataDirectory() {
+        return System.getProperty("user.home") + File.separator + ".minimus" + File.separator;
     }
 }

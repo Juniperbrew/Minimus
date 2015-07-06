@@ -942,7 +942,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showScoreboard();
         }
         if(character == 'i'){
-            statusData.writeLog("clientLog");
+            statusData.writeLog(false);
         }
         if(character == 'y'){
             boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
@@ -1064,7 +1064,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void dispose() {
-        statusData.writeLog("clientLog");
+        statusData.writeLog(false);
     }
 
     @Override

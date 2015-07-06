@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus.windows;
 
+import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.client.ClientLauncher;
 import net.miginfocom.swing.MigLayout;
 
@@ -78,7 +79,7 @@ public class ServerSelector extends JFrame {
     }
 
     private void addServer(String server){
-        try(PrintWriter out = new PrintWriter(new FileWriter(SERVER_LIST, true))) {
+        try(PrintWriter out = new PrintWriter(new FileWriter(Tools.getUserDataDirectory()+SERVER_LIST, true))) {
             out.println(server);
         }catch (IOException e) {
             e.printStackTrace();
@@ -87,7 +88,7 @@ public class ServerSelector extends JFrame {
 
     private String[] getServers() throws IOException {
         ArrayList<String> serverList = new ArrayList<>();
-        File file = new File(SERVER_LIST);
+        File file = new File(Tools.getUserDataDirectory()+SERVER_LIST);
         file.createNewFile();
 
         BufferedReader reader = new BufferedReader(new FileReader(file));

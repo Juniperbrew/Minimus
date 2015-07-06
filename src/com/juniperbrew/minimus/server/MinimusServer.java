@@ -704,7 +704,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                     if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
                         for(Connection c:server.getConnections()){
-                            serverData.updatePing();
+                            connectionStatus.get(c).updatePing();
                             updateFakePing(c);
                         }
                         lastPingUpdate = System.nanoTime();
@@ -922,7 +922,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             camera.update();
         }
         if(character == 'i'){
-            serverData.writeLog("serverLog");
+            serverData.writeLog(true);
         }
         if (character == '1') {
             showConsoleWindow();
@@ -994,7 +994,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     public void resume() {}
     @Override
     public void dispose() {
-        serverData.writeLog("serverLog");
+        serverData.writeLog(true);
     }
 
     @Override
