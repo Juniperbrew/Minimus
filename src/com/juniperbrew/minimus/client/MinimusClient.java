@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -138,6 +139,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Sound projectile;
     Sound laser;
 
+    Music backgroundMusic;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -182,6 +185,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         hurt = Gdx.audio.newSound(Gdx.files.internal("resources\\hurt.ogg"));
         laser = Gdx.audio.newSound(Gdx.files.internal("resources\\laser.ogg"));
         projectile = Gdx.audio.newSound(Gdx.files.internal("resources\\projectile.ogg"));
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources\\taustamuusik.mp3"));
+        backgroundMusic.setLooping(true);
+        backgroundMusic.play();
     }
 
     public void showConsoleWindow(){

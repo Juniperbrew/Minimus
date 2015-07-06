@@ -1,6 +1,7 @@
 TODO add hitscan weapon sword with swinging line animation
 TODO add sound effects
 TODO add tiled background
+TODO add error logging to network thread
 
 DONE store data usage in logfile [connection time, (max/avg) ping, (max/avg) fake ping, max entities, max players, (max/avg) kb/s, bytes (sent/received), (max/avg) packets/s, packets (sent/received), max packet size]
 DONE remove health interpolation
