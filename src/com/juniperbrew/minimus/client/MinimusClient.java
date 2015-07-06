@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -133,6 +134,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     boolean titleSet;
 
+    Sound hurt;
+    Sound projectile;
+    Sound laser;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -173,6 +178,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
+
+        hurt = Gdx.audio.newSound(Gdx.files.internal("hurt.ogg"));
+        laser = Gdx.audio.newSound(Gdx.files.internal("laser.ogg"));
+        projectile = Gdx.audio.newSound(Gdx.files.internal("projectile.ogg"));
     }
 
     public void showConsoleWindow(){
@@ -458,6 +467,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
+        laser.play();
         lastAttackDone = System.nanoTime();
         sharedMethods.createLaserAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(), attackVisuals);
     }
@@ -466,6 +476,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
+        projectile.play();
         lastAttackDone = System.nanoTime();
         projectiles.add(sharedMethods.createRocketAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(),player.id));
     }
@@ -710,8 +721,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         for(Network.EntityAttacking attack:pendingAttacks){
             if(attack.weapon == 0){
+                laser.play();
                 sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
             }else if(attack.weapon == 1){
+                projectile.play();
                 projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
             }
         }
@@ -779,6 +792,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             for(int id:stateSnapshot.keySet()){
                 Entity target = stateSnapshot.get(id);
                 if(target.getBounds().intersectsLine(movedPath) && target != stateSnapshot.get(projectile.ownerID)){
+                    hurt.play();
                     projectile.destroyed = true;
                 }
             }
