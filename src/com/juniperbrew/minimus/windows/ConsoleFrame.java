@@ -15,6 +15,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -154,15 +155,18 @@ public class ConsoleFrame extends JFrame {
 
     public void runAutoexec(){
         addLine("Running autoexec..");
-        try(BufferedReader reader = new BufferedReader(new FileReader(Tools.getUserDataDirectory()+"autoexec.txt"))){
-            String line;
-            while((line = reader.readLine()) != null){
-                parseCommand(line);
+        File file = new File(Tools.getUserDataDirectory()+"autoexec.txt");
+        if(file.exists()){
+            try(BufferedReader reader = new BufferedReader(new FileReader(file))){
+                String line;
+                while((line = reader.readLine()) != null){
+                    parseCommand(line);
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

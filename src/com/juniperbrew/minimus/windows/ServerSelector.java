@@ -14,7 +14,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -22,7 +21,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -161,9 +159,11 @@ public class ServerSelector extends JFrame {
     private ArrayList<File> getErrorLogs(){
         ArrayList<File> files = new ArrayList<>();
         File errorFolder = new File(errorFolderPath);
-        for (final File fileEntry : errorFolder.listFiles()) {
-            if (!fileEntry.isDirectory()) {
-                files.add(fileEntry);
+        if(errorFolder.exists()){
+            for (final File fileEntry : errorFolder.listFiles()) {
+                if (!fileEntry.isDirectory()) {
+                    files.add(fileEntry);
+                }
             }
         }
         return files;

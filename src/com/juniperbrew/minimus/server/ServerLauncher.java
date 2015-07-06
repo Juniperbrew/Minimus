@@ -4,12 +4,14 @@ import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.SharedMethods;
+import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.server.MinimusServer;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -19,6 +21,10 @@ public class ServerLauncher {
     static boolean useJFrame = false;
 
     public static void main(String[] args) {
+
+        //Create data directory if it doesn't exist
+        File file = new File(Tools.getUserDataDirectory());
+        file.mkdirs();
 
         final MinimusServer minimusServer = new MinimusServer();
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
