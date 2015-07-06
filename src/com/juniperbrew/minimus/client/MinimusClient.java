@@ -87,6 +87,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private ArrayList<Network.AddEntity> pendingAddedEntities = new ArrayList<>();
     private ArrayList<Integer> pendingRemovedEntities = new ArrayList<>();
+    private ArrayList<Network.EntityAttacking> pendingAttacks = new ArrayList<>();
 
 
     int playerID = -1;
@@ -356,11 +357,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
                 }else if(object instanceof Network.EntityAttacking){
                     Network.EntityAttacking attack = (Network.EntityAttacking) object;
-                    if(attack.weapon == 0){
-                        sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
-                    }else if(attack.weapon == 1){
-                        projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
-                    }
+                    pendingAttacks.add(attack);
                 }else if(object instanceof Network.AddDeath){
                     Network.AddDeath addDeath = (Network.AddDeath) object;
                     score.addDeath(addDeath.id);
@@ -706,8 +703,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         for(int id:pendingRemovedEntities){
             stateHistory.get(stateHistory.size()-1).entities.remove(id);
         }
+
+        for(Network.EntityAttacking attack:pendingAttacks){
+            if(attack.weapon == 0){
+                sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
+            }else if(attack.weapon == 1){
+                projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
+            }
+        }
         pendingAddedEntities.clear();
         pendingRemovedEntities.clear();
+        pendingAttacks.clear();
     }
 
     private void doLogic(){
