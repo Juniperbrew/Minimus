@@ -264,10 +264,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         return entities;
     }
 
-    public void updateHomemadeReturnTripTime (Connection connection) {
+    public void updateFakePing(Connection connection) {
         StatusData status = connectionStatus.get(connection);
         if(status != null){
-            Network.HomemadePing ping = new Network.HomemadePing();
+            Network.FakePing ping = new Network.FakePing();
             ping.id = status.lastPingID++;
             status.lastPingSendTime = System.currentTimeMillis();
             sendTCP(connection,ping);
@@ -337,12 +337,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             public void received (Connection connection, Object object) {
                 logReceivedPackets(connection,object);
 
-                if (object instanceof Network.HomemadePing) {
+                if (object instanceof Network.FakePing) {
                     StatusData status = connectionStatus.get(connection);
-                    Network.HomemadePing ping = (Network.HomemadePing)object;
+                    Network.FakePing ping = (Network.FakePing)object;
                     if (ping.isReply) {
                         if (ping.id == status.lastPingID - 1) {
-                            status.homemadeReturnTripTime = (int)(System.currentTimeMillis() - status.lastPingSendTime);
+                            status.setFakeReturnTripTime((int)(System.currentTimeMillis() - status.lastPingSendTime));
                         }
                     } else {
                         ping.isReply = true;
@@ -705,7 +705,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
                         for(Connection c:server.getConnections()){
                             c.updateReturnTripTime();
-                            updateHomemadeReturnTripTime(c);
+                            updateFakePing(c);
                         }
                         lastPingUpdate = System.nanoTime();
                     }

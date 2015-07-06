@@ -1,7 +1,8 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO store data usage in logfile [(max/average/min) ping,(max/average/min) homemadePing]
-PROGRESS (max/min) entities, max players, connection time, (max/avg) packets/s, (max/avg) kb/s, packets (sent/received), bytes (sent/received), max packet size,
+TODO add sound effects
+TODO add tiled background
 
+DONE store data usage in logfile [connection time, (max/avg) ping, (max/avg) fake ping, max entities, max players, (max/avg) kb/s, bytes (sent/received), (max/avg) packets/s, packets (sent/received), max packet size]
 DONE remove health interpolation
 DONE add projectile weapon (bow)
 DONE add 360 degree turning

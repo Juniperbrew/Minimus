@@ -17,7 +17,7 @@ public class ClientStatusFrame extends JFrame {
     JLabel currentInputRequest = new JLabel();
     JLabel inputQueue = new JLabel();
     JLabel ping = new JLabel();
-    JLabel homemadePing = new JLabel();
+    JLabel fakePing = new JLabel();
     JLabel download = new JLabel();
     JLabel upload = new JLabel();
 
@@ -39,15 +39,6 @@ public class ClientStatusFrame extends JFrame {
 
     public ClientStatusFrame(StatusData dataUsage){
 
-        /*
-
-        statusData.setFps(Gdx.graphics.getFramesPerSecond());
-        statusData.setEntityCount(stateSnapshot.size());
-        statusData.setServerTime(lastServerTime);
-        statusData.setClientTime(lastServerTime+((System.nanoTime()- lastAuthoritativeStateReceived)/1000000000f));
-        statusData.currentInputRequest = currentInputRequest;
-        statusData.inputQueue = inputQueue.size();
-         */
         super("Stats");
         setResizable(false);
         data = dataUsage;
@@ -63,7 +54,7 @@ public class ClientStatusFrame extends JFrame {
         add(currentInputRequest);
         add(inputQueue);
         add(ping);
-        add(homemadePing);
+        add(fakePing);
         add(new JSeparator(),"pushx, growx");
 
         add(packetsSent);
@@ -99,7 +90,7 @@ public class ClientStatusFrame extends JFrame {
                 currentInputRequest.setText("Current input request: "+data.currentInputRequest);
                 inputQueue.setText("Input queue: "+data.inputQueue);
                 ping.setText("Ping: "+data.getPing());
-                homemadePing.setText("Homemade ping:" + data.homemadeReturnTripTime);
+                fakePing.setText("Fake ping:" + data.getFakePing());
 
                 packetsSent.setText("Packets sent: " + data.packetsSent);
                 bytesSent.setText("Bytes sent: " + data.bytesSent);

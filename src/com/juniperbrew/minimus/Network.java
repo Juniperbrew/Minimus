@@ -50,14 +50,14 @@ public class Network {
         kryo.register(AddNpcKill.class);
         kryo.register(AddDeath.class);
         kryo.register(Rotation.class);
-        kryo.register(HomemadePing.class);
+        kryo.register(FakePing.class);
     }
 
     public static class Message{
         public String text;
     }
 
-    public static class HomemadePing{
+    public static class FakePing {
         public int id;
         public boolean isReply;
     }

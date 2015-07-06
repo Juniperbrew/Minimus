@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
@@ -51,18 +52,20 @@ public class StatusData {
 
     public int lastPingID;
     public long lastPingSendTime;
-    public int homemadeReturnTripTime;
+    private int fakeReturnTripTime;
 
     private int playerCount;
     private int maxPlayerCount;
-    private int maxEntityCount = -1;
-    private int minEntityCount = -1;
+    private int maxEntityCount;
 
     private int maxPacketsReceivedPerSecond;
     private int maxPacketsSentPerSecond;
     private int maxBytesReceivedPerSecond;
     private int maxBytesSentPerSecond;
     private int maxReceivedPacketSize;
+
+    private int maxPing;
+    private int maxFakePing;
 
     public int getEntityCount() {
         return entityCount;
@@ -76,6 +79,30 @@ public class StatusData {
         this.connection = connection;
         this.connectionTime = connectionTime;
         this.logIntervalSeconds = logIntervalSeconds;
+    }
+
+    public void setFakeReturnTripTime(int rtt){
+        fakeReturnTripTime = rtt;
+        averageData.fakePing += rtt;
+        averageData.fakePingCounter++;
+        if(rtt>maxFakePing){
+            maxFakePing = rtt;
+        }
+    }
+
+
+    public void updatePing(){
+        connection.updateReturnTripTime();
+        int rtt = connection.getReturnTripTime();
+        averageData.ping += rtt;
+        averageData.pingCounter++;
+        if(rtt > maxPing){
+            maxPing = rtt;
+        }
+    }
+
+    public int getFakePing(){
+        return fakeReturnTripTime;
     }
 
     public int getLastSentPacketSize() {
@@ -110,16 +137,9 @@ public class StatusData {
     }
 
     public void setEntityCount(int entityCount){
-        if(maxEntityCount == -1 && minEntityCount == -1){
-            maxEntityCount = entityCount;
-            minEntityCount = entityCount;
-        }
         this.entityCount = entityCount;
         if(entityCount>maxEntityCount){
             maxEntityCount = entityCount;
-        }
-        if(entityCount<minEntityCount){
-            minEntityCount = entityCount;
         }
     }
 
@@ -257,45 +277,53 @@ public class StatusData {
         StringBuilder bTitle = new StringBuilder();
         bTitle.append("Date;");
         bTitle.append("ConnectionTime;");
+        bTitle.append("MaxPing;");
+        bTitle.append("MaxFakePing;");
+        bTitle.append("AveragePing;");
+        bTitle.append("AverageFakePing;");
         bTitle.append("MaxEntityCount;");
-        bTitle.append("MinEntityCount;");
         bTitle.append("MaxPlayerCount;");
-        bTitle.append("MaxPacketsSentPerSecond;");
-        bTitle.append("MaxPacketsReceivedPerSecond;");
-        bTitle.append("AveragePacketsSentPerSecond;");
-        bTitle.append("AveragePacketsReceivedPerSecond;");
         bTitle.append("MaxBytesSentPerSecond;");
         bTitle.append("MaxBytesReceivedPerSecond;");
         bTitle.append("AverageBytesSentPerSecond;");
         bTitle.append("AverageBytesReceivedPerSecond;");
-        bTitle.append("MaxReceivedPacketSize;");
-        bTitle.append("MaxSentPacketSize;");
-        bTitle.append("PacketsReceived;");
-        bTitle.append("PacketsSent;");
-        bTitle.append("BytesReceived;");
         bTitle.append("BytesSent;");
+        bTitle.append("BytesReceived;");
+        bTitle.append("MaxPacketsSentPerSecond;");
+        bTitle.append("MaxPacketsReceivedPerSecond;");
+        bTitle.append("AveragePacketsSentPerSecond;");
+        bTitle.append("AveragePacketsReceivedPerSecond;");
+        bTitle.append("PacketsSent;");
+        bTitle.append("PacketsReceived;");
+        bTitle.append("MaxSentPacketSize;");
+        bTitle.append("MaxReceivedPacketSize;");
         String title = bTitle.toString();
 
         StringBuilder bData = new StringBuilder();
-        bData.append(Calendar.getInstance().getTime()+";");
+        SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        String date = format.format(Calendar.getInstance().getTime());
+        bData.append(date+";");
         bData.append(getConnectionTime()+";");
+        bData.append(maxPing+";");
+        bData.append(maxFakePing+";");
+        bData.append(averageData.getAveragePing()+";");
+        bData.append(averageData.getAverageFakePing()+";");
         bData.append(maxEntityCount+";");
-        bData.append(minEntityCount+";");
         bData.append(maxPlayerCount+";");
-        bData.append(maxPacketsSentPerSecond+";");
-        bData.append(maxPacketsReceivedPerSecond+";");
-        bData.append(averageData.getAveragePacketsSentPerSecond()+";");
-        bData.append(averageData.getAveragePacketsReceivedPerSecond()+";");
         bData.append(maxBytesSentPerSecond+";");
         bData.append(maxBytesReceivedPerSecond+";");
         bData.append(averageData.getAverageBytesSentPerSecond()+";");
         bData.append(averageData.getAverageBytesReceivedPerSecond()+";");
-        bData.append(maxReceivedPacketSize+";");
-        bData.append(maxSentPacketSize+";");
-        bData.append(packetsReceived+";");
-        bData.append(packetsSent+";");
-        bData.append(bytesReceived+";");
         bData.append(bytesSent+";");
+        bData.append(bytesReceived+";");
+        bData.append(maxPacketsSentPerSecond+";");
+        bData.append(maxPacketsReceivedPerSecond+";");
+        bData.append(averageData.getAveragePacketsSentPerSecond()+";");
+        bData.append(averageData.getAveragePacketsReceivedPerSecond()+";");
+        bData.append(packetsSent+";");
+        bData.append(packetsReceived+";");
+        bData.append(maxSentPacketSize+";");
+        bData.append(maxReceivedPacketSize+";");
         String data = bData.toString();
 
         boolean writeTitle = false;
@@ -339,6 +367,12 @@ public class StatusData {
         int bytesSentPerSecond;
         int bytesSentPerSecondCounter;
 
+        int ping;
+        int pingCounter;
+
+        int fakePing;
+        int fakePingCounter;
+
         public int getAveragePacketsReceivedPerSecond(){
             return packetsReceivedPerSecond/packetsReceivedPerSecondCounter;
         }
@@ -350,6 +384,12 @@ public class StatusData {
         }
         public int getAverageBytesSentPerSecond(){
             return bytesSentPerSecond/bytesSentPerSecondCounter;
+        }
+        public int getAveragePing(){
+            return ping/pingCounter;
+        }
+        public int getAverageFakePing(){
+            return fakePing/fakePingCounter;
         }
     }
 }

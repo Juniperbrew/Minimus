@@ -307,8 +307,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return newFullEntityUpdate;
     }
 
-    public void updateHomemadeReturnTripTime () {
-        Network.HomemadePing ping = new Network.HomemadePing();
+    public void updateFakePing() {
+        Network.FakePing ping = new Network.FakePing();
         ping.id = statusData.lastPingID++;
         statusData.lastPingSendTime = System.currentTimeMillis();
         sendTCP(ping);
@@ -326,11 +326,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             public void received(Connection connection, Object object) {
                 logReceivedPackets(connection, object);
 
-                if (object instanceof Network.HomemadePing) {
-                    Network.HomemadePing ping = (Network.HomemadePing)object;
+                if (object instanceof Network.FakePing) {
+                    Network.FakePing ping = (Network.FakePing)object;
                     if (ping.isReply) {
                         if (ping.id == statusData.lastPingID - 1) {
-                            statusData.homemadeReturnTripTime = (int)(System.currentTimeMillis() - statusData.lastPingSendTime);
+                            statusData.setFakeReturnTripTime((int)(System.currentTimeMillis() - statusData.lastPingSendTime));
                         }
                     } else {
                         ping.isReply = true;
@@ -717,8 +717,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float delta = Gdx.graphics.getDeltaTime();
 
         if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
-            client.updateReturnTripTime();
-            updateHomemadeReturnTripTime();
+            statusData.updatePing();
+            updateFakePing();
             lastPingRequest = System.nanoTime();
         }
 
