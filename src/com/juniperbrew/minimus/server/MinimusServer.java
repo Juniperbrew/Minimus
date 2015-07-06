@@ -640,7 +640,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void entityKilled(int killerID, int deadID){
         showMessage("Entity ID" + deadID + " is dead.");
         pendingDeadEntities.add(deadID);
-        if(playerList.containsKey(deadID)){
+        if(playerList.values().contains(deadID)){
             addPlayerKill(killerID);
             addDeath(deadID);
             //Respawn dead player
