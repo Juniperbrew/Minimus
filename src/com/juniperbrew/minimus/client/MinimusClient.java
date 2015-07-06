@@ -138,6 +138,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Sound hurt;
     Sound projectile;
     Sound laser;
+    Sound hit;
 
     Music backgroundMusic;
 
@@ -185,6 +186,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         hurt = Gdx.audio.newSound(Gdx.files.internal("resources\\hurt.ogg"));
         laser = Gdx.audio.newSound(Gdx.files.internal("resources\\laser.ogg"));
         projectile = Gdx.audio.newSound(Gdx.files.internal("resources\\projectile.ogg"));
+        hit = Gdx.audio.newSound(Gdx.files.internal("resources\\hit.ogg"));
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources\\taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.play();
@@ -798,7 +800,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             for(int id:stateSnapshot.keySet()){
                 Entity target = stateSnapshot.get(id);
                 if(target.getBounds().intersectsLine(movedPath) && target != stateSnapshot.get(projectile.ownerID)){
-                    hurt.play();
+                    if(id == playerID){
+                        hurt.play();
+                    }else{
+                        hit.play();
+                    }
                     projectile.destroyed = true;
                 }
             }
