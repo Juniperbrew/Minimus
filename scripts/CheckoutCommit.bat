@@ -28,10 +28,7 @@ echo %actualDate%
 
 git rev-list -n1 --before=%date% %branch% | xargs git checkout
 
-copy /y build\install\Minimus\bin\serverlist.txt ..\serverlist.txt
 call gradlew installDist
-copy /y ..\serverlist.txt build\install\Minimus\bin\serverlist.txt
-del ..\serverlist.txt
 
 cd /d %~dp0
 PAUSE

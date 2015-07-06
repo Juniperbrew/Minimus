@@ -701,7 +701,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         //Entities will be removed from latest state despite their remove time
         for(int id:pendingRemovedEntities){
-            stateHistory.get(stateHistory.size()-1).entities.remove(id);
+            int index = stateHistory.size()-1;
+            if(index<0){
+                index = 0;
+            }
+            stateHistory.get(index).entities.remove(id);
         }
 
         for(Network.EntityAttacking attack:pendingAttacks){
@@ -749,7 +753,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
 
         updateProjectiles(delta);
-
 
         float checkpoint2 = (System.nanoTime()-logicStart)/1000000f;
 
