@@ -165,7 +165,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void showHelp(){
-        try(BufferedReader reader = new BufferedReader(new FileReader("serverHelp.txt"))){
+        try(BufferedReader reader = new BufferedReader(new FileReader("resources\\serverHelp.txt"))){
             String line;
             while((line = reader.readLine())!=null){
                 showMessage(line);

@@ -169,7 +169,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         camera = new OrthographicCamera(windowWidth,windowHeight);
         centerCameraOnPlayer();
         Gdx.input.setInputProcessor(this);
-        spriteSheet = new Texture(Gdx.files.internal("spritesheetAlpha.png"));
+        spriteSheet = new Texture(Gdx.files.internal("resources\\spritesheetAlpha.png"));
         System.out.println("Spritesheet width:" +spriteSheet.getWidth());
         System.out.println("Spritesheet height:" +spriteSheet.getHeight());
         down = new TextureRegion(spriteSheet,171,129,16,22);
@@ -179,9 +179,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
-        hurt = Gdx.audio.newSound(Gdx.files.internal("hurt.ogg"));
-        laser = Gdx.audio.newSound(Gdx.files.internal("laser.ogg"));
-        projectile = Gdx.audio.newSound(Gdx.files.internal("projectile.ogg"));
+        hurt = Gdx.audio.newSound(Gdx.files.internal("resources\\hurt.ogg"));
+        laser = Gdx.audio.newSound(Gdx.files.internal("resources\\laser.ogg"));
+        projectile = Gdx.audio.newSound(Gdx.files.internal("resources\\projectile.ogg"));
     }
 
     public void showConsoleWindow(){
@@ -239,7 +239,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void showHelp(){
-        try(BufferedReader reader = new BufferedReader(new FileReader("clientHelp.txt"))){
+        try(BufferedReader reader = new BufferedReader(new FileReader("resources\\clientHelp.txt"))){
             String line;
             while((line = reader.readLine())!=null){
                 showMessage(line);

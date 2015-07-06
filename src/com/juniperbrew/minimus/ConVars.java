@@ -84,7 +84,7 @@ public class ConVars {
     }
 
     private void readVars(){
-        try(BufferedReader reader = new BufferedReader(new FileReader("conVars.txt"))){
+        try(BufferedReader reader = new BufferedReader(new FileReader("resources\\conVars.txt"))){
             String line;
             while((line = reader.readLine()) != null){
                 String[] splits = line.split(" ");
