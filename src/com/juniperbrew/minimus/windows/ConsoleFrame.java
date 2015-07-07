@@ -18,7 +18,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
 /**
@@ -164,6 +166,15 @@ public class ConsoleFrame extends JFrame {
                 }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else{
+            addLine("autoexec.txt doesn't exist, creating default autoexec.txt");
+            try(PrintWriter writer = new PrintWriter(new FileWriter(file))){
+                for(String line : conVars.getVarListWithValues()){
+                    writer.println(line);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -37,6 +37,13 @@ public class ConVars {
     public ArrayList<String> getVarList(){
         return new ArrayList<>(vars.keySet());
     }
+    public ArrayList<String> getVarListWithValues(){
+        ArrayList<String> varListWithValues = new ArrayList<>();
+        for(String varName : vars.keySet()){
+            varListWithValues.add(varName+" "+vars.get(varName));
+        }
+        return varListWithValues;
+    }
 
     public void set(String varName, double varValue){
         vars.put(varName,varValue);
