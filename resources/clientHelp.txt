@@ -4,6 +4,8 @@ e	show state history
 y	toggle performance warnings
 r	print player IDs
 q	print entity size
+i   write to log file
+l   throw runtime exception
 1	show console
 2	show status
 3	toggle clientside prediction

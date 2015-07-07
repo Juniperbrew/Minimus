@@ -6,3 +6,4 @@ wireshark.bat
 serverlist.txt
 spritesheet.png
 .DS_Store
+logs/**

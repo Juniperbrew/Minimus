@@ -24,6 +24,7 @@ public class ServerEntity extends Entity {
 
     public void restoreMaxHealth(){
         super.setHealth(maxHealth);
+        listener.healthChanged(id);
     }
 
     public void setHealth(int health){

@@ -86,6 +86,13 @@ public class Entity {
     public float getY(){
         return y;
     }
+
+    public float getCenterX(){
+        return x+width/2;
+    }
+    public float getCenterY(){
+        return y+height/2;
+    }
     public int getHealth(){
         return health;
     }

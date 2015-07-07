@@ -2,12 +2,16 @@ package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.juniperbrew.minimus.ExceptionLogger;
+import com.juniperbrew.minimus.SharedMethods;
+import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.server.MinimusServer;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -18,16 +22,21 @@ public class ServerLauncher {
 
     public static void main(String[] args) {
 
+        //Create data directory if it doesn't exist
+        File file = new File(Tools.getUserDataDirectory());
+        file.mkdirs();
+
+        final MinimusServer minimusServer = new MinimusServer();
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
+        cfg.title = minimusServer.getClass().getSimpleName()+" "+SharedMethods.VERSION_NAME;
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            final MinimusServer minimusServer = new MinimusServer();
-            frame.setTitle(minimusServer.getClass().getSimpleName());
+            frame.setTitle(minimusServer.getClass().getSimpleName()+" "+ SharedMethods.VERSION_NAME);
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
 

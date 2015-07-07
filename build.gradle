@@ -28,10 +28,7 @@ dependencies {
 installDist {
     into('bin') {
         from '.'
-        include 'clientHelp.txt'
-        include 'conVars.txt'
-        include 'spritesheetAlpha.png'
-        include 'serverHelp.txt'
+        include 'resources/*'
     }
 }
 
