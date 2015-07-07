@@ -167,7 +167,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     
     @Override
     public void create() {
-        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client"));
+        if(conVars.getBool("cl_auto_send_errorlogs")){
+            Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client", true, serverIP));
+        }else{
+            Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client"));
+        }
         windowHeight = Gdx.graphics.getHeight();
         windowWidth = Gdx.graphics.getWidth();
         camera = new OrthographicCamera(windowWidth,windowHeight);
@@ -975,6 +979,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(character == 'u'){
             showScoreboard();
+        }
+        if(character == 'l'){
+            //Throw exception
+            int kappa = 50/0;
         }
         if(character == 'i'){
             statusData.writeLog(false);

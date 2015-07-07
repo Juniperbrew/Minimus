@@ -73,6 +73,7 @@ public class Network {
     }
 
     public static class SendFile{
+        public String dateStamp;
         public String fileName;
         public byte[] data;
     }

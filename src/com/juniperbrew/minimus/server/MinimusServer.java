@@ -343,7 +343,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
                 if (object instanceof Network.SendFile){
                     Network.SendFile sendFile = (Network.SendFile) object;
-                    receiveFile(connection, sendFile.fileName, sendFile.data);
+                    receiveFile(connection, sendFile);
                     return;
                 }
 
@@ -897,8 +897,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }).start();
     }
 
-    private void receiveFile(Connection c, String fileName, byte[] data){
-        String folderName = Tools.getUserDataDirectory()+ File.separator+"receivedfiles"+File.separator+c.getRemoteAddressUDP().getHostName()+File.separator;
+    private void receiveFile(Connection c, Network.SendFile sendFile){
+        String fileName = sendFile.fileName;
+        byte[] data = sendFile.data;
+        String dateStamp = sendFile.dateStamp;
+        consoleFrame.addLine("Received file: "+fileName);
+        String folderName = Tools.getUserDataDirectory()+ File.separator+"receivedfiles"+File.separator+c.getRemoteAddressUDP().getHostName()+File.separator+dateStamp+File.separator;
         File folder = new File(folderName);
         folder.mkdirs();
         File file = new File(folderName+fileName);
