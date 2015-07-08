@@ -778,6 +778,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }else if(attack.weapon == 1){
                 projectile.play();
                 projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
+            }else if(attack.weapon == 2){
+                projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x,attack.y,attack.deg,attack.id));
             }
         }
         pendingAddedEntities.clear();
