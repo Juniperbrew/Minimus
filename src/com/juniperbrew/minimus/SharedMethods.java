@@ -67,6 +67,24 @@ public class SharedMethods {
         return new Projectile(x,y,500,300,deg,entityId);
     }
 
+    public ArrayList<Projectile> createShotgunAttackVisual(float x, float y, int deg, int entityId){
+        ArrayList<Projectile> projectiles = new ArrayList<>();
+        int rocketStartDistanceX = 25;
+        int rocketStartDistanceY = 25;
+        deg -= 20;
+        for(int i = 0; i < 5; i++){
+            float sina = MathUtils.sinDeg(deg);
+            float cosa = MathUtils.cosDeg(deg);
+
+            float startX = x + cosa*rocketStartDistanceX;
+            float startY = y + sina*rocketStartDistanceY;
+
+            projectiles.add(new Projectile(startX,startY,500,300,deg,entityId));
+            deg += 10;
+        }
+        return projectiles;
+    }
+
     public void applyCompassInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;

@@ -14,6 +14,8 @@ public class Entity {
     private int health;
     public int maxHealth;
     private int rotation;
+    public int slot1Weapon = 0;
+    public int slot2Weapon = 1;
 
     public Entity(){
         this(-1,-1,-1);
@@ -28,6 +30,8 @@ public class Entity {
         health = e.health;
         maxHealth = e.maxHealth;
         rotation = e.rotation;
+        slot1Weapon = e.slot1Weapon;
+        slot2Weapon = e.slot2Weapon;
     }
 
     public Entity(int id, float x, float y, int width, int height, int health, int maxHealth, Enums.Heading heading){

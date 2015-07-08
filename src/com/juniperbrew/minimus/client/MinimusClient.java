@@ -6,9 +6,9 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -96,6 +96,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
 
     int playerID = -1;
+    int slot1Weapon = 0;
+    int slot2Weapon = 1;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
@@ -470,30 +472,51 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         inputQueue.add(input);
         pendingInputPacket.add(input);
         //}
+
+        Entity e = stateSnapshot.get(playerID);
+        if(buttons.contains(Enums.Buttons.NUM1)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 0;
+            }else{
+                slot1Weapon = 0;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM2)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 1;
+            }else{
+                slot1Weapon = 1;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM3)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 2;
+            }else{
+                slot1Weapon = 2;
+            }
+        }
         if(buttons.contains(Enums.Buttons.MOUSE1)){
-            playerAttackLaser(stateSnapshot.get(playerID));
+            playerAttack(stateSnapshot.get(playerID), slot1Weapon);
         }
         if(buttons.contains(Enums.Buttons.MOUSE2)){
-            playerAttackRocket(stateSnapshot.get(playerID));
+            playerAttack(stateSnapshot.get(playerID), slot2Weapon);
         }
     }
 
-    private void playerAttackLaser(Entity player){
+    private void playerAttack(Entity player, int weapon){
         if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
             return;
         }
-        laser.play();
         lastAttackDone = System.nanoTime();
-        sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
-    }
-
-    private void playerAttackRocket(Entity player){
-        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
-            return;
+        if(weapon == 0){
+            laser.play();
+            sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
+        }else if(weapon == 1){
+            projectile.play();
+            projectiles.add(sharedMethods.createRocketAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(),player.id));
+        }else if (weapon == 2){
+            projectiles.addAll(sharedMethods.createShotgunAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id));
         }
-        projectile.play();
-        lastAttackDone = System.nanoTime();
-        projectiles.add(sharedMethods.createRocketAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(),player.id));
     }
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
@@ -953,6 +976,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.F1){
             showHelp();
         }
+        if(keycode == Input.Keys.SHIFT_LEFT) buttons.add(Enums.Buttons.SHIFT);
+        if(keycode == Input.Keys.NUM_1) buttons.add(Enums.Buttons.NUM1);
+        if(keycode == Input.Keys.NUM_2) buttons.add(Enums.Buttons.NUM2);
+        if(keycode == Input.Keys.NUM_3) buttons.add(Enums.Buttons.NUM3);
         if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);
         if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);
@@ -967,6 +994,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public boolean keyUp(int keycode) {
+        if(keycode == Input.Keys.SHIFT_LEFT) buttons.remove(Enums.Buttons.SHIFT);
+        if(keycode == Input.Keys.NUM_1) buttons.remove(Enums.Buttons.NUM1);
+        if(keycode == Input.Keys.NUM_2) buttons.remove(Enums.Buttons.NUM2);
+        if(keycode == Input.Keys.NUM_3) buttons.remove(Enums.Buttons.NUM3);
         if(keycode == Input.Keys.LEFT) buttons.remove(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.remove(Enums.Buttons.RIGHT);
         if(keycode == Input.Keys.UP)buttons.remove(Enums.Buttons.UP);
@@ -1058,18 +1089,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             showMessage("Total entity size is " + totalEntitySize + " bytes");
         }
-        if(character == '1'){
+        if(character == 'z'){
             showConsoleWindow();
         }
-        if(character == '2'){
+        if(character == 'x'){
             showStatusWindow();
         }
-
-        if (character == '3') {
+        if(character == 'c'){
             conVars.toggleVar("cl_clientside_prediction");
             showMessage("UseClientSidePrediction:" + conVars.getBool("cl_clientside_prediction"));
         }
-        if (character == '4') {
+        if(character == 'v'){
             conVars.toggleVar("cl_compress_input");
             showMessage("CompressInput:" + conVars.getBool("cl_compress_input"));
         }

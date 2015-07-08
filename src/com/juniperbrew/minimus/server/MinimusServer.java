@@ -406,12 +406,34 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
             for(Network.UserInput input : inputListCopy){
                 sharedMethods.applyInput(e,input);
-                //movePlayer(e, input);
+
+                if(input.buttons.contains(Enums.Buttons.NUM1)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 0;
+                    }else{
+                        e.slot1Weapon = 0;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM2)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 1;
+                    }else{
+                        e.slot1Weapon = 1;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM3)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 2;
+                    }else{
+                        e.slot1Weapon = 2;
+                    }
+                }
+
                 if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-                    attackWithEntity(connection,0);
+                    attackWithEntity(connection,e.slot1Weapon);
                 }
                 if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-                    attackWithEntity(connection,1);
+                    attackWithEntity(connection,e.slot2Weapon);
                 }
                 lastInputIDProcessed.put(connection,input.inputID);
                 inputList.remove(input); //FIXME we are removing this element from the original arraylist
@@ -449,11 +471,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                         }
                     }
                 }
-            }
-            if(weapon == 1){
+            }else if(weapon == 1){
                 Projectile projectile = sharedMethods.createRocketAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id);
                 projectiles.add(projectile);
+            }else if(weapon == 2){
+                projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id));
             }
+
 
         }
     }
