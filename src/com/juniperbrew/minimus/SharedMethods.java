@@ -125,6 +125,15 @@ public class SharedMethods {
         e.moveTo(newX,newY);
     }
 
+    public String getWeaponName(int weapon){
+        switch (weapon){
+            case 0: return "Laser";
+            case 1: return "Rifle";
+            case 2: return "Shotgun";
+            default: return null;
+        }
+    }
+
     public void applyInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;

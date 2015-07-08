@@ -116,6 +116,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     ConsoleFrame consoleFrame;
 
     private OrthographicCamera camera;
+    private OrthographicCamera hudCamera;
 
     ArrayList<Integer> playerList = new ArrayList<>();
 
@@ -149,6 +150,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     TiledMap map;
     OrthogonalTiledMapRenderer mapRenderer;
 
+    BitmapFont font;
+    int windowWidth;
+    int windowHeight;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -179,7 +184,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else{
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client"));
         }
-        camera = new OrthographicCamera(Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+        windowWidth = Gdx.graphics.getWidth();
+        windowHeight = Gdx.graphics.getHeight();
+        System.out.println("Window size: "+windowWidth+"x"+windowHeight);
+        camera = new OrthographicCamera(windowWidth,windowHeight);
+        hudCamera = new OrthographicCamera(windowWidth,windowHeight);
+        hudCamera.position.set(windowWidth/2,windowHeight/2,0);
+        hudCamera.update();
+
         Gdx.input.setInputProcessor(this);
         spriteSheet = new Texture(Gdx.files.internal("resources\\spritesheetAlpha.png"));
         System.out.println("Spritesheet width:" +spriteSheet.getWidth());
@@ -190,6 +202,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
+        font = new BitmapFont();
+        font.setColor(Color.RED);
 
         hurt = Gdx.audio.newSound(Gdx.files.internal("resources\\hurt.ogg"));
         laser = Gdx.audio.newSound(Gdx.files.internal("resources\\laser.ogg"));
@@ -950,6 +964,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             sharedMethods.renderProjectiles(shapeRenderer,projectiles);
         }
 
+        batch.begin();
+        batch.setProjectionMatrix(hudCamera.combined);
+        int offset = 0;
+        for(int id: playerList){
+            font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id), 5, windowHeight-5-offset);
+            offset += 20;
+        }
+        font.draw(batch, "Mouse 1: "+ sharedMethods.getWeaponName(slot1Weapon), 5, 40);
+        font.draw(batch, "Mouse 2: "+ sharedMethods.getWeaponName(slot2Weapon), 5, 20);
+        batch.end();
+
         if(stateSnapshot!=null){
             statusData.setEntityCount(stateSnapshot.size());
         }
@@ -1139,8 +1164,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void resize(int width, int height) {
+        windowWidth = width;
+        windowHeight = height;
         camera.viewportWidth = width;
         camera.viewportHeight = height;
+        hudCamera.viewportWidth = width;
+        hudCamera.viewportHeight = height;
+        hudCamera.position.set(windowWidth/2,windowHeight / 2,0);
+        hudCamera.update();
         centerCameraOnPlayer();
     }
 
