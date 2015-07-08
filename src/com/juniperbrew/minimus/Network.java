@@ -131,8 +131,8 @@ public class Network {
     public static class AssignEntity{
         public int networkID;
         public float velocity;
-        public int mapHeight;
-        public int mapWidth;
+        public String mapName;
+        public float mapScale;
         public ArrayList<Integer> playerList;
     }
 

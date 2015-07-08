@@ -4,8 +4,8 @@ TODO add healthpacks
 TODO add weapon switch with numbers for mouse1 and shift+numbers for mouse2
 TODO add shotgun
 TODO add hud with score info
-TODO add tiled background
 
+DONE add tiled background
 DONE add received timestamp folders in receivedfiles
 DONE autosend error logs
 DONE add sound effects

@@ -7,6 +7,8 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -92,8 +94,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     ConVars conVars;
 
-    final int MAP_WIDTH = 2000;
-    final int MAP_HEIGHT = 1500;
+    final String MAP_NAME = "minimus.tmx";
+    int mapWidth;
+    int mapHeight;
+    final float MAP_SCALE = 1f;
 
     float viewPortX;
     float viewPortY;
@@ -112,11 +116,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     Score score = new Score(this);
     Scoreboard scoreboard = new Scoreboard(score);
 
+    TiledMap map;
+
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         screenW = Gdx.graphics.getWidth();
         screenH = Gdx.graphics.getHeight();
-        sharedMethods = new SharedMethods(conVars,MAP_WIDTH,MAP_HEIGHT);
+        sharedMethods = new SharedMethods(conVars, mapWidth, mapHeight);
 
         for (int i = 0; i < 20; i++) {
             addNPC();
@@ -132,6 +138,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
         resize(h,w);
+
+        map = new TmxMapLoader().load("resources\\"+MAP_NAME);
+        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* MAP_SCALE);
+        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* MAP_SCALE);
 
         serverStartTime = System.nanoTime();
         serverData = new StatusData(null,serverStartTime,conVars.getInt("cl_log_interval_seconds"));
@@ -319,8 +329,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                     int width = 50;
                     int height = 50;
-                    float x = MathUtils.random(MAP_WIDTH-width);
-                    float y = MathUtils.random(MAP_HEIGHT-height);
+                    float x = MathUtils.random(mapWidth -width);
+                    float y = MathUtils.random(mapHeight -height);
                     ServerEntity newPlayer = new ServerEntity(networkID,x,y,MinimusServer.this);
                     newPlayer.width = width;
                     newPlayer.height = height;
@@ -336,8 +346,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     Network.AssignEntity assign = new Network.AssignEntity();
                     assign.networkID = networkID;
                     assign.velocity = (float)conVars.get("sv_velocity");
-                    assign.mapHeight = MAP_HEIGHT;
-                    assign.mapWidth = MAP_WIDTH;
+                    assign.mapName = MAP_NAME;
+                    assign.mapScale = MAP_SCALE;
                     assign.playerList = new ArrayList<>(playerList.values());
                     connection.sendTCP(assign);
                 }
@@ -563,8 +573,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void addNPC(){
         int width = 50;
         int height = 50;
-        float x = MathUtils.random(MAP_WIDTH-width);
-        float y = MathUtils.random(MAP_HEIGHT-height);
+        float x = MathUtils.random(mapWidth -width);
+        float y = MathUtils.random(mapHeight -height);
         int networkID = getNextNetworkID();
         ServerEntity npc = new ServerEntity(networkID,x,y,this);
         npc.height = height;
@@ -630,7 +640,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 int actualIndex = (startIndex+i)%keys.length;
                 EntityAI ai = entityAIs.get(keys[actualIndex]);
                 if(!ai.hasDestination){
-                    ai.setRandomDestination(MAP_WIDTH,MAP_HEIGHT);
+                    ai.setRandomDestination(mapWidth, mapHeight);
                     break;
                 }
             }
@@ -646,8 +656,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             //Respawn dead player
             ServerEntity deadPlayer = entities.get(deadID);
             deadPlayer.restoreMaxHealth();
-            float x = MathUtils.random(MAP_WIDTH-deadPlayer.width);
-            float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
+            float x = MathUtils.random(mapWidth -deadPlayer.width);
+            float y = MathUtils.random(mapHeight -deadPlayer.height);
             deadPlayer.moveTo(x,y);
         }else{
             addNpcKill(killerID);
@@ -687,8 +697,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 //Respawn dead player
                 ServerEntity deadPlayer = entities.get(id);
                 deadPlayer.restoreMaxHealth();
-                float x = MathUtils.random(MAP_WIDTH-deadPlayer.width);
-                float y = MathUtils.random(MAP_HEIGHT-deadPlayer.height);
+                float x = MathUtils.random(mapWidth -deadPlayer.width);
+                float y = MathUtils.random(mapHeight -deadPlayer.height);
                 deadPlayer.moveTo(x,y);
             }else{
                 removeEntity(id);
@@ -790,7 +800,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,0,0,1);
-        shapeRenderer.rect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+        shapeRenderer.rect(0, 0, mapWidth, mapHeight);
         shapeRenderer.setColor(1,1,1,1);
         ServerEntity[] serverEntitiesCopy = entities.values().toArray(new ServerEntity[entities.values().size()]);
         //TODO might want to make copy of playerlist too, to prevent concurrent modifications
@@ -1017,13 +1027,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void resize(int w, int h) {
-        if(h > ((float)w/MAP_WIDTH)*MAP_HEIGHT){
-            camera = new OrthographicCamera(MAP_WIDTH, h*((float)MAP_WIDTH/w));
+        if(h > ((float)w/ mapWidth)* mapHeight){
+            camera = new OrthographicCamera(mapWidth, h*((float) mapWidth /w));
         }else{
-            camera = new OrthographicCamera(w*((float)MAP_HEIGHT/h), MAP_HEIGHT);
+            camera = new OrthographicCamera(w*((float) mapHeight /h), mapHeight);
         }
-        viewPortX = MAP_WIDTH/2f;
-        viewPortY = MAP_HEIGHT/2f;
+        viewPortX = mapWidth /2f;
+        viewPortY = mapHeight /2f;
         camera.position.set(viewPortX, viewPortY, 0);
         camera.update();
     }

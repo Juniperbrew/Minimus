@@ -12,6 +12,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -130,9 +133,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Scoreboard scoreboard;
     Score score;
 
-    int windowHeight;
-    int windowWidth;
-
     boolean titleSet;
 
     Sound hurt;
@@ -141,6 +141,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Sound hit;
 
     Music backgroundMusic;
+
+    String mapName;
+    float mapScale;
+    TiledMap map;
+    OrthogonalTiledMapRenderer mapRenderer;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -172,10 +177,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else{
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client"));
         }
-        windowHeight = Gdx.graphics.getHeight();
-        windowWidth = Gdx.graphics.getWidth();
-        camera = new OrthographicCamera(windowWidth,windowHeight);
-        centerCameraOnPlayer();
+        camera = new OrthographicCamera(Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         Gdx.input.setInputProcessor(this);
         spriteSheet = new Texture(Gdx.files.internal("resources\\spritesheetAlpha.png"));
         System.out.println("Spritesheet width:" +spriteSheet.getWidth());
@@ -410,10 +412,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
                     conVars.set("sv_velocity",assign.velocity);
-                    mapHeight = assign.mapHeight;
-                    mapWidth = assign.mapWidth;
+
+                    mapName = assign.mapName;
+                    mapScale = assign.mapScale;
+
                     playerList = assign.playerList;
-                    sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
                     for(int id : playerList){
                         score.addPlayer(id);
                     }
@@ -481,7 +484,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         laser.play();
         lastAttackDone = System.nanoTime();
-        sharedMethods.createLaserAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(), attackVisuals);
+        sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
     }
 
     private void playerAttackRocket(Entity player){
@@ -743,6 +746,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         pendingAddedEntities.clear();
         pendingRemovedEntities.clear();
         pendingAttacks.clear();
+
+        if(mapRenderer == null && mapName != null){
+
+            map = new TmxMapLoader().load("resources\\"+mapName);
+            mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
+            mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
+            mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
+            sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
+        }
     }
 
     private void doLogic(){
@@ -846,24 +858,25 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         renderStart = System.nanoTime();
 
         doLogic();
-        centerCameraOnPlayer();
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        batch.setProjectionMatrix(camera.combined);
 
-        Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glLineWidth(3);
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0,0,0,1);
-        shapeRenderer.rect(0, 0, mapWidth, mapHeight);
-        shapeRenderer.end();
-
         statusFrame.update();
 
-
         if(stateSnapshot !=null){
+
+            centerCameraOnPlayer();
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            batch.setProjectionMatrix(camera.combined);
+
+            if(mapRenderer!=null){
+                mapRenderer.setView(camera);
+                mapRenderer.render();
+            }
+
             if(conVars.getBool("cl_show_debug")) {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
@@ -886,18 +899,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 Entity e = stateSnapshot.get(id);
                 float health = 1-((float)e.getHealth()/e.maxHealth);
                 if(playerList.contains(e.id)){
+                    //Cast player position to int because we are centering the camera using casted values too
+                    int playerX = (int)e.getX();
+                    int playerY = (int)e.getY();
                     batch.begin();
-                    batch.draw(down,e.getX(),e.getY(),e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    batch.draw(down,playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
                     batch.end();
                     int healthbarWidth = e.width+20;
                     int healthbarHeight = 10;
                     int healthbarXOffset = -10;
                     int healthbarYOffset = e.width+10;
                     shapeRenderer.setColor(0,1,0,1);
-                    shapeRenderer.rect(e.getX()+healthbarXOffset, e.getY()+healthbarYOffset, healthbarWidth,healthbarHeight);
+                    shapeRenderer.rect(playerX+healthbarXOffset, playerY+healthbarYOffset, healthbarWidth,healthbarHeight);
                     shapeRenderer.setColor(1,0,0,1);
                     float healthWidth = healthbarWidth*health;
-                    shapeRenderer.rect(e.getX()+healthbarXOffset, e.getY()+healthbarYOffset, healthWidth,healthbarHeight);
+                    shapeRenderer.rect(playerX+healthbarXOffset, playerY+healthbarYOffset, healthWidth,healthbarHeight);
                 }else{
                     shapeRenderer.setColor(1,1,1,1);
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
@@ -1083,7 +1099,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             player = stateSnapshot.get(playerID);
         }
         if(player != null){
-            camera.position.set(player.getX()+player.width/2f, player.getY()+player.height/2, 0);
+            //Cast values to int to avoid tile tearing
+            camera.position.set((int)(player.getX()+player.width/2f), (int)(player.getY()+player.height/2), 0);
         }else{
             camera.position.set(mapWidth/2f, mapHeight/2f, 0);
         }
@@ -1092,8 +1109,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void resize(int width, int height) {
-        windowWidth = width;
-        windowHeight = windowHeight;
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         centerCameraOnPlayer();

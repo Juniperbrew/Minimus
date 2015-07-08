@@ -213,6 +213,7 @@ public class ConsoleFrame extends JFrame {
                 String sendCommand = command.split(" ", 2)[1];
                 addLine("Sending command ["+sendCommand+"] to all clients.");
                 minimusServer.sendCommand(sendCommand);
+                parseCommand(sendCommand);
             }else{
                 addLine("The send command can only be used on server");
             }
