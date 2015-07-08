@@ -52,7 +52,7 @@ public class SharedMethods {
                 attackVisuals.remove(hitScan);
             }
         };
-        timer.schedule(task,Tools.secondsToMilli(conVars.get("sv_attack_visual_timer")));
+        timer.schedule(task,Tools.secondsToMilli(conVars.getDouble("sv_attack_visual_timer")));
         return hitScan;
     }
 
@@ -88,7 +88,7 @@ public class SharedMethods {
     public void applyCompassInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;
-        float velocity = (float)conVars.get("sv_velocity");
+        float velocity = (float)conVars.getDouble("sv_velocity");
 
         setCompassHeading(e, input.buttons);
 
@@ -137,7 +137,7 @@ public class SharedMethods {
     public void applyInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;
-        float velocity = (float)conVars.get("sv_velocity");
+        float velocity = (float)conVars.getDouble("sv_velocity");
 
         setRotation(e, input);
 

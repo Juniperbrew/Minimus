@@ -94,10 +94,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     ConVars conVars;
 
-    final String MAP_NAME = "minimus.tmx";
+    //final String MAP_NAME = "minimus.tmx";
     int mapWidth;
     int mapHeight;
-    final float MAP_SCALE = 1f;
+    //final float MAP_SCALE = 1f;
 
     float viewPortX;
     float viewPortY;
@@ -139,9 +139,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         int w = Gdx.graphics.getWidth();
         resize(h,w);
 
-        map = new TmxMapLoader().load("resources\\"+MAP_NAME);
-        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* MAP_SCALE);
-        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* MAP_SCALE);
+        map = new TmxMapLoader().load("resources\\"+conVars.get("sv_map_name"));
+        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* conVars.getDouble("sv_map_scale"));
+        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* conVars.getDouble("sv_map_scale"));
 
         serverStartTime = System.nanoTime();
         serverData = new StatusData(null,serverStartTime,conVars.getInt("cl_log_interval_seconds"));
@@ -345,9 +345,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                     Network.AssignEntity assign = new Network.AssignEntity();
                     assign.networkID = networkID;
-                    assign.velocity = (float)conVars.get("sv_velocity");
-                    assign.mapName = MAP_NAME;
-                    assign.mapScale = MAP_SCALE;
+                    assign.velocity = (float)conVars.getDouble("sv_velocity");
+                    assign.mapName = conVars.get("sv_map_name");
+                    assign.mapScale = (float) conVars.getDouble("sv_map_scale");
                     assign.playerList = new ArrayList<>(playerList.values());
                     connection.sendTCP(assign);
                 }
@@ -382,8 +382,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
             }
         };
-        double minPacketDelay = conVars.get("sv_min_packet_delay");
-        double maxPacketDelay = conVars.get("sv_max_packet_delay");
+        double minPacketDelay = conVars.getDouble("sv_min_packet_delay");
+        double maxPacketDelay = conVars.getDouble("sv_max_packet_delay");
         if(maxPacketDelay > 0){
             int msMinDelay = (int) (minPacketDelay*1000);
             int msMaxDelay = (int) (maxPacketDelay*1000);
@@ -444,7 +444,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void attackWithEntity(Connection connection, int weapon){
         if(lastAttackDone.get(connection)==null){
             lastAttackDone.put(connection,System.nanoTime());
-        }else if(System.nanoTime()-lastAttackDone.get(connection)<Tools.secondsToNano(conVars.get("sv_attack_delay"))){ //1 second attack delay
+        }else if(System.nanoTime()-lastAttackDone.get(connection)<Tools.secondsToNano(conVars.getDouble("sv_attack_delay"))){ //1 second attack delay
             return;
         }else{
             lastAttackDone.put(connection,System.nanoTime());
@@ -654,7 +654,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void moveNPC(float delta){
 
         for(EntityAI ai:entityAIs.values()){
-            ai.move(conVars.get("sv_velocity"),delta);
+            ai.move(conVars.getDouble("sv_velocity"),delta);
         }
 
         if(posChangedEntities.size()<conVars.getInt("sv_max_moving_entities")&&entityAIs.size()>0){
@@ -748,7 +748,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     float delta = tickActualDuration/1000000000f;
 
 
-                    if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
+                    if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
                         for(Connection c:playerList.keySet()){
                             connectionStatus.get(c).updatePing();
                             updateFakePing(c);

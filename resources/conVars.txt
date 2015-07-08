@@ -22,3 +22,5 @@ cl_max_packet_delay 0.025
 sv_ping_update_delay 1
 cl_ping_update_delay 1
 cl_auto_send_errorlogs 1
+sv_map_name minimus.tmx
+sv_map_scale 1

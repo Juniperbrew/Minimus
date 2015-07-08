@@ -16,7 +16,7 @@ import java.util.TreeMap;
  */
 public class ConVars {
 
-    private TreeMap<String,Double> vars = new TreeMap<>();
+    private TreeMap<String,String> vars = new TreeMap<>();
 
     public ConVars(){
         readVars();
@@ -45,28 +45,36 @@ public class ConVars {
         return varListWithValues;
     }
 
-    public void set(String varName, double varValue){
+    public void set(String varName, String varValue){
         vars.put(varName,varValue);
+    }
+
+    public void set(String varName, double varValue){
+        vars.put(varName,String.valueOf(varValue));
     }
 
     public void set(String varName, boolean varValue){
         if(varValue){
-            vars.put(varName,1d);
+            vars.put(varName,"1");
         }else{
-            vars.put(varName,0d);
+            vars.put(varName,"0");
         }
     }
 
-    public double get(String varName){
+    public String get(String varName){
         return vars.get(varName);
     }
 
+    public double getDouble(String varName){
+        return Double.valueOf(vars.get(varName));
+    }
+
     public int getInt(String varName){
-        return vars.get(varName).intValue();
+        return (int) getDouble(varName);
     }
 
     public boolean getBool(String varName){
-        if(vars.get(varName).intValue() == 1){
+        if(getInt(varName) == 1){
             return true;
         }else{
             return false;
@@ -79,7 +87,7 @@ public class ConVars {
     }
 
     public void addToVar(String varName,double add){
-        double value = get(varName);
+        double value = getDouble(varName);
         value += add;
         set(varName,value);
     }
@@ -95,7 +103,7 @@ public class ConVars {
             String line;
             while((line = reader.readLine()) != null){
                 String[] splits = line.split(" ");
-                vars.put(splits[0], Double.valueOf(splits[1]));
+                vars.put(splits[0], splits[1]);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();

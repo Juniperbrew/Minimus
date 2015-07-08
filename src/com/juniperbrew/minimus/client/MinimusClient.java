@@ -442,8 +442,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
             }
         };
-        double minPacketDelay = conVars.get("sv_min_packet_delay");
-        double maxPacketDelay = conVars.get("sv_max_packet_delay");
+        double minPacketDelay = conVars.getDouble("sv_min_packet_delay");
+        double maxPacketDelay = conVars.getDouble("sv_max_packet_delay");
         if(maxPacketDelay > 0){
             int msMinDelay = (int) (minPacketDelay*1000);
             int msMaxDelay = (int) (maxPacketDelay*1000);
@@ -518,7 +518,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void playerAttack(Entity player, int weapon){
-        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.get("sv_attack_delay"))){
+        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.getDouble("sv_attack_delay"))){
             return;
         }
         lastAttackDone = System.nanoTime();
@@ -611,7 +611,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         //printStateHistory();
         //If interp delay is 0 we simply copy the latest authorative state and run clientside prediction on that
-        if(conVars.get("cl_interp") <= 0){
+        if(conVars.getDouble("cl_interp") <= 0){
             HashMap<Integer, Entity> authoritativeStateCopy = new HashMap<Integer, Entity>();
             for(int id : authoritativeState.entities.keySet()){
                 Entity e = authoritativeState.entities.get(id);
@@ -623,7 +623,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             return;
         }
 
-        double renderTime = clientTime-conVars.get("cl_interp");
+        double renderTime = clientTime-conVars.getDouble("cl_interp");
 
         //Copy this because it's modified from network thread
         Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
@@ -779,7 +779,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 projectile.play();
                 projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
             }else if(attack.weapon == 2){
-                projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x,attack.y,attack.deg,attack.id));
+                projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id));
             }
         }
         pendingAddedEntities.clear();
@@ -802,7 +802,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float checkpoint0 = (System.nanoTime()-logicStart)/1000000f;
         float delta = Gdx.graphics.getDeltaTime();
 
-        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.get("cl_ping_update_delay"))){
+        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
             statusData.updatePing();
             updateFakePing();
             lastPingRequest = System.nanoTime();
@@ -1137,14 +1137,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         if(character == '+'){
             conVars.addToVar("cl_interp",0.05);
-            showMessage("Interpolation delay now:" + conVars.get("cl_interp"));
+            showMessage("Interpolation delay now:" + conVars.getDouble("cl_interp"));
         }
         if(character == '-'){
             conVars.addToVar("cl_interp",-0.05);
-            if(conVars.get("cl_interp")<0){
+            if(conVars.getDouble("cl_interp")<0){
                 conVars.set("cl_interp",0);
             }
-            showMessage("Interpolation delay now:" + conVars.get("cl_interp"));
+            showMessage("Interpolation delay now:" + conVars.getDouble("cl_interp"));
         }
 
         return false;
