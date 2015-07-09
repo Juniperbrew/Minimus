@@ -161,9 +161,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         clientStartTime = System.nanoTime();
         score = new Score(this);
         scoreboard = new Scoreboard(score);
-        joinServer();
+        client = new Client(writeBuffer,objectBuffer);
         statusData = new StatusData(client,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
         statusFrame = new ClientStatusFrame(statusData);
+        joinServer();
     }
 
     private void logIntervalElapsed(){
@@ -355,7 +356,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void joinServer() throws IOException {
-        client = new Client(writeBuffer,objectBuffer);
         Network.register(client);
         Listener listener = new Listener() {
 
@@ -527,7 +527,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
         }else if(weapon == 1){
             projectile.play();
-            projectiles.add(sharedMethods.createRocketAttackVisual(player.getCenterX(),player.getCenterY(),player.getRotation(),player.id));
+            projectiles.add(sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id));
         }else if (weapon == 2){
             projectiles.addAll(sharedMethods.createShotgunAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id));
         }
@@ -777,7 +777,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
             }else if(attack.weapon == 1){
                 projectile.play();
-                projectiles.add(sharedMethods.createRocketAttackVisual(attack.x,attack.y,attack.deg,attack.id));
+                projectiles.add(sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id));
             }else if(attack.weapon == 2){
                 projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id));
             }

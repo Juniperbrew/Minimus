@@ -472,7 +472,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     }
                 }
             }else if(weapon == 1){
-                Projectile projectile = sharedMethods.createRocketAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id);
+                Projectile projectile = sharedMethods.createRifleAttackVisual(e.getCenterX(), e.getCenterY(), e.getRotation(), e.id);
                 projectiles.add(projectile);
             }else if(weapon == 2){
                 projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id));

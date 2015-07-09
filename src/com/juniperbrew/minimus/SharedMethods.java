@@ -56,7 +56,7 @@ public class SharedMethods {
         return hitScan;
     }
 
-    public Projectile createRocketAttackVisual(float x, float y, int deg, int entityId){
+    public Projectile createRifleAttackVisual(float x, float y, int deg, int entityId){
         int rocketStartDistanceX = 25;
         int rocketStartDistanceY = 25;
         float sina = MathUtils.sinDeg(deg);
@@ -64,7 +64,7 @@ public class SharedMethods {
 
         x += cosa*rocketStartDistanceX;
         y += sina*rocketStartDistanceY;
-        return new Projectile(x,y,500,300,deg,entityId);
+        return new Projectile(x,y,500,500,deg,entityId);
     }
 
     public ArrayList<Projectile> createShotgunAttackVisual(float x, float y, int deg, int entityId){
