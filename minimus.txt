@@ -1,9 +1,9 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO add 3 different AI, passive, passive+shooting, active+shooting
 TODO add healthpacks
 TODO add waves
-TODO players take damage from contact, make enemies that fire randomly
 
+DONE players take damage from contact
+DONE add 3 different AI, passive, passive+shooting, active+shooting
 DONE add hud with score info
 DONE add weapon switch with numbers for mouse1 and shift+numbers for mouse2
 DONE add shotgun

@@ -1,5 +1,7 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.math.Rectangle;
+
 import java.awt.geom.Rectangle2D;
 
 /**
@@ -110,7 +112,11 @@ public class Entity {
         this.health = health;
     }
 
-    public Rectangle2D.Float getBounds(){
+    public Rectangle getGdxBounds(){
+        return new Rectangle(x,y,width,height);
+    }
+
+    public Rectangle2D.Float getJavaBounds(){
         return new Rectangle2D.Float(x,y,width,height);
     }
 }

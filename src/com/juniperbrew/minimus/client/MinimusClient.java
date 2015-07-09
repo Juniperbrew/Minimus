@@ -396,7 +396,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
                 }else if(object instanceof Network.EntityAttacking){
                     Network.EntityAttacking attack = (Network.EntityAttacking) object;
-                    pendingAttacks.add(attack);
+                    if(attack.id == playerID){
+                        //Dont create own attacks again
+                        //This could be used to show debug info about where server sees players attacks
+                    }else{
+                        pendingAttacks.add(attack);
+                    }
                 }else if(object instanceof Network.AddDeath){
                     Network.AddDeath addDeath = (Network.AddDeath) object;
                     score.addDeath(addDeath.id);
@@ -427,7 +432,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }else if(object instanceof Network.AssignEntity){
                     Network.AssignEntity assign = (Network.AssignEntity) object;
                     playerID = assign.networkID;
-                    conVars.set("sv_velocity",assign.velocity);
+                    conVars.set("sv_player_velocity",assign.velocity);
 
                     mapName = assign.mapName;
                     mapScale = assign.mapScale;
@@ -742,6 +747,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void applyNetworkUpdates(){
+
+        if(mapRenderer == null && mapName != null){
+            map = new TmxMapLoader().load("resources\\"+mapName);
+            mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
+            mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
+            mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
+            sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
+        }
+
         //Add new states to state history, sort states and store the latest state
         if(pendingReceivedStates.size()>0){
             stateHistory.addAll(pendingReceivedStates);
@@ -786,14 +800,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         pendingRemovedEntities.clear();
         pendingAttacks.clear();
 
-        if(mapRenderer == null && mapName != null){
-
-            map = new TmxMapLoader().load("resources\\"+mapName);
-            mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-            mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
-            mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
-            sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
-        }
     }
 
     private void doLogic(){
@@ -854,7 +860,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             for(int id:stateSnapshot.keySet()){
                 Entity target = stateSnapshot.get(id);
-                if(target.getBounds().intersectsLine(movedPath) && target != stateSnapshot.get(projectile.ownerID)){
+                if(target.getJavaBounds().intersectsLine(movedPath) && target != stateSnapshot.get(projectile.ownerID)){
                     if(id == playerID){
                         hurt.play();
                     }else{

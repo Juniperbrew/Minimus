@@ -69,6 +69,10 @@ public class ConVars {
         return Double.valueOf(vars.get(varName));
     }
 
+    public float getFloat(String varName){
+        return Float.valueOf(vars.get(varName));
+    }
+
     public int getInt(String varName){
         return (int) getDouble(varName);
     }

@@ -2,6 +2,7 @@ package com.juniperbrew.minimus.server;
 
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
+import com.juniperbrew.minimus.Tools;
 
 import java.awt.geom.Rectangle2D;
 
@@ -11,10 +12,13 @@ import java.awt.geom.Rectangle2D;
 public class ServerEntity extends Entity {
 
     EntityChangeListener listener;
+    int team;
+    long lastDamageTaken;
 
-    public ServerEntity(int id, float x, float y, EntityChangeListener listener) {
+    public ServerEntity(int id, float x, float y, int team, EntityChangeListener listener) {
         super(id,x,y);
         this.listener = listener;
+        this.team = team;
     }
 
     public Entity getNetworkEntity(){
@@ -46,9 +50,27 @@ public class ServerEntity extends Entity {
         super.moveTo(newX, newY);
         listener.positionChanged(id);
     }
+    public boolean isInvulnerable(){
+        if(System.nanoTime()-lastDamageTaken> Tools.secondsToNano(MinimusServer.conVars.getDouble("sv_invulnerability_timer"))){
+            return false;
+        }else{
+            System.out.println(id + " is still invulnerable for " + (System.nanoTime()-lastDamageTaken));
+            return true;
+        }
+    }
 
-    public void reduceHealth(int healthReduction){
+    public void contactDamage(int healthReduction, int sourceID){
+        if(!isInvulnerable()) {
+            lastDamageTaken = System.nanoTime();
+            reduceHealth(healthReduction,sourceID);
+        }
+    }
+
+    public void reduceHealth(int healthReduction, int sourceID){
         super.setHealth(getHealth() - healthReduction);
         listener.healthChanged(id);
+        if(getHealth()<=0){
+            listener.entityDied(id, sourceID);
+        }
     }
 }

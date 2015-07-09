@@ -32,7 +32,7 @@ public class SharedMethods {
 
     public Line2D.Float createLaserAttackVisual(float x, float y, int deg, final ArrayList<Line2D.Float> attackVisuals){
 
-        int laserLength = 200;
+        float laserLength = conVars.getFloat("sv_laser_length");
         int laserStartDistanceX = 25;
         int laserStartDistanceY = 25;
 
@@ -57,72 +57,32 @@ public class SharedMethods {
     }
 
     public Projectile createRifleAttackVisual(float x, float y, int deg, int entityId){
-        int rocketStartDistanceX = 25;
-        int rocketStartDistanceY = 25;
+        int projectileStartDistanceX = 25;
+        int projectileStartDistanceY = 25;
         float sina = MathUtils.sinDeg(deg);
         float cosa = MathUtils.cosDeg(deg);
 
-        x += cosa*rocketStartDistanceX;
-        y += sina*rocketStartDistanceY;
-        return new Projectile(x,y,500,500,deg,entityId);
+        x += cosa*projectileStartDistanceX;
+        y += sina*projectileStartDistanceY;
+        return new Projectile(x,y,conVars.getFloat("sv_rifle_range"),conVars.getFloat("sv_rifle_velocity"),deg,entityId);
     }
 
     public ArrayList<Projectile> createShotgunAttackVisual(float x, float y, int deg, int entityId){
         ArrayList<Projectile> projectiles = new ArrayList<>();
-        int rocketStartDistanceX = 25;
-        int rocketStartDistanceY = 25;
+        int projectileStartDistanceX = 25;
+        int projectileStartDistanceY = 25;
         deg -= 20;
         for(int i = 0; i < 5; i++){
             float sina = MathUtils.sinDeg(deg);
             float cosa = MathUtils.cosDeg(deg);
 
-            float startX = x + cosa*rocketStartDistanceX;
-            float startY = y + sina*rocketStartDistanceY;
+            float startX = x + cosa*projectileStartDistanceX;
+            float startY = y + sina*projectileStartDistanceY;
 
-            projectiles.add(new Projectile(startX,startY,500,300,deg,entityId));
+            projectiles.add(new Projectile(startX,startY,conVars.getFloat("sv_shotgun_range"),conVars.getFloat("sv_shotgun_velocity"),deg,entityId));
             deg += 10;
         }
         return projectiles;
-    }
-
-    public void applyCompassInput(Entity e, Network.UserInput input){
-        float deltaX = 0;
-        float deltaY = 0;
-        float velocity = (float)conVars.getDouble("sv_velocity");
-
-        setCompassHeading(e, input.buttons);
-
-        if(input.buttons.contains(Enums.Buttons.UP)){
-            deltaY = velocity *input.msec;
-        }
-        if(input.buttons.contains(Enums.Buttons.DOWN)){
-            deltaY = -1* velocity *input.msec;
-        }
-        if(input.buttons.contains(Enums.Buttons.LEFT)){
-            deltaX = -1* velocity *input.msec;
-        }
-        if(input.buttons.contains(Enums.Buttons.RIGHT)){
-            deltaX = velocity *input.msec;
-        }
-
-        if(conVars.getBool("sv_check_map_collisions")) {
-            if (e.getX() + e.width + deltaX > mapWidth) {
-                deltaX = mapWidth - e.getX() - e.width;
-            }
-            if (e.getX() + deltaX < 0) {
-                deltaX = 0 - e.getX();
-            }
-            if (e.getY() + e.height + deltaY > mapHeight) {
-                deltaY = mapHeight - e.getY() - e.height;
-            }
-            if (e.getY() + deltaY < 0) {
-                deltaY = 0 - e.getY();
-            }
-        }
-
-        float newX = e.getX()+deltaX;
-        float newY = e.getY()+deltaY;
-        e.moveTo(newX,newY);
     }
 
     public String getWeaponName(int weapon){
@@ -137,7 +97,7 @@ public class SharedMethods {
     public void applyInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;
-        float velocity = (float)conVars.getDouble("sv_velocity");
+        float velocity = conVars.getFloat("sv_player_velocity");
 
         setRotation(e, input);
 

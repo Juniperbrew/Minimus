@@ -1,4 +1,4 @@
-sv_velocity 100
+sv_player_velocity 150
 sv_tickrate 60
 sv_updaterate 10
 cl_udp 1
@@ -24,3 +24,12 @@ cl_ping_update_delay 1
 cl_auto_send_errorlogs 1
 sv_map_name minimus.tmx
 sv_map_scale 1
+sv_npc_velocity 75
+sv_npc_target_search_radius 300
+sv_rifle_range 700
+sv_rifle_velocity 500
+sv_shotgun_range 500
+sv_shotgun_velocity 300
+sv_laser_length 200
+sv_contact_damage 5
+sv_invulnerability_timer 0.5
