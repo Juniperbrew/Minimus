@@ -12,17 +12,15 @@ import java.awt.geom.Rectangle2D;
 public class ServerEntity extends Entity {
 
     EntityChangeListener listener;
-    int team;
     long lastDamageTaken;
 
     public ServerEntity(int id, float x, float y, int team, EntityChangeListener listener) {
-        super(id,x,y);
+        super(id,x,y, team);
         this.listener = listener;
-        this.team = team;
     }
 
     public Entity getNetworkEntity(){
-        Entity e = new Entity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading());
+        Entity e = new Entity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading(), team);
         return e;
     }
 

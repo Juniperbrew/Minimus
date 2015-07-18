@@ -56,7 +56,7 @@ public class SharedMethods {
         return hitScan;
     }
 
-    public Projectile createRifleAttackVisual(float x, float y, int deg, int entityId){
+    public Projectile createRifleAttackVisual(float x, float y, int deg, int entityId, int team){
         int projectileStartDistanceX = 25;
         int projectileStartDistanceY = 25;
         float sina = MathUtils.sinDeg(deg);
@@ -64,10 +64,10 @@ public class SharedMethods {
 
         x += cosa*projectileStartDistanceX;
         y += sina*projectileStartDistanceY;
-        return new Projectile(x,y,conVars.getFloat("sv_rifle_range"),conVars.getFloat("sv_rifle_velocity"),deg,entityId);
+        return new Projectile(x,y,conVars.getFloat("sv_rifle_range"),conVars.getFloat("sv_rifle_velocity"),deg,entityId, team);
     }
 
-    public ArrayList<Projectile> createShotgunAttackVisual(float x, float y, int deg, int entityId){
+    public ArrayList<Projectile> createShotgunAttackVisual(float x, float y, int deg, int entityId, int team){
         ArrayList<Projectile> projectiles = new ArrayList<>();
         int projectileStartDistanceX = 25;
         int projectileStartDistanceY = 25;
@@ -79,7 +79,7 @@ public class SharedMethods {
             float startX = x + cosa*projectileStartDistanceX;
             float startY = y + sina*projectileStartDistanceY;
 
-            projectiles.add(new Projectile(startX,startY,conVars.getFloat("sv_shotgun_range"),conVars.getFloat("sv_shotgun_velocity"),deg,entityId));
+            projectiles.add(new Projectile(startX,startY,conVars.getFloat("sv_shotgun_range"),conVars.getFloat("sv_shotgun_velocity"),deg,entityId,team));
             deg += 10;
         }
         return projectiles;

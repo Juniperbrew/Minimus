@@ -50,6 +50,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -90,9 +91,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private Network.FullEntityUpdate interpFrom;
     private Network.FullEntityUpdate interpTo;
 
-    private ArrayList<Network.AddEntity> pendingAddedEntities = new ArrayList<>();
-    private ArrayList<Integer> pendingRemovedEntities = new ArrayList<>();
-    private ArrayList<Network.EntityAttacking> pendingAttacks = new ArrayList<>();
+    private ConcurrentLinkedQueue<Network.AddEntity> pendingAddedEntities = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Integer> pendingRemovedEntities = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Network.EntityAttacking> pendingAttacks = new ConcurrentLinkedQueue<>();
 
 
     int playerID = -1;
@@ -527,14 +528,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             return;
         }
         lastAttackDone = System.nanoTime();
+        //TODO Ignoring projectile team for now
         if(weapon == 0){
             laser.play();
             sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
         }else if(weapon == 1){
             projectile.play();
-            projectiles.add(sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id));
+            projectiles.add(sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
         }else if (weapon == 2){
-            projectiles.addAll(sharedMethods.createShotgunAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id));
+            projectiles.addAll(sharedMethods.createShotgunAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
         }
     }
 
@@ -773,11 +775,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             //System.out.println("InputID:"+authoritativeState.lastProcessedInputID+" Time:"+authoritativeState.serverTime+" is now authoritative state.");
         }
         //Entities will be added to latest state despite their add time
-        for(Network.AddEntity addEntity:pendingAddedEntities){
+        for(Network.AddEntity addEntity;(addEntity = pendingAddedEntities.poll())!=null;){
             stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity);
         }
         //Entities will be removed from latest state despite their remove time
-        for(int id:pendingRemovedEntities){
+        for(Integer id;(id=pendingRemovedEntities.poll())!=null;){
             int index = stateHistory.size()-1;
             if(index<0){
                 index = 0;
@@ -785,21 +787,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             stateHistory.get(index).entities.remove(id);
         }
 
-        for(Network.EntityAttacking attack:pendingAttacks){
+        //TODO Ignoring projectile team for now
+        for(Network.EntityAttacking attack;(attack=pendingAttacks.poll())!=null;){
             if(attack.weapon == 0){
                 laser.play();
                 sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
             }else if(attack.weapon == 1){
                 projectile.play();
-                projectiles.add(sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id));
+                projectiles.add(sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
             }else if(attack.weapon == 2){
-                projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id));
+                projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
             }
         }
-        pendingAddedEntities.clear();
-        pendingRemovedEntities.clear();
-        pendingAttacks.clear();
-
     }
 
     private void doLogic(){
@@ -859,8 +858,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Line2D.Float movedPath = projectile.move(delta);
 
             for(int id:stateSnapshot.keySet()){
+                if(id==projectile.ownerID){
+                    continue;
+                }
                 Entity target = stateSnapshot.get(id);
-                if(target.getJavaBounds().intersectsLine(movedPath) && target != stateSnapshot.get(projectile.ownerID)){
+                if(target.getJavaBounds().intersectsLine(movedPath)){
                     if(id == playerID){
                         hurt.play();
                     }else{
@@ -1078,7 +1080,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
-            Entity e = new Entity(-1,50,50);
+            Entity e = new Entity(-1,50,50,-1);
             s.write(client, buffer ,e);
             showMessage("Entity size is " + buffer.position() + " bytes");
             buffer.clear();

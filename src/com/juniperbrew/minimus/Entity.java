@@ -18,9 +18,10 @@ public class Entity {
     private int rotation;
     public int slot1Weapon = 0;
     public int slot2Weapon = 1;
+    public int team;
 
     public Entity(){
-        this(-1,-1,-1);
+        this(-1,-1,-1,-1);
     }
 
     public Entity(Entity e){
@@ -34,9 +35,10 @@ public class Entity {
         rotation = e.rotation;
         slot1Weapon = e.slot1Weapon;
         slot2Weapon = e.slot2Weapon;
+        team = e.team;
     }
 
-    public Entity(int id, float x, float y, int width, int height, int health, int maxHealth, Enums.Heading heading){
+    public Entity(int id, float x, float y, int width, int height, int health, int maxHealth, Enums.Heading heading, int team){
         this.id = id;
         this.x = x;
         this.y = y;
@@ -44,10 +46,10 @@ public class Entity {
         this.height = height;
         this.health = health;
         this.maxHealth = maxHealth;
-
+        this.team = team;
     }
 
-    public Entity(int id, float x, float y) {
+    public Entity(int id, float x, float y, int team) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -56,6 +58,7 @@ public class Entity {
         health = 100;
         maxHealth = 100;
         rotation = -90;
+        this.team = team;
     }
 
     public Enums.Heading getHeading(){

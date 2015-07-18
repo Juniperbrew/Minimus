@@ -17,8 +17,9 @@ public class Projectile {
     Line2D.Float path;
     public boolean destroyed;
     public int ownerID;
+    public int team;
 
-    public Projectile(float startX, float startY, float range, float velocity, int angle, int ownerID) {
+    public Projectile(float startX, float startY, float range, float velocity, int angle, int ownerID, int team) {
         float targetX = startX+MathUtils.cosDeg(angle)*range;
         float targetY = startY+MathUtils.sinDeg(angle)*range;
         path = new Line2D.Float(startX,startY,targetX,targetY);
@@ -26,6 +27,7 @@ public class Projectile {
         this.velocity = velocity;
         this.angle = angle;
         this.ownerID = ownerID;
+        this.team = team;
     }
 
     public Line2D.Float move(float delta){

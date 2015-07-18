@@ -151,7 +151,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         startSimulation();
         Gdx.input.setInputProcessor(this);
 
-        serverData.entitySize = measureObject(new Entity(-1, 1000000, 1000000));
+        serverData.entitySize = measureObject(new Entity(-1, 1000000, 1000000,-1));
         showMessage("Kryo entity size:" + serverData.entitySize + "bytes");
         showMessage("0 entityComponents size:" + measureObject(createComponentList(0,true,true,true)) + "bytes");
         showMessage("pos entityComponents size:" + measureObject(createComponentList(1,true,false,false)) + "bytes");
@@ -192,7 +192,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Kryo kryo = new Kryo();
         kryo.register(Entity.class);
         Output output = new Output(objectBuffer);
-        kryo.writeObject(output, new Entity(-1, 1000000, 1000000));
+        kryo.writeObject(output, new Entity(-1, 1000000, 1000000,-1));
         int size = output.position();
         output.close();
         return size;
@@ -473,10 +473,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
             }
         }else if(weapon == 1){
-            Projectile projectile = sharedMethods.createRifleAttackVisual(e.getCenterX(), e.getCenterY(), e.getRotation(), e.id);
+            Projectile projectile = sharedMethods.createRifleAttackVisual(e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.team);
             projectiles.add(projectile);
         }else if(weapon == 2){
-            projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id));
+            projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.team));
         }
     }
 
@@ -655,10 +655,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             Line2D.Float movedPath = projectile.move(delta);
 
             for(int id:entities.keySet()){
+                if(projectile.ownerID==id){
+                    continue;
+                }
                 ServerEntity target = entities.get(id);
-                if(target.getJavaBounds().intersectsLine(movedPath) && target.team != entities.get(projectile.ownerID).team){
+                if(target.getJavaBounds().intersectsLine(movedPath)){
                     projectile.destroyed = true;
-                    target.reduceHealth(10,projectile.ownerID);
+                    if(target.team != projectile.team){
+                        target.reduceHealth(10,projectile.ownerID);
+                    }
                 }
             }
             if(projectile.destroyed){
