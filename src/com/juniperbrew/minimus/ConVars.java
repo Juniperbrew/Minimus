@@ -96,7 +96,7 @@ public class ConVars {
         set(varName,value);
     }
 
-    private void printVars(){
+    public void printVars(){
         for(String varName:vars.keySet()){
             System.out.println(varName + " = " + vars.get(varName));
         }
@@ -114,6 +114,5 @@ public class ConVars {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        printVars();
     }
 }

@@ -179,6 +179,7 @@ public class ConsoleFrame extends JFrame {
                 e.printStackTrace();
             }
         }
+        addLine(conVars.getVarDump());
     }
 
     private void parseCommand(String command){
