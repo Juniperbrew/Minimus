@@ -185,12 +185,8 @@ public class ConsoleFrame extends JFrame {
         String[] splits = command.split(" ");
         if(conVars.has(splits[0])){
             if(splits.length>1){
-                try {
-                    conVars.set(splits[0], Float.valueOf(splits[1]));
-                    addLine("set "+ splits[0] + " = " + splits[1]);
-                }catch(NumberFormatException e){
-                    addLine("ERROR: "+ splits[1] + " is not a number");
-                }
+                conVars.set(splits[0], splits[1]);
+                addLine("set "+ splits[0] + " = " + splits[1]);
             }else{
                 addLine(splits[0]+ " = " + conVars.get(splits[0]));
             }
