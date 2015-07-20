@@ -171,7 +171,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Network.WaveChanged waveChanged = new Network.WaveChanged();
         waveChanged.wave = wave;
         sendTCPtoAll(waveChanged);
-        for (int i = 0; i < wave; i++) {
+        for (int i = 0; i < wave+4; i++) {
             addNPC();
         }
     }
