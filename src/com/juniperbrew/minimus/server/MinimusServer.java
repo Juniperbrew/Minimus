@@ -481,6 +481,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             }
         }else if(weapon == 1){
             Projectile projectile = sharedMethods.createRifleAttackVisual(e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.team);
+            if(playerList.values().contains(e.id)){
+                showMessage("["+getServerTime()+"] Created rifle projectile for player ("+e.id+") Created rifle projectile at ("+projectile.getX()+","+projectile.getY()+") Direction: "+e.getRotation());
+            }
             projectiles.add(projectile);
         }else if(weapon == 2){
             projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.team));
@@ -832,7 +835,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
         Iterator<ServerEntity> iter = entities.values().iterator();
         while(iter.hasNext()){
-            ServerEntity e = iter.next();
+            ServerEntity e = iter.next(); //TODO ConcurrentModificationException
             if(playerList.values().contains(e.id)){
                 shapeRenderer.setColor(0,0,1,1);
             }else{

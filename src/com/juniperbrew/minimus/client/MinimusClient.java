@@ -540,7 +540,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
         }else if(weapon == 1){
             projectile.play();
-            projectiles.add(sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
+            Projectile projectile = sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
+            showMessage("["+getClientTime()+"] Created rifle projectile at ("+projectile.getX()+","+projectile.getY()+") Direction: "+player.getRotation());
+            projectiles.add(projectile);
+
         }else if (weapon == 2){
             projectiles.addAll(sharedMethods.createShotgunAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
         }
@@ -800,6 +803,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
             }else if(attack.weapon == 1){
                 projectile.play();
+                if(playerList.contains(attack.id)){
+                    showMessage("["+getClientTime()+"] Created rifle projectile for player ("+attack.id+") at ("+attack.x+","+attack.y+") Direction: "+attack.deg);
+                }
                 projectiles.add(sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
             }else if(attack.weapon == 2){
                 projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
@@ -846,8 +852,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //Dont pollInput or create snapshot if we have no state from server
         if (authoritativeState != null){
             pollInput((short) (delta*1000));
-            float clientTime = lastServerTime + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
-            createStateSnapshot(clientTime); //FIXME Will cause concurrent modifications
+            createStateSnapshot(getClientTime()); //FIXME Will cause concurrent modifications
         }
         float checkpoint3 = (System.nanoTime()-logicStart)/1000000f;
         if(checkpoint3-checkpoint0>1&& conVars.getBool("cl_show_performance_warnings")) {
@@ -855,6 +860,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showMessage("Send input:" + (checkpoint2 - checkpoint1) + "ms");
             showMessage("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
         }
+    }
+
+    private float getClientTime(){
+        return lastServerTime + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
     }
 
     private void updateProjectiles(float delta){
