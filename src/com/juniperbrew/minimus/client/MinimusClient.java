@@ -803,10 +803,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
             }else if(attack.weapon == 1){
                 projectile.play();
+                Projectile projectile = sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1);
+                projectiles.add(projectile);
+
                 if(playerList.contains(attack.id)){
-                    showMessage("["+getClientTime()+"] Created rifle projectile for player ("+attack.id+") at ("+attack.x+","+attack.y+") Direction: "+attack.deg);
+                    showMessage("["+getClientTime()+"] Created rifle projectile for player ("+projectile.ownerID+") at ("+projectile.getX()+","+projectile.getY()+") Direction: "+attack.deg);
                 }
-                projectiles.add(sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
             }else if(attack.weapon == 2){
                 projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
             }
