@@ -9,6 +9,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -96,6 +97,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private ConcurrentLinkedQueue<Network.EntityAttacking> pendingAttacks = new ConcurrentLinkedQueue<>();
 
 
+    int currentWave;
     int playerID = -1;
     int slot1Weapon = 0;
     int slot2Weapon = 1;
@@ -152,6 +154,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     OrthogonalTiledMapRenderer mapRenderer;
 
     BitmapFont font;
+    GlyphLayout glyphLayout = new GlyphLayout();
     int windowWidth;
     int windowHeight;
 
@@ -442,6 +445,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     for(int id : playerList){
                         score.addPlayer(id);
                     }
+                }else if(object instanceof Network.WaveChanged){
+                    Network.WaveChanged waveChanged = (Network.WaveChanged) object;
+                    currentWave = waveChanged.wave;
                 }else if(object instanceof String){
                     String command = (String) object;
                     consoleFrame.giveCommand(command);
@@ -974,6 +980,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             sharedMethods.renderProjectiles(shapeRenderer,projectiles);
         }
 
+        //Draw HUD
         batch.begin();
         batch.setProjectionMatrix(hudCamera.combined);
         int offset = 0;
@@ -983,6 +990,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         font.draw(batch, "Mouse 1: "+ sharedMethods.getWeaponName(slot1Weapon), 5, 40);
         font.draw(batch, "Mouse 2: "+ sharedMethods.getWeaponName(slot2Weapon), 5, 20);
+        glyphLayout.setText(font, "Wave "+currentWave);
+        font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
         batch.end();
 
         if(stateSnapshot!=null){

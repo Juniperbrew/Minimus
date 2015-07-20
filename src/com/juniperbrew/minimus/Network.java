@@ -54,11 +54,16 @@ public class Network {
         kryo.register(SendFile.class);
         kryo.register(FileReceived.class);
         kryo.register(byte[].class);
+        kryo.register(WaveChanged.class);
         kryo.register(SpawnRequest.class);
     }
 
     public static class Message{
         public String text;
+    }
+
+    public static class WaveChanged{
+        public int wave;
     }
 
     public static class SpawnRequest{}

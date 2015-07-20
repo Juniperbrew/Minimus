@@ -118,16 +118,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     Scoreboard scoreboard = new Scoreboard(score);
 
     TiledMap map;
+    int wave;
 
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         screenW = Gdx.graphics.getWidth();
         screenH = Gdx.graphics.getHeight();
         sharedMethods = new SharedMethods(conVars, mapWidth, mapHeight);
-
-        for (int i = 0; i < 20; i++) {
-            addNPC();
-        }
     }
 
     @Override
@@ -167,6 +164,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         showMessage("1 entity position update size:" + measureObject(createPositionList(1)) + "bytes");
         showMessage("10 entity position update size:" + measureObject(createPositionList(10)) + "bytes");
         showMessage("100 entity position update size:" + measureObject(createPositionList(100)) + "bytes");
+    }
+
+    private void spawnNextWave(){
+        wave++;
+        Network.WaveChanged waveChanged = new Network.WaveChanged();
+        waveChanged.wave = wave;
+        sendTCPtoAll(waveChanged);
+        for (int i = 0; i < wave; i++) {
+            addNPC();
+        }
     }
 
     private void showMessage(String message){
@@ -592,7 +599,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
-    private void addNPC(){
+    private void addNPC(int aiType, int weapon){
         int width = 50;
         int height = 50;
         float x = MathUtils.random(mapWidth -width);
@@ -604,8 +611,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         npc.reduceHealth(10,-1);
         int randomHeading = MathUtils.random(Enums.Heading.values().length - 1);
         npc.setHeading(Enums.Heading.values()[randomHeading]);
-        entityAIs.put(networkID,new EntityAI(npc, this));
+        entityAIs.put(networkID,new EntityAI(npc,aiType,weapon,this));
         addEntity(npc);
+    }
+
+    private void addNPC(){
+        addNPC(MathUtils.random(0,3),MathUtils.random(0,2));
     }
 
     private void removeNPC(){
@@ -738,6 +749,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                             updateFakePing(c);
                         }
                         lastPingUpdate = System.nanoTime();
+                    }
+                    if(entityAIs.isEmpty()){
+                        spawnNextWave();
                     }
 
                     for (int i = 0; i < pendingEntityAdds; i++) {

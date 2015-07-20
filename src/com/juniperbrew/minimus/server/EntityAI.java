@@ -36,16 +36,12 @@ public class EntityAI {
     float attackDelay;
     ServerEntity target;
 
-    public EntityAI(ServerEntity entity, int aiType, MinimusServer server){
+    public EntityAI(ServerEntity entity, int aiType, int weapon, MinimusServer server){
         this.entity = entity;
         this.server = server;
         this.aiType = aiType;
-        weapon = MathUtils.random(0,2);
         attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
-    }
-
-    public EntityAI(ServerEntity entity,MinimusServer server){
-        this(entity,MathUtils.random(0,3),server);
+        this.weapon = weapon;
     }
 
     public void act(double velocity, double delta){
