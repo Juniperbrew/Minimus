@@ -158,6 +158,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int windowWidth;
     int windowHeight;
 
+    boolean mouse1Pressed;
+    boolean mouse2Pressed;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -492,6 +495,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Network.UserInput input = new Network.UserInput();
         input.msec = delta;
         input.buttons = buttons.clone();
+        if(mouse1Pressed) input.buttons.add(Enums.Buttons.MOUSE1);
+        if(mouse2Pressed) input.buttons.add(Enums.Buttons.MOUSE2);
+
         input.inputID = inputRequestID;
         input.mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
         input.mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
@@ -521,11 +527,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 slot1Weapon = 2;
             }
         }
-        if(buttons.contains(Enums.Buttons.MOUSE1)){
+        if(buttons.contains(Enums.Buttons.MOUSE1) || mouse1Pressed){
             playerAttack(stateSnapshot.get(playerID), slot1Weapon);
+            mouse1Pressed = false;
         }
-        if(buttons.contains(Enums.Buttons.MOUSE2)){
+        if(buttons.contains(Enums.Buttons.MOUSE2)|| mouse2Pressed){
             playerAttack(stateSnapshot.get(playerID), slot2Weapon);
+            mouse2Pressed = false;
         }
     }
 
@@ -1222,9 +1230,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if(button == 0){
             buttons.add(Enums.Buttons.MOUSE1);
+            mouse1Pressed = true;
         }
         if(button == 1){
             buttons.add(Enums.Buttons.MOUSE2);
+            mouse2Pressed = true;
         }
         return false;
     }
