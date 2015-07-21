@@ -785,7 +785,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         //Entities will be added to latest state despite their add time
         for(Network.AddEntity addEntity;(addEntity = pendingAddedEntities.poll())!=null;){
-            stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity);
+            stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity); //TODO java.lang.ArrayIndexOutOfBoundsException: -1
         }
         //Entities will be removed from latest state despite their remove time
         for(Integer id;(id=pendingRemovedEntities.poll())!=null;){
