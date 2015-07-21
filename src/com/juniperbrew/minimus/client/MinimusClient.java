@@ -865,7 +865,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private float getClientTime(){
-        return lastServerTime + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
+        //TODO adding half the latency to last server update this might cause some errors
+        //TODO using the fake ping here because i wont be able to test this properly without adding artificial lag
+        return lastServerTime + + ((statusData.getFakePing()/1000f)/2f) + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
     }
 
     private void updateProjectiles(float delta){
@@ -1010,7 +1012,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         statusData.setFps(Gdx.graphics.getFramesPerSecond());
         statusData.setServerTime(lastServerTime);
-        statusData.setClientTime(lastServerTime+((System.nanoTime()- lastAuthoritativeStateReceived)/1000000000f));
+        statusData.setClientTime(getClientTime());
         statusData.currentInputRequest = currentInputRequest;
         statusData.inputQueue = inputQueue.size();
 
