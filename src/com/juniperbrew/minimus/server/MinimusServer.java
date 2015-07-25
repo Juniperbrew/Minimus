@@ -461,7 +461,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }else{
             attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
             ServerEntity e = entities.get(playerList.get(connection));
-            showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
+            if(weapon == 1){
+                showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
+            }
             createAttack(e, weapon);
         }
     }
