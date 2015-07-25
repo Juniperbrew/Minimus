@@ -497,7 +497,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         HashMap<Integer, Network.Position> positions = new HashMap<>();
         for(int id: posChangedEntities){
             ServerEntity e = entities.get(id);
-            positions.put(id,new Network.Position((float)e.getX(),(float)e.getY()));
+            positions.put(id,new Network.Position(e.getX(),e.getY()));
         }
         return positions;
     }

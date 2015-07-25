@@ -127,7 +127,7 @@ public class EntityAI {
         }
         lastAttackDone = System.nanoTime();
         attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
-        server.createAttack(entity, weapon, null);
+        server.createAttack(entity, weapon);
     }
 
     private void setDestination(float x, float y){
