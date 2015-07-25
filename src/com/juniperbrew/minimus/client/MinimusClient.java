@@ -104,7 +104,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
-    long lastAttackDone;
+    double attackCooldown;
 
     long lastPingRequest;
     long renderStart;
@@ -490,7 +490,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void pollInput(short delta){
         //TODO only save input if mouse has moved or button pressed
-        //if(buttons.size()>0){
         int inputRequestID = getNextInputRequestID();
         Network.UserInput input = new Network.UserInput();
         input.msec = delta;
@@ -503,9 +502,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         input.mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
         inputQueue.add(input);
         pendingInputPacket.add(input);
-        //}
 
-        Entity e = stateSnapshot.get(playerID);
+        //We need to move player here so we can spawn the potential projectiles at correct location
+        Entity player = stateSnapshot.get(playerID);
+        if(player != null){
+            sharedMethods.applyInput(player,input);
+        }
+
         if(buttons.contains(Enums.Buttons.NUM1)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
                 slot2Weapon = 0;
@@ -527,29 +530,30 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 slot1Weapon = 2;
             }
         }
-        if(buttons.contains(Enums.Buttons.MOUSE1) || mouse1Pressed){
-            playerAttack(stateSnapshot.get(playerID), slot1Weapon);
+        if(input.buttons.contains(Enums.Buttons.MOUSE1)){
+            playerAttack(stateSnapshot.get(playerID), slot1Weapon, input);
             mouse1Pressed = false;
         }
-        if(buttons.contains(Enums.Buttons.MOUSE2)|| mouse2Pressed){
-            playerAttack(stateSnapshot.get(playerID), slot2Weapon);
+        if(input.buttons.contains(Enums.Buttons.MOUSE2)){
+            playerAttack(stateSnapshot.get(playerID), slot2Weapon, input);
             mouse2Pressed = false;
         }
+        attackCooldown -= (delta/1000d);
     }
 
-    private void playerAttack(Entity player, int weapon){
-        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(conVars.getDouble("sv_attack_delay"))){
+    private void playerAttack(Entity player, int weapon, Network.UserInput input){
+        if(attackCooldown>0){
             return;
         }
-        lastAttackDone = System.nanoTime();
+        attackCooldown = conVars.getDouble("sv_attack_delay");
         //TODO Ignoring projectile team for now
         if(weapon == 0){
             laser.play();
             sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
         }else if(weapon == 1){
             projectile.play();
+            showMessage(input.inputID+"> ["+getClientTime()+"] Creating projectile from PlayerCenterX: " + player.getCenterX() + " PlayerCenterY: " + player.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY +" PlayerRotation: " + player.getRotation());
             Projectile projectile = sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
-            showMessage("["+getClientTime()+"] Created rifle projectile at ("+projectile.getX()+","+projectile.getY()+") Direction: "+player.getRotation());
             projectiles.add(projectile);
 
         }else if (weapon == 2){
@@ -767,14 +771,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void applyNetworkUpdates(){
 
-        if(mapRenderer == null && mapName != null){
-            map = new TmxMapLoader().load("resources\\"+mapName);
-            mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-            mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
-            mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
-            sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
-        }
-
         //Add new states to state history, sort states and store the latest state
         if(pendingReceivedStates.size()>0){
             stateHistory.addAll(pendingReceivedStates);
@@ -849,6 +845,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }else{
                     inputPacket.inputs = pendingInputPacket;
                 }
+                /*for(Network.UserInput input : inputPacket.inputs){
+                    if(input.buttons.contains(Enums.Buttons.MOUSE2)){
+                        showMessage(input.inputID+ "> Sending mouse2 input packets MouseX: "+input.mouseX +" MouseY: " +input.mouseY);
+                    }
+                }*/
                 sendUDP(inputPacket);
                 pendingInputPacket.clear();
             }
@@ -905,19 +906,38 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         projectiles.removeAll(destroyedProjectiles);
     }
 
-    private TextureRegion getTexture(Entity e){
+    private TextureRegion getTexture(Entity e) {
         Enums.Heading heading = e.getHeading();
-        switch(heading){
-            case NORTH: return up;
-            case SOUTH: return down;
-            case WEST: if(!right.isFlipX()){right.flip(true,false);}return right;
-            case EAST: if(right.isFlipX()){right.flip(true,false);}return right;
+        switch (heading) {
+            case NORTH:
+                return up;
+            case SOUTH:
+                return down;
+            case WEST:
+                if (!right.isFlipX()) {
+                    right.flip(true, false);
+                }
+                return right;
+            case EAST:
+                if (right.isFlipX()) {
+                    right.flip(true, false);
+                }
+                return right;
         }
         return null;
     }
 
     @Override
     public void render() {
+
+        if(mapRenderer == null && mapName != null){
+            map = new TmxMapLoader().load("resources\\"+mapName);
+            mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
+            mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
+            mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
+            sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
+        }
+
         if(playerID != -1 && !titleSet){
             Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"] "+sharedMethods.VERSION_NAME);
             titleSet = true;

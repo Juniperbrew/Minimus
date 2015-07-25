@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
-import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -74,7 +73,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     private int networkIDCounter = 1;
     private int teamCounter = 1;
-    private int currentTick=0;
+    private int currentTick = 0;
     long serverStartTime;
 
     int screenW;
@@ -84,7 +83,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private int objectBuffer = 4096; //Default 2048
     private long lastPingUpdate;
 
-    HashMap<Connection,Long> lastAttackDone = new HashMap<>();
+    HashMap<Connection,Double> attackCooldown = new HashMap<>();
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
 
@@ -413,7 +412,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
             for(Network.UserInput input : inputListCopy){
                 sharedMethods.applyInput(e,input);
-
                 if(input.buttons.contains(Enums.Buttons.NUM1)){
                     if(input.buttons.contains(Enums.Buttons.SHIFT)){
                         e.slot2Weapon = 0;
@@ -437,11 +435,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
 
                 if(input.buttons.contains(Enums.Buttons.MOUSE1)){
+                    showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
                     attackWithPlayer(connection, e.slot1Weapon);
                 }
                 if(input.buttons.contains(Enums.Buttons.MOUSE2)){
                     attackWithPlayer(connection, e.slot2Weapon);
                 }
+
+                if(attackCooldown.get(connection)!=null){
+                    double cd = attackCooldown.get(connection);
+                    cd -= (input.msec/1000d);
+                    attackCooldown.put(connection,cd);
+                }
+
                 lastInputIDProcessed.put(connection,input.inputID);
                 inputList.remove(input); //FIXME we are removing this element from the original arraylist
             }
@@ -449,12 +455,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void attackWithPlayer(Connection connection, int weapon){
-        if(lastAttackDone.get(connection)==null){
-            lastAttackDone.put(connection,System.nanoTime());
-        }else if(System.nanoTime()-lastAttackDone.get(connection)<Tools.secondsToNano(conVars.getDouble("sv_attack_delay"))){ //1 second attack delay
+        if(attackCooldown.get(connection)==null){
+            attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
+        }else if(attackCooldown.get(connection) > 0){
             return;
         }else{
-            lastAttackDone.put(connection,System.nanoTime());
+            attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
             ServerEntity e = entities.get(playerList.get(connection));
             createAttack(e, weapon);
         }
@@ -481,9 +487,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             }
         }else if(weapon == 1){
             Projectile projectile = sharedMethods.createRifleAttackVisual(e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.team);
-            if(playerList.values().contains(e.id)){
-                showMessage("["+getServerTime()+"] Created rifle projectile for player ("+e.id+") Created rifle projectile at ("+projectile.getX()+","+projectile.getY()+") Direction: "+e.getRotation());
-            }
             projectiles.add(projectile);
         }else if(weapon == 2){
             projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.team));
