@@ -435,11 +435,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
 
                 if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-                    showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
-                    attackWithPlayer(connection, e.slot1Weapon);
+                    attackWithPlayer(connection, e.slot1Weapon, input);
                 }
                 if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-                    attackWithPlayer(connection, e.slot2Weapon);
+                    attackWithPlayer(connection, e.slot2Weapon, input);
                 }
 
                 if(attackCooldown.get(connection)!=null){
@@ -454,7 +453,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
-    private void attackWithPlayer(Connection connection, int weapon){
+    private void attackWithPlayer(Connection connection, int weapon, Network.UserInput input){
         if(attackCooldown.get(connection)==null){
             attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
         }else if(attackCooldown.get(connection) > 0){
@@ -462,6 +461,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }else{
             attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
             ServerEntity e = entities.get(playerList.get(connection));
+            showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
             createAttack(e, weapon);
         }
     }
