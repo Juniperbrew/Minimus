@@ -119,6 +119,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     TiledMap map;
     int wave;
 
+    HashMap<Integer,WaveDefinition> waveList;
+
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         screenW = Gdx.graphics.getWidth();
@@ -131,6 +133,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(conVars,this);
 
+        waveList = readWaveList();
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
         resize(h,w);
@@ -165,12 +168,37 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         showMessage("100 entity position update size:" + measureObject(createPositionList(100)) + "bytes");
     }
 
+    private void spawnNextCustomWave(){
+
+        WaveDefinition waveDef = waveList.get(wave+1);
+        if(waveDef!=null){
+            wave++;
+            Network.WaveChanged waveChanged = new Network.WaveChanged();
+            waveChanged.wave = wave;
+            sendTCPtoAll(waveChanged);
+
+            for(WaveDefinition.EnemyDefinition enemy:waveDef.enemies){
+                for (int i = 0; i < enemy.count; i++) {
+                    switch (enemy.aiType){
+                        case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
+                        case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
+                        case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
+                        case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
+                    }
+                }
+            }
+        }else{
+            spawnNextWave();
+        }
+
+    }
+
     private void spawnNextWave(){
         wave++;
         Network.WaveChanged waveChanged = new Network.WaveChanged();
         waveChanged.wave = wave;
         sendTCPtoAll(waveChanged);
-        for (int i = 0; i < wave+4; i++) {
+        for (int i = 0; i < (wave*2)+4; i++) {
             addNPC();
         }
     }
@@ -608,6 +636,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void addNPC(int aiType, int weapon){
+        System.out.println("Adding npc "+aiType+","+weapon);
         int width = 50;
         int height = 50;
         float x = MathUtils.random(mapWidth -width);
@@ -759,7 +788,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                         lastPingUpdate = System.nanoTime();
                     }
                     if(entityAIs.isEmpty()){
-                        spawnNextWave();
+                        if(conVars.getBool("sv_custom_waves")){
+                            spawnNextCustomWave();
+                        }else{
+                            spawnNextWave();
+                        }
                     }
 
                     for (int i = 0; i < pendingEntityAdds; i++) {
@@ -848,7 +881,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
             float health = 1-((float)e.getHealth()/e.maxHealth);
             int healthWidth = (int) (e.width*health);
-            shapeRenderer.setColor(1,0,0,1); //red
+            shapeRenderer.setColor(1, 0, 0, 1); //red
             shapeRenderer.rect(e.getX(),e.getY(),e.width/2,e.height/2,healthWidth,e.height,1,1,e.getRotation());
         }
 
@@ -968,6 +1001,47 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Network.FileReceived fileReceived = new Network.FileReceived();
         fileReceived.fileName = fileName;
         c.sendTCP(fileReceived);
+    }
+
+    private HashMap<Integer,WaveDefinition> readWaveList(){
+        File file = new File(Tools.getUserDataDirectory()+ File.separator+"wavelist.txt");
+        if(!file.exists()){
+            file = new File("resources\\"+"defaultwavelist.txt");
+        }
+        System.out.println("Loading custom wave from file:"+file);
+        HashMap<Integer,WaveDefinition> waves = new HashMap<>();
+        int waveNumber = 0;
+        String aiType;
+        int weapon;
+        int count;
+        WaveDefinition wave = new WaveDefinition();
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))){
+            for(String line;(line = reader.readLine())!=null;){
+                if(line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' '){
+                    continue;
+                }
+                if(line.charAt(0) == '{'){
+                    wave = new WaveDefinition();
+                    continue;
+                }
+                if(line.charAt(0) == '}'){
+                    waveNumber++;
+                    waves.put(waveNumber,wave);
+                    continue;
+                }
+                aiType = Character.toString(line.charAt(0));
+                weapon = Character.getNumericValue(line.charAt(1))-1;
+                count = Integer.parseInt(line.substring(3));
+                wave.addEnemy(aiType, weapon, count);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return waves;
     }
 
     @Override
@@ -1172,10 +1246,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     public void entityDied(int id, int sourceID) {
         showMessage("Entity ID" + id + " is dead.");
         pendingDeadEntities.add(id);
+        if (playerList.values().contains(id)) {
+            addDeath(id);
+        }
         if(playerList.values().contains(sourceID)) {
             if (playerList.values().contains(id)) {
                 addPlayerKill(sourceID);
-                addDeath(id);
                 //Respawn dead player
                 ServerEntity deadPlayer = entities.get(id);
                 deadPlayer.restoreMaxHealth();

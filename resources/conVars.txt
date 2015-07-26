@@ -33,3 +33,4 @@ sv_shotgun_velocity 300
 sv_laser_length 200
 sv_contact_damage 5
 sv_invulnerability_timer 0.5
+sv_custom_waves 1
