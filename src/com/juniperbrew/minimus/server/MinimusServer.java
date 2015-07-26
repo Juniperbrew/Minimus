@@ -838,9 +838,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         shapeRenderer.rect(0, 0, mapWidth, mapHeight);
         shapeRenderer.setColor(1,1,1,1);
 
-        Iterator<ServerEntity> iter = entities.values().iterator();
-        while(iter.hasNext()){
-            ServerEntity e = iter.next(); //TODO ConcurrentModificationException
+        ServerEntity[] entitiesCopy = entities.values().toArray(new ServerEntity[entities.values().size()]);
+        for(ServerEntity e : entitiesCopy){
             if(playerList.values().contains(e.id)){
                 shapeRenderer.setColor(0,0,1,1);
             }else{
