@@ -161,6 +161,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     boolean mouse1Pressed;
     boolean mouse2Pressed;
 
+    boolean autoWalk;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -496,6 +498,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         input.buttons = buttons.clone();
         if(mouse1Pressed) input.buttons.add(Enums.Buttons.MOUSE1);
         if(mouse2Pressed) input.buttons.add(Enums.Buttons.MOUSE2);
+
+        if(autoWalk) input.buttons.add(Enums.Buttons.W);
 
         input.inputID = inputRequestID;
         input.mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
@@ -1070,10 +1074,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);
         if(keycode == Input.Keys.DOWN)buttons.add(Enums.Buttons.DOWN);
         if(keycode == Input.Keys.SPACE)buttons.add(Enums.Buttons.SPACE);
-        if(keycode == Input.Keys.W)buttons.add(Enums.Buttons.W);
-        if(keycode == Input.Keys.A)buttons.add(Enums.Buttons.A);
-        if(keycode == Input.Keys.S)buttons.add(Enums.Buttons.S);
-        if(keycode == Input.Keys.D)buttons.add(Enums.Buttons.D);
+        if(keycode == Input.Keys.W)buttons.add(Enums.Buttons.W);autoWalk=false;
+        if(keycode == Input.Keys.A)buttons.add(Enums.Buttons.A);autoWalk=false;
+        if(keycode == Input.Keys.S)buttons.add(Enums.Buttons.S);autoWalk=false;
+        if(keycode == Input.Keys.D)buttons.add(Enums.Buttons.D);autoWalk=false;
         return false;
     }
 
@@ -1178,9 +1182,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showConsoleWindow();
         }
         if(character == 'x'){
-            showStatusWindow();
+            autoWalk = !autoWalk;
         }
         if(character == 'c'){
+            showStatusWindow();
+        }
+        if(character == 'b'){
             conVars.toggleVar("cl_clientside_prediction");
             showMessage("UseClientSidePrediction:" + conVars.getBool("cl_clientside_prediction"));
         }
