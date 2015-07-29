@@ -121,6 +121,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     HashMap<Integer,WaveDefinition> waveList;
 
+    //This should not be more than 400 which is the max distance entities can look for a destination
+    final int SPAWN_AREA_WIDTH = 200;
+
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
         screenW = Gdx.graphics.getWidth();
@@ -639,8 +642,24 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         System.out.println("Adding npc "+aiType+","+weapon);
         int width = 50;
         int height = 50;
-        float x = MathUtils.random(mapWidth -width);
-        float y = MathUtils.random(mapHeight -height);
+        float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH*-1,SPAWN_AREA_WIDTH);
+        float x;
+        float y;
+        if(MathUtils.randomBoolean()){
+            if(spawnPosition >= 0){
+                x = mapWidth+spawnPosition;
+            }else{
+                x = spawnPosition;
+            }
+            y = MathUtils.random(0-SPAWN_AREA_WIDTH,mapHeight+SPAWN_AREA_WIDTH);
+        }else{
+            if(spawnPosition >= 0){
+                y = mapHeight+spawnPosition;
+            }else{
+                y = spawnPosition;
+            }
+            x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth+SPAWN_AREA_WIDTH);
+        }
         int networkID = getNextNetworkID();
         ServerEntity npc = new ServerEntity(networkID,x,y,0,this);
         npc.height = height;

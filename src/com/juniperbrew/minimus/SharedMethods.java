@@ -216,7 +216,9 @@ public class SharedMethods {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,1,0,1);
         for(Projectile projectile: projectilesCopy){
-            shapeRenderer.circle(projectile.getX(),projectile.getY(),5);
+            if(projectile!=null){
+                shapeRenderer.circle(projectile.getX(),projectile.getY(),5);
+            }
         }
         shapeRenderer.end();
     }

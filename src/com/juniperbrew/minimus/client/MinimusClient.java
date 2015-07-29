@@ -957,12 +957,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         doLogic();
 
+        statusFrame.update();
+
         Gdx.gl.glClearColor(0f, 0f, 0f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glLineWidth(3);
-
-        statusFrame.update();
+        Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
+        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 
         if(stateSnapshot !=null){
 
@@ -1025,6 +1027,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             sharedMethods.renderProjectiles(shapeRenderer,projectiles);
         }
 
+        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+
         //Draw HUD
         batch.begin();
         batch.setProjectionMatrix(hudCamera.combined);
@@ -1051,6 +1055,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if((System.nanoTime()-renderStart)/1000000f>30 && conVars.getBool("cl_show_performance_warnings")){
             showMessage("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
         }
+
     }
 
     private void printPlayerList(){
