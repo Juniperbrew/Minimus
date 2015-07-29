@@ -1308,7 +1308,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             soundVolume = conVars.getFloat(varName);
         }else if(varName.equals("cl_volume_music")){
             musicVolume = conVars.getFloat(varName);
-            backgroundMusic.setVolume(musicVolume);
+            if(backgroundMusic!=null){
+                backgroundMusic.setVolume(musicVolume);
+            }
         }
     }
 }
