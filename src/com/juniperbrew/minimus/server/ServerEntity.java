@@ -48,21 +48,6 @@ public class ServerEntity extends Entity {
         super.moveTo(newX, newY);
         listener.positionChanged(id);
     }
-    public boolean isInvulnerable(){
-        if(System.nanoTime()-lastDamageTaken> Tools.secondsToNano(MinimusServer.conVars.getDouble("sv_invulnerability_timer"))){
-            return false;
-        }else{
-            System.out.println(id + " is still invulnerable for " + (System.nanoTime()-lastDamageTaken));
-            return true;
-        }
-    }
-
-    public void contactDamage(int healthReduction, int sourceID){
-        if(!isInvulnerable()) {
-            lastDamageTaken = System.nanoTime();
-            reduceHealth(healthReduction,sourceID);
-        }
-    }
 
     public void reduceHealth(int healthReduction, int sourceID){
         super.setHealth(getHealth() - healthReduction);

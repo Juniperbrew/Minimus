@@ -56,7 +56,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener {
+public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener {
 
     Client client;
     private int writeBuffer = 8192; //Default 8192
@@ -164,10 +164,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     boolean autoWalk;
 
     int lives;
+    float soundVolume;
+    float musicVolume;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
-        conVars = new ConVars();
+        conVars = new ConVars(this);
+        soundVolume = conVars.getFloat("cl_volume_sound");
+        musicVolume = conVars.getFloat("cl_volume_music");
         consoleFrame = new ConsoleFrame(conVars);
         clientStartTime = System.nanoTime();
         score = new Score(this);
@@ -223,6 +227,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         hit = Gdx.audio.newSound(Gdx.files.internal("resources\\hit.ogg"));
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources\\taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
+        backgroundMusic.setVolume(musicVolume);
         backgroundMusic.play();
     }
 
@@ -545,10 +550,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attackCooldown = conVars.getDouble("sv_attack_delay");
         //TODO Ignoring projectile team for now
         if(weapon == 0){
-            laser.play();
+            laser.play(soundVolume);
             sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
         }else if(weapon == 1){
-            projectile.play();
+            projectile.play(soundVolume);
             showMessage(input.inputID+"> ["+getClientTime()+"] Creating projectile from PlayerCenterX: " + player.getCenterX() + " PlayerCenterY: " + player.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY +" PlayerRotation: " + player.getRotation());
             Projectile projectile = sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
             projectiles.add(projectile);
@@ -800,10 +805,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO Ignoring projectile team for now
         for(Network.EntityAttacking attack;(attack=pendingAttacks.poll())!=null;){
             if(attack.weapon == 0){
-                laser.play();
+                laser.play(soundVolume);
                 sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
             }else if(attack.weapon == 1){
-                projectile.play();
+                projectile.play(soundVolume);
                 Projectile projectile = sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1);
                 projectiles.add(projectile);
 
@@ -889,9 +894,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 Entity target = stateSnapshot.get(id);
                 if(target.getJavaBounds().intersectsLine(movedPath)){
                     if(id == playerID){
-                        hurt.play();
+                        hurt.play(soundVolume);
                     }else{
-                        hit.play();
+                        hit.play(soundVolume);
                     }
                     projectile.destroyed = true;
                 }
@@ -1295,5 +1300,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public void scoreChanged() {
         scoreboard.updateScoreboard();
+    }
+
+    @Override
+    public void conVarChanged(String varName, String varValue) {
+        if(varName.equals("cl_volume_sound")){
+            soundVolume = conVars.getFloat(varName);
+        }else if(varName.equals("cl_volume_music")){
+            musicVolume = conVars.getFloat(varName);
+            backgroundMusic.setVolume(musicVolume);
+        }
     }
 }

@@ -250,8 +250,4 @@ public class ConsoleFrame extends JFrame {
             e.printStackTrace();
         }
     }
-
-    public static void main(String[] args) {
-        new ConsoleFrame(new ConVars()).setVisible(true);
-    }
 }

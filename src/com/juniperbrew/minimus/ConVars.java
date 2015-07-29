@@ -17,8 +17,10 @@ import java.util.TreeMap;
 public class ConVars {
 
     private TreeMap<String,String> vars = new TreeMap<>();
+    ConVarChangeListener listener;
 
-    public ConVars(){
+    public ConVars(ConVarChangeListener listener){
+        this.listener = listener;
         readVars();
     }
 
@@ -47,17 +49,18 @@ public class ConVars {
 
     public void set(String varName, String varValue){
         vars.put(varName,varValue);
+        listener.conVarChanged(varName,varValue);
     }
 
     public void set(String varName, double varValue){
-        vars.put(varName,String.valueOf(varValue));
+        set(varName,String.valueOf(varValue));
     }
 
-    public void set(String varName, boolean varValue){
+    public void set(String varName, boolean varValue) {
         if(varValue){
-            vars.put(varName,"1");
+            set(varName,"1");
         }else{
-            vars.put(varName,"0");
+            set(varName,"0");
         }
     }
 
@@ -114,5 +117,9 @@ public class ConVars {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public interface ConVarChangeListener{
+        public void conVarChanged(String varName, String varValue);
     }
 }

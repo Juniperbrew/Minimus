@@ -56,7 +56,7 @@ import java.util.Map;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusServer implements ApplicationListener, InputProcessor, EntityChangeListener, Score.ScoreChangeListener {
+public class MinimusServer implements ApplicationListener, InputProcessor, EntityChangeListener, Score.ScoreChangeListener, ConVars.ConVarChangeListener {
 
     Server server;
     ShapeRenderer shapeRenderer;
@@ -98,7 +98,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     ConsoleFrame consoleFrame;
     StatusData serverData;
 
-    public static final ConVars conVars = new ConVars();
+    public ConVars conVars;
 
     int mapWidth;
     int mapHeight;
@@ -138,6 +138,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void create() {
+        conVars = new ConVars(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(conVars,this);
 
@@ -763,12 +764,23 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 ServerEntity e = iter.next();
                 if(e.team!=player.team){
                     if(player.getJavaBounds().intersects(e.getJavaBounds())){
-                        player.contactDamage(conVars.getInt("sv_contact_damage"),e.id);
+                        if(!isInvulnerable(player)) {
+                            player.lastDamageTaken = System.nanoTime();
+                            player.reduceHealth(conVars.getInt("sv_contact_damage"),e.id);
+                        }
                     }
                 }
             }
         }
+    }
 
+    private boolean isInvulnerable(ServerEntity e){
+        if(System.nanoTime()-e.lastDamageTaken> Tools.secondsToNano(conVars.getDouble("sv_invulnerability_timer"))){
+            return false;
+        }else{
+            System.out.println(e.id + " is still invulnerable for " + (System.nanoTime()-e.lastDamageTaken));
+            return true;
+        }
     }
 
     private void startSimulation(){
@@ -1288,5 +1300,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     @Override
     public void scoreChanged() {
         scoreboard.updateScoreboard();
+    }
+
+    @Override
+    public void conVarChanged(String varName, String varValue) {
+
     }
 }
