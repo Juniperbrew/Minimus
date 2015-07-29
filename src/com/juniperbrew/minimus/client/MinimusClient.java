@@ -280,19 +280,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }).start();
     }
 
-    private void showHelp(){
-        try(BufferedReader reader = new BufferedReader(new FileReader("resources\\clientHelp.txt"))){
-            String line;
-            while((line = reader.readLine())!=null){
-                showMessage(line);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void showMessage(String message){
         System.out.println(message);
         consoleFrame.addLine(message);
@@ -1076,7 +1063,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public boolean keyDown(int keycode) {
         if(keycode == Input.Keys.F1){
-            showHelp();
+            consoleFrame.showHelp();
         }
         if(keycode == Input.Keys.SHIFT_LEFT) buttons.add(Enums.Buttons.SHIFT);
         if(keycode == Input.Keys.NUM_1) buttons.add(Enums.Buttons.NUM1);

@@ -11,3 +11,11 @@ r	reset zoom
 8	lower updaterate
 9	increase updaterate
 s	show scoreboard
+
+Commands:
+help: display this message
+cvarlist: list all vars\n
+send: send command to all clients
+dumphistory: print console command history
+start: start spawning waves
+reset: clear all enemies, stop spawning waves and reset wave to 0

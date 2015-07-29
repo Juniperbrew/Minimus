@@ -121,12 +121,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     Scoreboard scoreboard = new Scoreboard(score);
 
     TiledMap map;
-    int wave;
+    private int wave;
 
     HashMap<Integer,WaveDefinition> waveList;
 
     //This should not be more than 400 which is the max distance entities can look for a destination
     final int SPAWN_AREA_WIDTH = 200;
+    public boolean spawnWaves;
 
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
@@ -175,14 +176,18 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         showMessage("100 entity position update size:" + measureObject(createPositionList(100)) + "bytes");
     }
 
+    public void setWave(int wave){
+        this.wave = wave;
+        Network.WaveChanged waveChanged = new Network.WaveChanged();
+        waveChanged.wave = wave;
+        sendTCPtoAll(waveChanged);
+    }
+
     private void spawnNextCustomWave(){
 
         WaveDefinition waveDef = waveList.get(wave+1);
         if(waveDef!=null){
-            wave++;
-            Network.WaveChanged waveChanged = new Network.WaveChanged();
-            waveChanged.wave = wave;
-            sendTCPtoAll(waveChanged);
+            setWave(wave+1);
 
             for(WaveDefinition.EnemyDefinition enemy:waveDef.enemies){
                 for (int i = 0; i < enemy.count; i++) {
@@ -201,10 +206,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void spawnNextWave(){
-        wave++;
-        Network.WaveChanged waveChanged = new Network.WaveChanged();
-        waveChanged.wave = wave;
-        sendTCPtoAll(waveChanged);
+        setWave(wave + 1);
         for (int i = 0; i < (wave*2)+4; i++) {
             addNPC();
         }
@@ -213,19 +215,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void showMessage(String message){
         System.out.println(message);
         consoleFrame.addLine(message);
-    }
-
-    private void showHelp(){
-        try(BufferedReader reader = new BufferedReader(new FileReader("resources\\serverHelp.txt"))){
-            String line;
-            while((line = reader.readLine())!=null){
-                showMessage(line);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private int measureKryoEntitySize(){
@@ -712,6 +701,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         sendTCPtoAll(addEntity);
     }
 
+    public void removeAllEntities(){
+        for(int id:entityAIs.keySet()){
+            pendingDeadEntities.add(id);
+        }
+    }
+
     private void removeEntity(int networkID){
         showMessage("Removing npc ID:"+networkID);
         entityAIs.remove(networkID);
@@ -800,7 +795,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                         }
                         lastPingUpdate = System.nanoTime();
                     }
-                    if(entityAIs.isEmpty()){
+                    if(entityAIs.isEmpty() && spawnWaves){
                         if(conVars.getBool("sv_custom_waves")){
                             spawnNextCustomWave();
                         }else{
@@ -1175,7 +1170,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     @Override
     public boolean keyDown(int keycode) {
         if(keycode == Input.Keys.F1){
-            showHelp();
+            consoleFrame.showHelp();
         }
         if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);

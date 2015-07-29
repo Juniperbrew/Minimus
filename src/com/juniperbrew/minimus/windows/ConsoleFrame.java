@@ -33,11 +33,6 @@ public class ConsoleFrame extends JFrame {
     ArrayList<String> commandHistory = new ArrayList<>();
     private int historyIndex = 0;
     int maxHistory = 10;
-    final String HELP = "Commands:\n" +
-                            "help:\t display this message\n" +
-                            "cvarlist:\t list all vars\n" +
-                            "send:\t send command to all clients\n" +
-                            "dumphistory:\t print console command history";
 
     MinimusServer minimusServer;
     private static final String COMMIT_ACTION = "commit";
@@ -202,7 +197,7 @@ public class ConsoleFrame extends JFrame {
             return;
         }
         if(splits[0].equals("help")){
-            addLine(HELP);
+            showHelp();
             return;
         }
         if(splits[0].equals("send")){
@@ -212,11 +207,48 @@ public class ConsoleFrame extends JFrame {
                 minimusServer.sendCommand(sendCommand);
                 parseCommand(sendCommand);
             }else{
-                addLine("The send command can only be used on server");
+                addLine("The "+splits[0]+" command can only be used on server");
+            }
+            return;
+        }
+        if(splits[0].equals("start")){
+            if(minimusServer!=null){
+                minimusServer.spawnWaves = true;
+            }else{
+                addLine("The "+splits[0]+" command can only be used on server");
+            }
+            return;
+        }
+        if(splits[0].equals("reset")){
+            if(minimusServer!=null){
+                minimusServer.removeAllEntities();
+                minimusServer.spawnWaves = false;
+                minimusServer.setWave(0);
+            }else{
+                addLine("The "+splits[0]+" command can only be used on server");
             }
             return;
         }
         addLine(command);
+    }
+
+    public void showHelp(){
+        File file = null;
+        if(minimusServer!=null){
+            file = new File("resources\\serverHelp.txt");
+        }else{
+            file = new File("resources\\clientHelp.txt");
+        }
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))){
+            String line;
+            while((line = reader.readLine())!=null){
+                addLine(line);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {

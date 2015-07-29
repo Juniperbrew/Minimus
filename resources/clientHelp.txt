@@ -14,3 +14,8 @@ l   throw runtime exception
 +	increase interpolation
 -	decrease interpolation
 u	show scoreboard
+
+Commands:
+help: display this message
+cvarlist: list all vars\n
+dumphistory: print console command history
