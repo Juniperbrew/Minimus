@@ -163,6 +163,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     boolean autoWalk;
 
+    int lives;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         conVars = new ConVars();
@@ -445,6 +447,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
                     mapName = assign.mapName;
                     mapScale = assign.mapScale;
+                    lives = assign.lives;
 
                     playerList = assign.playerList;
                     for(int id : playerList){
@@ -453,6 +456,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }else if(object instanceof Network.WaveChanged){
                     Network.WaveChanged waveChanged = (Network.WaveChanged) object;
                     currentWave = waveChanged.wave;
+                }else if(object instanceof Network.SetLives){
+                    Network.SetLives setLives = (Network.SetLives) object;
+                    lives = setLives.lives;
                 }else if(object instanceof String){
                     String command = (String) object;
                     consoleFrame.giveCommand(command);
@@ -1041,6 +1047,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         font.draw(batch, "Mouse 2: "+ sharedMethods.getWeaponName(slot2Weapon), 5, 20);
         glyphLayout.setText(font, "Wave "+currentWave);
         font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
+        glyphLayout.setText(font, "Lives: "+lives);
+        font.draw(batch, "Lives: "+lives,windowWidth-glyphLayout.width ,windowHeight-5);
         batch.end();
 
         if(stateSnapshot!=null){

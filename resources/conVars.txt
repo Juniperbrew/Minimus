@@ -34,3 +34,4 @@ sv_laser_length 200
 sv_contact_damage 5
 sv_invulnerability_timer 0.5
 sv_custom_waves 1
+sv_start_lives 0

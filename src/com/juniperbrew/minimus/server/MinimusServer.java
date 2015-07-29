@@ -35,6 +35,8 @@ import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.ServerStatusFrame;
 import com.juniperbrew.minimus.windows.StatusData;
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
@@ -48,6 +50,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 
 /**
@@ -59,7 +62,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     ShapeRenderer shapeRenderer;
     HashMap<Integer,ServerEntity> entities = new HashMap<>();
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
-    HashMap<Connection,Integer> playerList = new HashMap<>();
+    BidiMap<Integer, Connection> playerList = new DualHashBidiMap<>();
     HashMap<Connection,Integer> lastInputIDProcessed = new HashMap<>();
     HashMap<Connection,Integer> connectionUpdateRate = new HashMap<>();
     HashMap<Connection, ArrayList<Network.UserInput>> inputQueue = new HashMap<>();
@@ -84,6 +87,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private long lastPingUpdate;
 
     HashMap<Connection,Double> attackCooldown = new HashMap<>();
+    Map<Integer,Integer> playerLives = new HashMap<>();
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
 
@@ -279,7 +283,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     public void sendCommand(String command){
-        for(Connection connection :playerList.keySet()){
+        for(Connection connection :playerList.values()){
             connection.sendTCP(command);
         }
     }
@@ -339,8 +343,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
             @Override
             public void disconnected(Connection connection){
-                if(playerList.containsKey(connection)){
-                    int networkID = playerList.get(connection);
+                if(playerList.containsValue(connection)){
+                    int networkID = playerList.getKey(connection);
                     entities.remove(networkID);
                     playerList.remove(connection);
                     serverData.removePlayer();
@@ -356,7 +360,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                 if (object instanceof Network.SpawnRequest){
                     int networkID = getNextNetworkID();
-                    playerList.put(connection,networkID);
+                    playerList.put(networkID,connection);
                     Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
                     fullUpdate.entities = getNetworkedEntityList(entities);
                     connection.sendTCP(fullUpdate);
@@ -368,6 +372,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     int height = 50;
                     float x = MathUtils.random(mapWidth -width);
                     float y = MathUtils.random(mapHeight -height);
+                    playerLives.put(networkID, conVars.getInt("sv_start_lives"));
                     ServerEntity newPlayer = new ServerEntity(networkID,x,y,getNextTeam(),MinimusServer.this);
                     newPlayer.width = width;
                     newPlayer.height = height;
@@ -382,10 +387,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                     Network.AssignEntity assign = new Network.AssignEntity();
                     assign.networkID = networkID;
+                    assign.lives = playerLives.get(networkID);
                     assign.velocity = conVars.getFloat("sv_player_velocity");
                     assign.mapName = conVars.get("sv_map_name");
                     assign.mapScale = conVars.getFloat("sv_map_scale");
-                    assign.playerList = new ArrayList<>(playerList.values());
+                    assign.playerList = new ArrayList<>(playerList.keySet());
                     connection.sendTCP(assign);
                 }
                 if (object instanceof Network.SendFile){
@@ -438,7 +444,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private void processCommands(){
         for(Connection connection:inputQueue.keySet()){
             ArrayList<Network.UserInput> inputList = inputQueue.get(connection);
-            ServerEntity e = entities.get(playerList.get(connection));
+            if(!playerList.containsValue(connection)){
+                //If player is dead and have no lives left we ignore all input
+                inputList.clear();
+                continue;
+            }
+            ServerEntity e = entities.get(playerList.getKey(connection));
             Network.UserInput[] inputListCopy = inputList.toArray(new Network.UserInput[inputList.size()]);
 
             for(Network.UserInput input : inputListCopy){
@@ -491,7 +502,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             return;
         }else{
             attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
-            ServerEntity e = entities.get(playerList.get(connection));
+            ServerEntity e = entities.get(playerList.getKey(connection));
             if(weapon == 1){
                 showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
             }
@@ -573,14 +584,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void sendTCPtoAllExcept(Connection connection, Object o){
-        for(Connection c:playerList.keySet()){
+        for(Connection c:playerList.values()){
             if(!c.equals(connection)){
                 sendTCP(c,o);
             }
         }
     }
     private void sendTCPtoAll(Object o){
-        for(Connection c:playerList.keySet()){
+        for(Connection c:playerList.values()){
             sendTCP(c,o);
         }
     }
@@ -590,7 +601,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             Network.FullEntityUpdate update = new Network.FullEntityUpdate();
             update.serverTime = getServerTime();
             update.entities = getNetworkedEntityList(entities);
-            for(Connection connection :playerList.keySet()){
+            for(Connection connection :playerList.values()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(conVars.getBool("cl_udp")){
                     sendUDP(connection,update);
@@ -602,7 +613,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             Network.EntityPositionUpdate update = new Network.EntityPositionUpdate();
             update.serverTime = getServerTime();
             update.changedEntityPositions = getChangedEntityPositions();
-            for(Connection connection :playerList.keySet()){
+            for(Connection connection :playerList.values()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(conVars.getBool("cl_udp")){
                     sendUDP(connection, update);
@@ -614,7 +625,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             Network.EntityComponentsUpdate update = new Network.EntityComponentsUpdate();
             update.serverTime = getServerTime();
             update.changedEntityComponents = getChangedEntityComponents();
-            for(Connection connection :playerList.keySet()) {
+            for(Connection connection :playerList.values()) {
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(conVars.getBool("cl_udp")){
                     sendUDP(connection,update);
@@ -682,8 +693,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 int networkID ;
                 int removeIndex;
                 do{
-                    removeIndex = MathUtils.random(keys.length-1);
-                }while(playerList.values().contains(keys[removeIndex]));
+                    removeIndex = MathUtils.random(keys.length - 1);
+                }while(playerList.keySet().contains(keys[removeIndex]));
                 showMessage("Remove index:" + removeIndex);
                 networkID = keys[removeIndex];
                 removeEntity(networkID);
@@ -748,26 +759,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         return teamCounter++;
     }
 
-    private void updateDeadEntities(){
-
-        for(int id: pendingDeadEntities){
-            if(playerList.values().contains(id)){
-                //Respawn dead player
-                ServerEntity deadPlayer = entities.get(id);
-                deadPlayer.restoreMaxHealth();
-                float x = MathUtils.random(mapWidth -deadPlayer.width);
-                float y = MathUtils.random(mapHeight -deadPlayer.height);
-                deadPlayer.moveTo(x,y);
-            }else{
-                removeEntity(id);
-            }
-        }
-        pendingDeadEntities.clear();
-    }
-
     private void checkPlayerEntityCollisions(){
 
-        for(int playerID : playerList.values()){
+        for(int playerID : playerList.keySet()){
             ServerEntity player = entities.get(playerID);
             Iterator<ServerEntity> iter = entities.values().iterator();
             while(iter.hasNext()){
@@ -800,7 +794,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
 
                     if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
-                        for(Connection c:playerList.keySet()){
+                        for(Connection c:playerList.values()){
                             connectionStatus.get(c).updatePing();
                             updateFakePing(c);
                         }
@@ -823,7 +817,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     }
                     pendingEntityRemovals = 0;
 
-                    updateDeadEntities();
+                    for(int id: pendingDeadEntities){
+                        removeEntity(id);
+                    }
+                    pendingDeadEntities.clear();
 
                     for(EntityAI ai:entityAIs.values()){
                         ai.act(conVars.getDouble("sv_npc_velocity"), delta);
@@ -891,8 +888,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         shapeRenderer.setColor(1,1,1,1);
 
         ServerEntity[] entitiesCopy = entities.values().toArray(new ServerEntity[entities.values().size()]);
-        for(ServerEntity e : entitiesCopy){
-            if(playerList.values().contains(e.id)){
+        for(ServerEntity e : entitiesCopy) {
+            if(playerList.keySet().contains(e.id)){
                 shapeRenderer.setColor(0,0,1,1);
             }else{
                 shapeRenderer.setColor(1,1,1,1);
@@ -1264,22 +1261,32 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     @Override
     public void entityDied(int id, int sourceID) {
         showMessage("Entity ID" + id + " is dead.");
-        pendingDeadEntities.add(id);
-        if (playerList.values().contains(id)) {
-            addDeath(id);
-        }
-        if(playerList.values().contains(sourceID)) {
-            if (playerList.values().contains(id)) {
+        if(playerList.keySet().contains(sourceID)) {
+            if (playerList.keySet().contains(id)) {
                 addPlayerKill(sourceID);
-                //Respawn dead player
+            } else {
+                addNpcKill(sourceID);
+            }
+        }
+        if (playerList.keySet().contains(id)) {
+            addDeath(id);
+            Tools.addToMap(playerLives,id,-1);
+            Network.SetLives setLives = new Network.SetLives();
+            setLives.lives = playerLives.get(id);
+            sendTCP(playerList.get(id),setLives);
+            if(playerLives.get(id) >= 0){
+                //Respawn player if lives left
                 ServerEntity deadPlayer = entities.get(id);
                 deadPlayer.restoreMaxHealth();
                 float x = MathUtils.random(mapWidth - deadPlayer.width);
                 float y = MathUtils.random(mapHeight - deadPlayer.height);
                 deadPlayer.moveTo(x, y);
-            } else {
-                addNpcKill(sourceID);
+            }else{
+                playerList.remove(id);
+                pendingDeadEntities.add(id);
             }
+        }else{
+            pendingDeadEntities.add(id);
         }
     }
 

@@ -56,6 +56,7 @@ public class Network {
         kryo.register(byte[].class);
         kryo.register(WaveChanged.class);
         kryo.register(SpawnRequest.class);
+        kryo.register(SetLives.class);
     }
 
     public static class Message{
@@ -138,6 +139,7 @@ public class Network {
         public float velocity;
         public String mapName;
         public float mapScale;
+        public int lives;
         public ArrayList<Integer> playerList;
     }
 
@@ -198,5 +200,9 @@ public class Network {
             this.x = x;
             this.y = y;
         }
+    }
+
+    public static class SetLives{
+        public int lives;
     }
 }

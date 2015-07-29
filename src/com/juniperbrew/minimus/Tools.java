@@ -3,6 +3,7 @@ package com.juniperbrew.minimus;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.TimeZone;
 
 /**
@@ -57,5 +58,10 @@ public class Tools {
 
     public static float getSquaredDistance(float x1, float y1, float x2, float y2){
         return (float) (Math.pow((x1-x2),2)+Math.pow((y1-y2),2));
+    }
+
+    public static void addToMap(Map<Integer,Integer> map, int key, int increment){
+        int count = map.containsKey(key) ? map.get(key) : 0;
+        map.put(key, count + increment);
     }
 }

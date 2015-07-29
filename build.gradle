@@ -22,6 +22,7 @@ dependencies {
     compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     compile "com.badlogicgames.gdx:gdx:$gdxVersion"
     compile "com.esotericsoftware:kryonet:2.22.0-RC1"
+    compile 'org.apache.commons:commons-collections4:4.0'
 }
 
 
