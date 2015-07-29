@@ -114,6 +114,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     int pendingEntityRemovals = 0;
 
     ArrayList<Integer> pendingDeadEntities = new ArrayList<>();
+    HashMap<Connection,Network.SpawnRequest> pendingPlayerSpawns = new HashMap<>();
+    ArrayList<Connection> pendingPlayerDespawns = new ArrayList<>();
 
     SharedMethods sharedMethods;
 
@@ -334,55 +336,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             @Override
             public void disconnected(Connection connection){
                 if(playerList.containsValue(connection)){
-                    int networkID = playerList.getKey(connection);
-                    entities.remove(networkID);
-                    playerList.remove(connection);
-                    serverData.removePlayer();
-                    score.removePlayer(networkID);
-                    connectionStatus.get(connection).disconnected();
-                    Network.RemovePlayer removePlayer = new Network.RemovePlayer();
-                    removePlayer.networkID = networkID;
-                    sendTCPtoAllExcept(connection,removePlayer);
+                    pendingPlayerDespawns.add(connection);
                 }
             }
 
             public void received (Connection connection, Object object) {
 
                 if (object instanceof Network.SpawnRequest){
-                    int networkID = getNextNetworkID();
-                    playerList.put(networkID,connection);
-                    Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
-                    fullUpdate.entities = getNetworkedEntityList(entities);
-                    connection.sendTCP(fullUpdate);
-
-                    StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
-                    connectionStatus.put(connection, dataUsage);
-
-                    int width = 50;
-                    int height = 50;
-                    float x = MathUtils.random(mapWidth -width);
-                    float y = MathUtils.random(mapHeight -height);
-                    playerLives.put(networkID, conVars.getInt("sv_start_lives"));
-                    ServerEntity newPlayer = new ServerEntity(networkID,x,y,getNextTeam(),MinimusServer.this);
-                    newPlayer.width = width;
-                    newPlayer.height = height;
-                    addEntity(newPlayer);
-
-                    serverData.addPlayer();
-                    score.addPlayer(networkID);
-                    serverStatusFrame.addConnection(connection.toString(),dataUsage);
-                    Network.AddPlayer addPlayer = new Network.AddPlayer();
-                    addPlayer.networkID = networkID;
-                    sendTCPtoAllExcept(connection,addPlayer);
-
-                    Network.AssignEntity assign = new Network.AssignEntity();
-                    assign.networkID = networkID;
-                    assign.lives = playerLives.get(networkID);
-                    assign.velocity = conVars.getFloat("sv_player_velocity");
-                    assign.mapName = conVars.get("sv_map_name");
-                    assign.mapScale = conVars.getFloat("sv_map_scale");
-                    assign.playerList = new ArrayList<>(playerList.keySet());
-                    connection.sendTCP(assign);
+                    pendingPlayerSpawns.put(connection, (Network.SpawnRequest) object);
                 }
                 if (object instanceof Network.SendFile){
                     Network.SendFile sendFile = (Network.SendFile) object;
@@ -783,6 +744,55 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
+    private void spawnPlayer(Connection connection, Network.SpawnRequest spawnRequest){
+        int networkID = getNextNetworkID();
+        playerList.put(networkID,connection);
+        Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
+        fullUpdate.entities = getNetworkedEntityList(entities);
+        connection.sendTCP(fullUpdate);
+
+        StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
+        connectionStatus.put(connection, dataUsage);
+
+        int width = 50;
+        int height = 50;
+        float x = MathUtils.random(mapWidth -width);
+        float y = MathUtils.random(mapHeight -height);
+        playerLives.put(networkID, conVars.getInt("sv_start_lives"));
+        ServerEntity newPlayer = new ServerEntity(networkID,x,y,getNextTeam(),MinimusServer.this);
+        newPlayer.width = width;
+        newPlayer.height = height;
+        addEntity(newPlayer);
+
+        serverData.addPlayer();
+        score.addPlayer(networkID);
+        serverStatusFrame.addConnection(connection.toString(),dataUsage);
+        Network.AddPlayer addPlayer = new Network.AddPlayer();
+        addPlayer.networkID = networkID;
+        sendTCPtoAllExcept(connection,addPlayer);
+
+        Network.AssignEntity assign = new Network.AssignEntity();
+        assign.networkID = networkID;
+        assign.lives = playerLives.get(networkID);
+        assign.velocity = conVars.getFloat("sv_player_velocity");
+        assign.mapName = conVars.get("sv_map_name");
+        assign.mapScale = conVars.getFloat("sv_map_scale");
+        assign.playerList = new ArrayList<>(playerList.keySet());
+        connection.sendTCP(assign);
+    }
+
+    private void despawnPlayer(Connection connection){
+        int networkID = playerList.getKey(connection);
+        entities.remove(networkID);
+        playerList.remove(connection);
+        serverData.removePlayer();
+        score.removePlayer(networkID);
+        connectionStatus.get(connection).disconnected();
+        Network.RemovePlayer removePlayer = new Network.RemovePlayer();
+        removePlayer.networkID = networkID;
+        sendTCPtoAllExcept(connection,removePlayer);
+    }
+
     private void startSimulation(){
         Thread thread = new Thread(new Runnable(){
             @Override
@@ -807,6 +817,17 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                         }
                         lastPingUpdate = System.nanoTime();
                     }
+
+                    for(Connection c:pendingPlayerSpawns.keySet()){
+                        spawnPlayer(c,pendingPlayerSpawns.get(c));
+                    }
+                    pendingPlayerSpawns.clear();
+
+                    for(Connection c: pendingPlayerDespawns){
+                        despawnPlayer(c);
+                    }
+                    pendingPlayerDespawns.clear();
+
                     if(entityAIs.isEmpty() && spawnWaves){
                         if(conVars.getBool("sv_custom_waves")){
                             spawnNextCustomWave();
