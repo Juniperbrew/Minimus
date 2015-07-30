@@ -57,6 +57,9 @@ public class Network {
         kryo.register(WaveChanged.class);
         kryo.register(SpawnRequest.class);
         kryo.register(SetLives.class);
+        kryo.register(Powerup.class);
+        kryo.register(AddPowerup.class);
+        kryo.register(RemovePowerup.class);
     }
 
     public static class Message{
@@ -140,7 +143,9 @@ public class Network {
         public String mapName;
         public float mapScale;
         public int lives;
+        public int wave;
         public ArrayList<Integer> playerList;
+        public HashMap<Integer,Powerup> powerups;
     }
 
     public static class AddEntity{
@@ -183,6 +188,15 @@ public class Network {
     }
 
     public static class AddPlayer{
+        public int networkID;
+    }
+
+    public static class AddPowerup{
+        public int networkID;
+        public Powerup powerup;
+    }
+
+    public static class RemovePowerup{
         public int networkID;
     }
 

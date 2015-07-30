@@ -22,6 +22,7 @@ import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Powerup;
 import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
@@ -51,6 +52,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -61,6 +63,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     Server server;
     ShapeRenderer shapeRenderer;
     HashMap<Integer,ServerEntity> entities = new HashMap<>();
+    ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
     BidiMap<Integer, Connection> playerList = new DualHashBidiMap<>();
     HashMap<Connection,Integer> lastInputIDProcessed = new HashMap<>();
@@ -344,6 +347,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                 if (object instanceof Network.SpawnRequest){
                     pendingPlayerSpawns.put(connection, (Network.SpawnRequest) object);
+                    StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
+                    connectionStatus.put(connection, dataUsage);
+                    serverStatusFrame.addConnection(connection.toString(),dataUsage);
                 }
                 if (object instanceof Network.SendFile){
                     Network.SendFile sendFile = (Network.SendFile) object;
@@ -716,6 +722,21 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         return teamCounter++;
     }
 
+    private void checkPowerupCollisions(){
+        for(int playerID : playerList.keySet()){
+            ServerEntity player = entities.get(playerID);
+            for(int powerupID : powerups.keySet()){
+                Powerup p = powerups.get(powerupID);
+                if(player.getJavaBounds().contains(p.x,p.y)){
+                    if(p.type == Powerup.HEALTH){
+                        player.addHealth(p.value);
+                        despawnPowerup(powerupID);
+                    }
+                }
+            }
+        }
+    }
+
     private void checkPlayerEntityCollisions(){
 
         for(int playerID : playerList.keySet()){
@@ -751,9 +772,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         fullUpdate.entities = getNetworkedEntityList(entities);
         connection.sendTCP(fullUpdate);
 
-        StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
-        connectionStatus.put(connection, dataUsage);
-
         int width = 50;
         int height = 50;
         float x = MathUtils.random(mapWidth -width);
@@ -766,7 +784,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
         serverData.addPlayer();
         score.addPlayer(networkID);
-        serverStatusFrame.addConnection(connection.toString(),dataUsage);
         Network.AddPlayer addPlayer = new Network.AddPlayer();
         addPlayer.networkID = networkID;
         sendTCPtoAllExcept(connection,addPlayer);
@@ -778,19 +795,42 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         assign.mapName = conVars.get("sv_map_name");
         assign.mapScale = conVars.getFloat("sv_map_scale");
         assign.playerList = new ArrayList<>(playerList.keySet());
+        assign.powerups = new HashMap<>(powerups);
+        assign.wave = wave;
         connection.sendTCP(assign);
     }
 
     private void despawnPlayer(Connection connection){
         int networkID = playerList.getKey(connection);
         entities.remove(networkID);
-        playerList.remove(connection);
+        playerList.remove(networkID);
         serverData.removePlayer();
         score.removePlayer(networkID);
         connectionStatus.get(connection).disconnected();
         Network.RemovePlayer removePlayer = new Network.RemovePlayer();
         removePlayer.networkID = networkID;
         sendTCPtoAllExcept(connection,removePlayer);
+    }
+
+    private void spawnPowerup(){
+        int x = MathUtils.random(0,mapWidth);
+        int y = MathUtils.random(0,mapHeight);
+        int id = getNextNetworkID();
+        Powerup powerup = new Powerup(x,y,Powerup.HEALTH,30);
+        powerups.put(id,powerup);
+
+        Network.AddPowerup addPowerup = new Network.AddPowerup();
+        addPowerup.networkID = id;
+        addPowerup.powerup = powerup;
+        sendTCPtoAll(addPowerup);
+    }
+
+    private void despawnPowerup(int id){
+        powerups.remove(id);
+
+        Network.RemovePowerup removePowerup = new Network.RemovePowerup();
+        removePowerup.networkID = id;
+        sendTCPtoAll(removePowerup);
     }
 
     private void startSimulation(){
@@ -859,6 +899,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                     updateProjectiles(delta);
                     checkPlayerEntityCollisions();
+                    checkPowerupCollisions();
 
                     float moveNpcCheckpoint = (System.nanoTime()-tickStartTime)/1000000f;
 
@@ -927,6 +968,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             int healthWidth = (int) (e.width*health);
             shapeRenderer.setColor(1, 0, 0, 1); //red
             shapeRenderer.rect(e.getX(),e.getY(),e.width/2,e.height/2,healthWidth,e.height,1,1,e.getRotation());
+        }
+        for(Powerup p : powerups.values()){
+            shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
+            shapeRenderer.circle(p.x,p.y,5);
         }
 
         shapeRenderer.end();
@@ -1102,6 +1147,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
         if (character == 'q') {
             pendingEntityRemovals++;
+        }
+        if (character == 'p') {
+            spawnPowerup();
         }
         if (character == 'w') {
             pendingEntityAdds++;

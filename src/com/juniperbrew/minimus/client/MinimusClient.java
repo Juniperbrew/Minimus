@@ -25,6 +25,7 @@ import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
+import com.juniperbrew.minimus.Powerup;
 import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
@@ -96,6 +97,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private ConcurrentLinkedQueue<Integer> pendingRemovedEntities = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Network.EntityAttacking> pendingAttacks = new ConcurrentLinkedQueue<>();
 
+
+    private HashMap<Integer,Powerup> powerups = new HashMap<>();
 
     int currentWave;
     int playerID = -1;
@@ -442,6 +445,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     lives = assign.lives;
 
                     playerList = assign.playerList;
+                    powerups = assign.powerups;
+                    currentWave = assign.wave;
                     for(int id : playerList){
                         score.addPlayer(id);
                     }
@@ -451,6 +456,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }else if(object instanceof Network.SetLives){
                     Network.SetLives setLives = (Network.SetLives) object;
                     lives = setLives.lives;
+                }else if(object instanceof Network.AddPowerup){
+                    Network.AddPowerup addPowerup = (Network.AddPowerup) object;
+                    powerups.put(addPowerup.networkID,addPowerup.powerup);
+                }else if(object instanceof Network.RemovePowerup){
+                    Network.RemovePowerup removePowerup = (Network.RemovePowerup) object;
+                    powerups.remove(removePowerup.networkID);
                 }else if(object instanceof String){
                     String command = (String) object;
                     consoleFrame.giveCommand(command);
@@ -1020,6 +1031,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, healthWidth, e.height, 1, 1, e.getRotation());
                 }
             }
+
+            Powerup[] powerupsCopy = powerups.values().toArray(new Powerup[powerups.values().size()]);
+            for(Powerup p : powerupsCopy){
+                shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
+                shapeRenderer.circle(p.x,p.y,5);
+            }
+
             shapeRenderer.end();
             sharedMethods.renderAttackVisuals(shapeRenderer,attackVisuals);
             sharedMethods.renderProjectiles(shapeRenderer,projectiles);

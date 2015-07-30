@@ -56,4 +56,9 @@ public class ServerEntity extends Entity {
             listener.entityDied(id, sourceID);
         }
     }
+
+    public void addHealth(int healing){
+        super.setHealth(getHealth() + healing);
+        listener.healthChanged(id);
+    }
 }

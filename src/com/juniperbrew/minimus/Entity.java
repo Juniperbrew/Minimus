@@ -112,7 +112,11 @@ public class Entity {
     }
 
     public void setHealth(int health){
-        this.health = health;
+        if(health > maxHealth){
+            this.health = maxHealth;
+        }else{
+            this.health = health;
+        }
     }
 
     public Rectangle getGdxBounds(){
