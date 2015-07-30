@@ -6,6 +6,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -30,6 +31,7 @@ import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
+import com.juniperbrew.minimus.Weapon;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
@@ -43,6 +45,7 @@ import com.juniperbrew.minimus.windows.StatusData;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -144,10 +147,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     boolean titleSet;
 
-    Sound hurt;
-    Sound projectile;
-    Sound laser;
-    Sound hit;
+    HashMap<String,Sound> sounds = new HashMap<>();
 
     Music backgroundMusic;
 
@@ -169,6 +169,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int lives;
     float soundVolume;
     float musicVolume;
+
+    HashMap<Integer,Weapon> weaponList;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -224,10 +226,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         font = new BitmapFont();
         font.setColor(Color.RED);
 
-        hurt = Gdx.audio.newSound(Gdx.files.internal("resources\\hurt.ogg"));
-        laser = Gdx.audio.newSound(Gdx.files.internal("resources\\laser.ogg"));
-        projectile = Gdx.audio.newSound(Gdx.files.internal("resources\\projectile.ogg"));
-        hit = Gdx.audio.newSound(Gdx.files.internal("resources\\hit.ogg"));
+        loadSounds();
+
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources\\taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.setVolume(musicVolume);
@@ -447,6 +447,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     playerList = assign.playerList;
                     powerups = assign.powerups;
                     currentWave = assign.wave;
+                    weaponList = assign.weaponList;
                     for(int id : playerList){
                         score.addPlayer(id);
                     }
@@ -543,6 +544,55 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 slot1Weapon = 2;
             }
         }
+        if(buttons.contains(Enums.Buttons.NUM4)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 3;
+            }else{
+                slot1Weapon = 3;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM5)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 4;
+            }else{
+                slot1Weapon = 4;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM6)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 5;
+            }else{
+                slot1Weapon = 5;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM7)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 6;
+            }else{
+                slot1Weapon = 6;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM8)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 7;
+            }else{
+                slot1Weapon = 7;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM9)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 8;
+            }else{
+                slot1Weapon = 8;
+            }
+        }
+        if(buttons.contains(Enums.Buttons.NUM0)){
+            if(buttons.contains(Enums.Buttons.SHIFT)){
+                slot2Weapon = 9;
+            }else{
+                slot1Weapon = 9;
+            }
+        }
         if(input.buttons.contains(Enums.Buttons.MOUSE1)){
             playerAttack(stateSnapshot.get(playerID), slot1Weapon, input);
             mouse1Pressed = false;
@@ -554,23 +604,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attackCooldown -= (delta/1000d);
     }
 
-    private void playerAttack(Entity player, int weapon, Network.UserInput input){
+    private void playerAttack(Entity player, int weaponSlot, Network.UserInput input){
         if(attackCooldown>0){
             return;
         }
         attackCooldown = conVars.getDouble("sv_attack_delay");
         //TODO Ignoring projectile team for now
-        if(weapon == 0){
-            laser.play(soundVolume);
-            sharedMethods.createLaserAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
-        }else if(weapon == 1){
-            projectile.play(soundVolume);
-            showMessage(input.inputID+"> ["+getClientTime()+"] Creating projectile from PlayerCenterX: " + player.getCenterX() + " PlayerCenterY: " + player.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY +" PlayerRotation: " + player.getRotation());
-            Projectile projectile = sharedMethods.createRifleAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
-            projectiles.add(projectile);
 
-        }else if (weapon == 2){
-            projectiles.addAll(sharedMethods.createShotgunAttackVisual(player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
+        Weapon weapon = weaponList.get(weaponSlot);
+        if(weapon!=null){
+            if(weapon.hitScan){
+                sharedMethods.createHitscanAttack(weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
+            }else{
+                projectiles.addAll(sharedMethods.createProjectileAttack(weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
+            }
+            if(weapon.sound!=null){
+                sounds.get(weapon.sound).play(soundVolume);
+            }
         }
     }
 
@@ -815,19 +865,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         //TODO Ignoring projectile team for now
         for(Network.EntityAttacking attack;(attack=pendingAttacks.poll())!=null;){
-            if(attack.weapon == 0){
-                laser.play(soundVolume);
-                sharedMethods.createLaserAttackVisual(attack.x,attack.y,attack.deg, attackVisuals);
-            }else if(attack.weapon == 1){
-                projectile.play(soundVolume);
-                Projectile projectile = sharedMethods.createRifleAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1);
-                projectiles.add(projectile);
-
-                if(playerList.contains(attack.id)){
-                    showMessage("["+getClientTime()+"] Created rifle projectile for player ("+projectile.ownerID+") at ("+projectile.getX()+","+projectile.getY()+") Direction: "+attack.deg);
+            Weapon weapon = weaponList.get(attack.weapon);
+            if(weapon!=null){
+                if(weapon.hitScan){
+                    sharedMethods.createHitscanAttack(weapon,attack.x,attack.y,attack.deg, attackVisuals);
+                }else{
+                    projectiles.addAll(sharedMethods.createProjectileAttack(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
                 }
-            }else if(attack.weapon == 2){
-                projectiles.addAll(sharedMethods.createShotgunAttackVisual(attack.x, attack.y, attack.deg, attack.id, -1));
+                if(weapon.sound!=null){
+                    sounds.get(weapon.sound).play(soundVolume);
+                }
             }
         }
     }
@@ -905,9 +952,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 Entity target = stateSnapshot.get(id);
                 if(target.getJavaBounds().intersectsLine(movedPath)){
                     if(id == playerID){
-                        hurt.play(soundVolume);
+                        sounds.get("hurt.ogg").play(soundVolume);
                     }else{
-                        hit.play(soundVolume);
+                        sounds.get("hit.ogg").play(soundVolume);
                     }
                     projectile.destroyed = true;
                 }
@@ -1053,8 +1100,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id), 5, windowHeight-5-offset);
             offset += 20;
         }
-        font.draw(batch, "Mouse 1: "+ sharedMethods.getWeaponName(slot1Weapon), 5, 40);
-        font.draw(batch, "Mouse 2: "+ sharedMethods.getWeaponName(slot2Weapon), 5, 20);
+        font.draw(batch, "Mouse 1: "+ (weaponList.get(slot1Weapon)!=null?weaponList.get(slot1Weapon).name:"N/A"), 5, 40);
+        font.draw(batch, "Mouse 2: "+ (weaponList.get(slot2Weapon)!=null?weaponList.get(slot2Weapon).name:"N/A"), 5, 20);
         glyphLayout.setText(font, "Wave "+currentWave);
         font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
         glyphLayout.setText(font, "Lives: "+lives);
@@ -1092,6 +1139,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.NUM_1) buttons.add(Enums.Buttons.NUM1);
         if(keycode == Input.Keys.NUM_2) buttons.add(Enums.Buttons.NUM2);
         if(keycode == Input.Keys.NUM_3) buttons.add(Enums.Buttons.NUM3);
+        if(keycode == Input.Keys.NUM_4) buttons.add(Enums.Buttons.NUM4);
+        if(keycode == Input.Keys.NUM_5) buttons.add(Enums.Buttons.NUM5);
+        if(keycode == Input.Keys.NUM_6) buttons.add(Enums.Buttons.NUM6);
+        if(keycode == Input.Keys.NUM_7) buttons.add(Enums.Buttons.NUM7);
+        if(keycode == Input.Keys.NUM_8) buttons.add(Enums.Buttons.NUM8);
+        if(keycode == Input.Keys.NUM_9) buttons.add(Enums.Buttons.NUM9);
+        if(keycode == Input.Keys.NUM_0) buttons.add(Enums.Buttons.NUM0);
         if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);
         if(keycode == Input.Keys.UP)buttons.add(Enums.Buttons.UP);
@@ -1110,6 +1164,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.NUM_1) buttons.remove(Enums.Buttons.NUM1);
         if(keycode == Input.Keys.NUM_2) buttons.remove(Enums.Buttons.NUM2);
         if(keycode == Input.Keys.NUM_3) buttons.remove(Enums.Buttons.NUM3);
+        if(keycode == Input.Keys.NUM_4) buttons.remove(Enums.Buttons.NUM4);
+        if(keycode == Input.Keys.NUM_5) buttons.remove(Enums.Buttons.NUM5);
+        if(keycode == Input.Keys.NUM_6) buttons.remove(Enums.Buttons.NUM6);
+        if(keycode == Input.Keys.NUM_7) buttons.remove(Enums.Buttons.NUM7);
+        if(keycode == Input.Keys.NUM_8) buttons.remove(Enums.Buttons.NUM8);
+        if(keycode == Input.Keys.NUM_9) buttons.remove(Enums.Buttons.NUM9);
+        if(keycode == Input.Keys.NUM_0) buttons.remove(Enums.Buttons.NUM0);
         if(keycode == Input.Keys.LEFT) buttons.remove(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.remove(Enums.Buttons.RIGHT);
         if(keycode == Input.Keys.UP)buttons.remove(Enums.Buttons.UP);
@@ -1250,6 +1311,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             camera.position.set(mapWidth/2f, mapHeight/2f, 0);
         }
         camera.update();
+    }
+
+    private void loadSounds(){
+
+        ArrayList<File> files = new ArrayList<>();
+        File soundFolder = new File("resources\\sounds");
+        for (final File file : soundFolder.listFiles()) {
+            if (!file.isDirectory()) {
+                Sound sound = Gdx.audio.newSound(new FileHandle(file));
+                sounds.put(file.getName(), sound);
+                System.out.println("Loaded: "+file.getName());
+            }
+        }
     }
 
     @Override

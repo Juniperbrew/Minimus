@@ -27,6 +27,7 @@ import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
+import com.juniperbrew.minimus.Weapon;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
@@ -134,6 +135,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     private final int HEALTHPACK_SPAWN_DELAY = 10;
 
     HashMap<Integer,WaveDefinition> waveList;
+    HashMap<Integer,Weapon> weaponList;
 
     //This should not be more than 400 which is the max distance entities can look for a destination
     final int SPAWN_AREA_WIDTH = 200;
@@ -155,6 +157,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         consoleFrame = new ConsoleFrame(conVars,this);
 
         waveList = readWaveList();
+        weaponList = readWeaponList();
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
         resize(h,w);
@@ -439,6 +442,55 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                         e.slot1Weapon = 2;
                     }
                 }
+                if(input.buttons.contains(Enums.Buttons.NUM4)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 3;
+                    }else{
+                        e.slot1Weapon = 3;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM5)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 4;
+                    }else{
+                        e.slot1Weapon = 4;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM6)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 5;
+                    }else{
+                        e.slot1Weapon = 5;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM7)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 6;
+                    }else{
+                        e.slot1Weapon = 6;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM8)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 7;
+                    }else{
+                        e.slot1Weapon = 7;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM9)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 8;
+                    }else{
+                        e.slot1Weapon = 8;
+                    }
+                }
+                if(input.buttons.contains(Enums.Buttons.NUM0)){
+                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                        e.slot2Weapon = 9;
+                    }else{
+                        e.slot1Weapon = 9;
+                    }
+                }
 
                 if(input.buttons.contains(Enums.Buttons.MOUSE1)){
                     attackWithPlayer(connection, e.slot1Weapon, input);
@@ -474,30 +526,33 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
-    public void createAttack(ServerEntity e, int weapon){
+    public void createAttack(ServerEntity e, int weaponSlot){
 
         Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
         entityAttacking.x = e.getCenterX();
         entityAttacking.y = e.getCenterY();
         entityAttacking.deg = e.getRotation();
         entityAttacking.id = e.id;
-        entityAttacking.weapon = weapon;
+        entityAttacking.weapon = weaponSlot;
         sendTCPtoAll(entityAttacking);
 
-        if(weapon == 0){
-            final Line2D.Float hitScan = sharedMethods.createLaserAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
+        Weapon weapon = weaponList.get(weaponSlot);
+        if(weapon==null){
+            return;
+        }
+        if(weapon.hitScan){
+            ArrayList<Line2D.Float> hitScans = sharedMethods.createHitscanAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
 
             for(int id:entities.keySet()){
                 ServerEntity target = entities.get(id);
-                if(target.getJavaBounds().intersectsLine(hitScan) && target.team != e.team){
-                    target.reduceHealth(10,e.id);
+                for(Line2D hitScan:hitScans){
+                    if(target.getJavaBounds().intersectsLine(hitScan) && target.team != e.team){
+                        target.reduceHealth(weapon.damage,e.id);
+                    }
                 }
             }
-        }else if(weapon == 1){
-            Projectile projectile = sharedMethods.createRifleAttackVisual(e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.team);
-            projectiles.add(projectile);
-        }else if(weapon == 2){
-            projectiles.addAll(sharedMethods.createShotgunAttackVisual(e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.team));
+        }else{
+            projectiles.addAll(sharedMethods.createProjectileAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.team));
         }
     }
 
@@ -710,7 +765,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 if(target.getJavaBounds().intersectsLine(movedPath)){
                     projectile.destroyed = true;
                     if(target.team != projectile.team){
-                        target.reduceHealth(10,projectile.ownerID);
+                        target.reduceHealth(projectile.damage,projectile.ownerID);
                     }
                 }
             }
@@ -804,6 +859,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         assign.playerList = new ArrayList<>(playerList.keySet());
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
+        assign.weaponList = new HashMap<>(weaponList);
         connection.sendTCP(assign);
     }
 
@@ -1115,6 +1171,77 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Network.FileReceived fileReceived = new Network.FileReceived();
         fileReceived.fileName = fileName;
         c.sendTCP(fileReceived);
+    }
+
+    private HashMap<Integer,Weapon> readWeaponList(){
+        File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponlist.txt");
+        if(!file.exists()){
+            file = new File("resources\\"+"defaultweaponlist.txt");
+        }
+        System.out.println("Loading weapons from file:"+file);
+        HashMap<Integer,Weapon> weapons = new HashMap<>();
+        Weapon weapon = null;
+        int weaponSlot = 0;
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
+                    continue;
+                }
+                if(line.charAt(0) == '{'){
+                    weapon = new Weapon();
+                    continue;
+                }
+                if(line.charAt(0) == '}'){
+                    weapons.put(weaponSlot,weapon);
+                    weaponSlot++;
+                    continue;
+                }
+                String[] splits = line.split("=");
+                if(splits[0].equals("type")){
+                    if(splits[1].equals("hitscan")){
+                        weapon.hitScan = true;
+                    }
+                }
+                if(splits[0].equals("name")){
+                    weapon.name = splits[1];
+                }
+                if(splits[0].equals("range")){
+                    weapon.range = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("velocity")){
+                    weapon.velocity = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("spread")){
+                    weapon.spread = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("projectileCount")){
+                    weapon.projectileCount = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("damage")){
+                    weapon.damage = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("visualDuration")){
+                    weapon.visualDuration = Float.parseFloat(splits[1]);
+                }
+                if(splits[0].equals("sound")){
+                    weapon.sound = splits[1];
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for(int i: weapons.keySet()){
+            Weapon w = weapons.get(i);
+            System.out.println("Slot: "+i);
+            System.out.println(w);
+            System.out.println();
+        }
+
+        return weapons;
     }
 
     private HashMap<Integer,WaveDefinition> readWaveList(){

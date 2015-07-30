@@ -30,7 +30,41 @@ public class SharedMethods {
         timer = new Timer();
     }
 
-    public Line2D.Float createLaserAttackVisual(float x, float y, int deg, final ArrayList<Line2D.Float> attackVisuals){
+    public ArrayList<Line2D.Float> createHitscanAttack(Weapon weapon, float x, float y, int deg, final ArrayList<Line2D.Float> attackVisuals){
+        ArrayList<Line2D.Float> hitscans = new ArrayList<>();
+        int range = weapon.range;
+        int startDistanceX = 25;
+        int startDistanceY = 25;
+
+        deg -= weapon.spread/2f;
+        for (int i = 0; i < weapon.projectileCount; i++) {
+            float sina = MathUtils.sinDeg(deg);
+            float cosa = MathUtils.cosDeg(deg);
+
+            float startX = x + cosa*startDistanceX;
+            float startY = y + sina*startDistanceY;
+            float targetX = startX + cosa*range;
+            float targetY = startY + sina*range;
+
+            final Line2D.Float hitScan = new Line2D.Float(startX,startY,targetX,targetY);
+            hitscans.add(hitScan);
+            attackVisuals.add(hitScan);
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    attackVisuals.remove(hitScan);
+                }
+            };
+            timer.schedule(task,Tools.secondsToMilli(weapon.visualDuration));
+
+            if(weapon.projectileCount>1){
+                deg += weapon.spread/(weapon.projectileCount-1);
+            }
+        }
+        return hitscans;
+    }
+
+    /*public Line2D.Float createLaserAttackVisual(float x, float y, int deg, final ArrayList<Line2D.Float> attackVisuals){
 
         float laserLength = conVars.getFloat("sv_laser_length");
         int laserStartDistanceX = 25;
@@ -54,33 +88,25 @@ public class SharedMethods {
         };
         timer.schedule(task,Tools.secondsToMilli(conVars.getDouble("sv_attack_visual_timer")));
         return hitScan;
-    }
+    }*/
 
-    public Projectile createRifleAttackVisual(float x, float y, int deg, int entityId, int team){
-        int projectileStartDistanceX = 25;
-        int projectileStartDistanceY = 25;
-        float sina = MathUtils.sinDeg(deg);
-        float cosa = MathUtils.cosDeg(deg);
-
-        x += cosa*projectileStartDistanceX;
-        y += sina*projectileStartDistanceY;
-        return new Projectile(x,y,conVars.getFloat("sv_rifle_range"),conVars.getFloat("sv_rifle_velocity"),deg,entityId, team);
-    }
-
-    public ArrayList<Projectile> createShotgunAttackVisual(float x, float y, int deg, int entityId, int team){
+    public ArrayList<Projectile> createProjectileAttack(Weapon weapon, float x, float y, int deg, int entityId, int team){
         ArrayList<Projectile> projectiles = new ArrayList<>();
         int projectileStartDistanceX = 25;
         int projectileStartDistanceY = 25;
-        deg -= 20;
-        for(int i = 0; i < 5; i++){
+
+        deg -= weapon.spread/2f;
+        for (int i = 0; i < weapon.projectileCount; i++) {
             float sina = MathUtils.sinDeg(deg);
             float cosa = MathUtils.cosDeg(deg);
 
             float startX = x + cosa*projectileStartDistanceX;
             float startY = y + sina*projectileStartDistanceY;
 
-            projectiles.add(new Projectile(startX,startY,conVars.getFloat("sv_shotgun_range"),conVars.getFloat("sv_shotgun_velocity"),deg,entityId,team));
-            deg += 10;
+            projectiles.add(new Projectile(startX,startY,weapon.range,weapon.velocity,deg,entityId,team,weapon.damage));
+            if(weapon.projectileCount>1){
+                deg += weapon.spread/(weapon.projectileCount-1);
+            }
         }
         return projectiles;
     }

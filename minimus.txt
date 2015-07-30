@@ -1,8 +1,8 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO add healthpacks
 TODO change projectile damage
 TODO fix exceptions from empty state history
 
+DONE add healthpacks
 DONE add waves
 DONE players take damage from contact
 DONE add 3 different AI, passive, passive+shooting, active+shooting

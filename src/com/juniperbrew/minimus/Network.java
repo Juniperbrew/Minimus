@@ -60,6 +60,7 @@ public class Network {
         kryo.register(Powerup.class);
         kryo.register(AddPowerup.class);
         kryo.register(RemovePowerup.class);
+        kryo.register(Weapon.class);
     }
 
     public static class Message{
@@ -146,6 +147,7 @@ public class Network {
         public int wave;
         public ArrayList<Integer> playerList;
         public HashMap<Integer,Powerup> powerups;
+        public HashMap<Integer,Weapon> weaponList;
     }
 
     public static class AddEntity{
