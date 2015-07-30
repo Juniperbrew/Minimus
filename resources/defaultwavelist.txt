@@ -4,10 +4,12 @@
 # a = Random Movement                   1 = Laser
 # b = Following                         2 = Rifle
 # c = Shooting, Random Movement         3 = Shotgun
-# d = Shooting, Following              
+# d = Shooting, Following
+# + = healthpack
  
 #Wave 1
 {
++=10
 a1=3
 c1=1
 c2=1

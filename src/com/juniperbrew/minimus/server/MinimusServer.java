@@ -52,6 +52,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -127,12 +129,17 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     TiledMap map;
     private int wave;
+    private int spawnedHealthPacksCounter;
+    private long lastHealthPackSpawned;
+    private final int HEALTHPACK_SPAWN_DELAY = 10;
 
     HashMap<Integer,WaveDefinition> waveList;
 
     //This should not be more than 400 which is the max distance entities can look for a destination
     final int SPAWN_AREA_WIDTH = 200;
     public boolean spawnWaves;
+
+    Timer timer = new Timer();
 
     private void initialize(){
         shapeRenderer = new ShapeRenderer();
@@ -812,12 +819,20 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         sendTCPtoAllExcept(connection,removePlayer);
     }
 
-    private void spawnPowerup(){
+    private void spawnPowerup(int type, int value, int duration){
         int x = MathUtils.random(0,mapWidth);
         int y = MathUtils.random(0,mapHeight);
-        int id = getNextNetworkID();
-        Powerup powerup = new Powerup(x,y,Powerup.HEALTH,30);
+        final int id = getNextNetworkID();
+        Powerup powerup = new Powerup(x,y,type,value);
         powerups.put(id,powerup);
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                despawnPowerup(id);
+            }
+        };
+        timer.schedule(task,Tools.secondsToMilli(duration));
 
         Network.AddPowerup addPowerup = new Network.AddPowerup();
         addPowerup.networkID = id;
@@ -868,11 +883,21 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     }
                     pendingPlayerDespawns.clear();
 
-                    if(entityAIs.isEmpty() && spawnWaves){
-                        if(conVars.getBool("sv_custom_waves")){
-                            spawnNextCustomWave();
-                        }else{
-                            spawnNextWave();
+                    if(spawnWaves){
+                        if(entityAIs.isEmpty()){
+                            spawnedHealthPacksCounter=0;
+                            if(conVars.getBool("sv_custom_waves")){
+                                spawnNextCustomWave();
+                            }else{
+                                spawnNextWave();
+                            }
+                        }
+                        if(spawnedHealthPacksCounter < waveList.get(wave).healthPackCount){
+                            if(System.nanoTime()-lastHealthPackSpawned > Tools.secondsToNano(HEALTHPACK_SPAWN_DELAY)){
+                                lastHealthPackSpawned = System.nanoTime();
+                                spawnedHealthPacksCounter++;
+                                spawnPowerup(Powerup.HEALTH,30,30);
+                            }
                         }
                     }
 
@@ -1119,6 +1144,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     waves.put(waveNumber,wave);
                     continue;
                 }
+                if(line.charAt(0) == '+'){
+                    wave.healthPackCount = Integer.parseInt(line.substring(2));
+                }
                 aiType = Character.toString(line.charAt(0));
                 weapon = Character.getNumericValue(line.charAt(1))-1;
                 count = Integer.parseInt(line.substring(3));
@@ -1149,7 +1177,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             pendingEntityRemovals++;
         }
         if (character == 'p') {
-            spawnPowerup();
+            spawnPowerup(Powerup.HEALTH,30,30);
         }
         if (character == 'w') {
             pendingEntityAdds++;

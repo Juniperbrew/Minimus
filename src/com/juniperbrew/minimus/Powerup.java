@@ -1,5 +1,7 @@
 package com.juniperbrew.minimus;
 
+import java.util.Timer;
+
 /**
  * Created by Juniperbrew on 30.7.2015.
  */
