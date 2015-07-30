@@ -25,11 +25,10 @@ dependencies {
     compile 'org.apache.commons:commons-collections4:4.0'
 }
 
-
 installDist {
     into('bin') {
         from '.'
-        include 'resources/*'
+        include 'resources/**'
     }
 }
 
@@ -40,7 +39,6 @@ sourceSets {
         }
     }
 }
-
 
 task installServer(type: CreateStartScripts) {
     mainClassName = "com.juniperbrew.minimus.server.ServerLauncher"

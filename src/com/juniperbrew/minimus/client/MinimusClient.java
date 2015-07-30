@@ -1317,6 +1317,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         ArrayList<File> files = new ArrayList<>();
         File soundFolder = new File("resources\\sounds");
+        System.out.println("Loading sounds from: "+ soundFolder);
         for (final File file : soundFolder.listFiles()) {
             if (!file.isDirectory()) {
                 Sound sound = Gdx.audio.newSound(new FileHandle(file));
