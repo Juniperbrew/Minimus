@@ -518,8 +518,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     private void attackWithPlayer(Connection connection, int weapon, Network.UserInput input){
         if(attackCooldown.get(connection)==null){
-            attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
-        }else if(attackCooldown.get(connection) > 0){
+            attackCooldown.put(connection,-1d);
+        }
+        if(attackCooldown.get(connection) > 0){
             return;
         }else{
             attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
