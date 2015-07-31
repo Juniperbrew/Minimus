@@ -37,6 +37,7 @@ import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
+import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
@@ -177,7 +178,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         conVars = new ConVars(this);
         soundVolume = conVars.getFloat("cl_volume_sound");
         musicVolume = conVars.getFloat("cl_volume_music");
-        consoleFrame = new ConsoleFrame(conVars);
+        consoleFrame = new ConsoleFrame(conVars, this);
         clientStartTime = System.nanoTime();
         score = new Score(this);
         scoreboard = new Scoreboard(score);
@@ -341,6 +342,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         Rotation rotation = (Rotation) component;
                         changedEntity.setRotation(rotation.degrees);
                     }
+                    if(component instanceof Team){
+                        Team team = (Team) component;
+                        changedEntity.setTeam(team.team);
+                    }
                 }
                 newEntityList.put(id,changedEntity);
             } else {
@@ -422,15 +427,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     showMessage("PlayerID "+addPlayer.networkID+" added.");
                     playerList.add(addPlayer.networkID);
                     score.addPlayer(addPlayer.networkID);
-                }else if(object instanceof Network.RemovePlayer){
-                    Network.RemovePlayer removePlayer = (Network.RemovePlayer) object;
-                    showMessage("PlayerID "+removePlayer.networkID+" removed.");
-                    playerList.remove((Integer) removePlayer.networkID);
-                    pendingRemovedEntities.add(removePlayer.networkID);
-                    score.removePlayer(removePlayer.networkID);
                 }else if(object instanceof Network.AddEntity){
                     Network.AddEntity addEntity = (Network.AddEntity) object;
-                    System.out.println("Adding entity "+addEntity.entity.id);
+                    System.out.println("Adding entity " + addEntity.entity.id);
                     pendingAddedEntities.add(addEntity);
                 }else if(object instanceof Network.RemoveEntity){
                     Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
@@ -449,6 +448,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     currentWave = assign.wave;
                     weaponList = assign.weaponList;
                     for(int id : playerList){
+                        System.out.println("Adding id "+id+" to score");
                         score.addPlayer(id);
                     }
                 }else if(object instanceof Network.WaveChanged){
@@ -604,6 +604,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attackCooldown -= (delta/1000d);
     }
 
+    public void changeTeam(int team){
+        Network.TeamChangeRequest teamChangeRequest = new Network.TeamChangeRequest();
+        teamChangeRequest.team = team;
+        sendTCP(teamChangeRequest);
+    }
+
+    public void requestRespawn(){
+        Network.SpawnRequest spawnRequest = new Network.SpawnRequest();
+        sendTCP(spawnRequest);
+    }
+
     private void playerAttack(Entity player, int weaponSlot, Network.UserInput input){
         if(attackCooldown>0){
             return;
@@ -626,6 +637,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
 
+        if(playerID==-1){
+            inputQueue.clear();
+        }
+
         if(!conVars.getBool("cl_clientside_prediction")){
             return;
         }
@@ -640,51 +655,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
-            //System.out.print("Predicting player inputID:" + input.inputID);
+            //System.out.println("Predicting player inputID:" + input.inputID);
             sharedMethods.applyInput(state.get(playerID),input);
-        }
-    }
-
-    private void setHeading(ServerEntity e, EnumSet<Enums.Buttons> buttons){
-
-        if(buttons.contains(Enums.Buttons.UP)){
-            if(buttons.contains(Enums.Buttons.LEFT)&&e.getHeading()== Enums.Heading.WEST){
-                e.setHeading(Enums.Heading.WEST);
-            }else if(buttons.contains(Enums.Buttons.RIGHT)&&e.getHeading()== Enums.Heading.EAST){
-                e.setHeading(Enums.Heading.EAST);
-            }else{
-                e.setHeading(Enums.Heading.NORTH);
-            }
-        }
-
-        if(buttons.contains(Enums.Buttons.DOWN)){
-            if(buttons.contains(Enums.Buttons.LEFT)&&e.getHeading()== Enums.Heading.WEST){
-                e.setHeading(Enums.Heading.WEST);
-            }else if(buttons.contains(Enums.Buttons.RIGHT)&&e.getHeading()== Enums.Heading.EAST){
-                e.setHeading(Enums.Heading.EAST);
-            }else{
-                e.setHeading(Enums.Heading.SOUTH);
-            }
-        }
-
-        if(buttons.contains(Enums.Buttons.LEFT)){
-            if(buttons.contains(Enums.Buttons.UP)&&e.getHeading()== Enums.Heading.NORTH){
-                e.setHeading(Enums.Heading.NORTH);
-            }else if(buttons.contains(Enums.Buttons.DOWN)&&e.getHeading()== Enums.Heading.SOUTH){
-                e.setHeading(Enums.Heading.SOUTH);
-            }else{
-                e.setHeading(Enums.Heading.WEST);
-            }
-        }
-
-        if(buttons.contains(Enums.Buttons.RIGHT)){
-            if(buttons.contains(Enums.Buttons.UP)&&e.getHeading()== Enums.Heading.NORTH){
-                e.setHeading(Enums.Heading.NORTH);
-            }else if(buttons.contains(Enums.Buttons.DOWN)&&e.getHeading()== Enums.Heading.SOUTH){
-                e.setHeading(Enums.Heading.SOUTH);
-            }else{
-                e.setHeading(Enums.Heading.EAST);
-            }
         }
     }
 
@@ -852,7 +824,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         //Entities will be added to latest state despite their add time
         for(Network.AddEntity addEntity;(addEntity = pendingAddedEntities.poll())!=null;){
-            stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity); //TODO java.lang.ArrayIndexOutOfBoundsException: -1
+            authoritativeState.entities.put(addEntity.entity.id,addEntity.entity);
+            //stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity); //TODO java.lang.ArrayIndexOutOfBoundsException: -1
         }
         //Entities will be removed from latest state despite their remove time
         for(Integer id;(id=pendingRemovedEntities.poll())!=null;){
@@ -861,6 +834,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 index = 0;
             }
             stateHistory.get(index).entities.remove(id);
+            if(playerList.contains(id)){
+                showMessage("PlayerID "+id+" removed.");
+                playerList.remove(id);
+                score.removePlayer(id);
+                if(id==playerID){
+                    playerID = -1;
+                    slot1Weapon = 0;
+                    slot2Weapon = 1;
+                }
+            }
         }
 
         //TODO Ignoring projectile team for now
@@ -905,11 +888,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }else{
                     inputPacket.inputs = pendingInputPacket;
                 }
-                /*for(Network.UserInput input : inputPacket.inputs){
-                    if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-                        showMessage(input.inputID+ "> Sending mouse2 input packets MouseX: "+input.mouseX +" MouseY: " +input.mouseY);
-                    }
-                }*/
                 sendUDP(inputPacket);
                 pendingInputPacket.clear();
             }
@@ -922,7 +900,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         //Dont pollInput or create snapshot if we have no state from server
         if (authoritativeState != null){
-            pollInput((short) (delta*1000));
+            if(stateSnapshot.get(playerID)!=null){
+                pollInput((short) (delta*1000));
+            }
             createStateSnapshot(getClientTime()); //FIXME Will cause concurrent modifications
         }
         float checkpoint3 = (System.nanoTime()-logicStart)/1000000f;
@@ -1097,7 +1077,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         batch.setProjectionMatrix(hudCamera.combined);
         int offset = 0;
         for(int id: playerList){
-            font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id), 5, windowHeight-5-offset);
+            //TODO Nullpointer when someone connects as we're trying to get player team
+            font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id) + " Team: "+authoritativeState.entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
         font.draw(batch, "Mouse 1: "+ (weaponList.get(slot1Weapon)!=null?weaponList.get(slot1Weapon).name:"N/A"), 5, 40);

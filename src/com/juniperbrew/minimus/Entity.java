@@ -18,7 +18,7 @@ public class Entity {
     private int rotation;
     public int slot1Weapon = 0;
     public int slot2Weapon = 1;
-    public int team;
+    private int team;
 
     public Entity(){
         this(-1,-1,-1,-1);
@@ -117,6 +117,14 @@ public class Entity {
         }else{
             this.health = health;
         }
+    }
+
+    public int getTeam() {
+        return team;
+    }
+
+    public void setTeam(int team) {
+        this.team = team;
     }
 
     public Rectangle getGdxBounds(){

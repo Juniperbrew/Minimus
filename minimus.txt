@@ -1,5 +1,5 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO fix exceptions from empty state history
+TODO fix first shot not sent to server
 
 DONE change projectile damage
 DONE add healthpacks

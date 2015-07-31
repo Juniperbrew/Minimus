@@ -2,6 +2,7 @@ package com.juniperbrew.minimus.windows;
 
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Tools;
+import com.juniperbrew.minimus.client.MinimusClient;
 import com.juniperbrew.minimus.server.MinimusServer;
 import net.miginfocom.swing.MigLayout;
 
@@ -35,6 +36,7 @@ public class ConsoleFrame extends JFrame {
     int maxHistory = 10;
 
     MinimusServer minimusServer;
+    MinimusClient minimusClient;
     private static final String COMMIT_ACTION = "commit";
 
     public ConsoleFrame(ConVars conVars, MinimusServer minimusServer){
@@ -43,15 +45,13 @@ public class ConsoleFrame extends JFrame {
         this.minimusServer = minimusServer;
     }
 
-    private void storeCommandHistory(String command){
-        commandHistory.add(command);
-        if(commandHistory.size()>maxHistory){
-            commandHistory.remove(0);
-        }
+    public ConsoleFrame(ConVars conVars, MinimusClient minimusClient){
+        this(conVars);
+        setTitle("Console[CLIENT]");
+        this.minimusClient = minimusClient;
     }
 
-    public ConsoleFrame(ConVars conVars){
-        super("Console");
+    private ConsoleFrame(ConVars conVars){
         this.conVars = conVars;
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setLayout(new MigLayout("wrap"));
@@ -115,6 +115,13 @@ public class ConsoleFrame extends JFrame {
         add(textField, "growx,pushx");
         pack();
         runAutoexec();
+    }
+
+    private void storeCommandHistory(String command){
+        commandHistory.add(command);
+        if(commandHistory.size()>maxHistory){
+            commandHistory.remove(0);
+        }
     }
 
     private int getHistoryIndex(){
@@ -216,6 +223,22 @@ public class ConsoleFrame extends JFrame {
                 minimusServer.spawnWaves = true;
             }else{
                 addLine("The "+splits[0]+" command can only be used on server");
+            }
+            return;
+        }
+        if(splits[0].equals("team")){
+            if(minimusClient!=null){
+                minimusClient.changeTeam(Integer.parseInt(splits[1]));
+            }else{
+                addLine("The " + splits[0] + " command can only be used on client");
+            }
+            return;
+        }
+        if(splits[0].equals("respawn")){
+            if(minimusClient!=null){
+                minimusClient.requestRespawn();
+            }else{
+                addLine("The "+splits[0]+" command can only be used on client");
             }
             return;
         }

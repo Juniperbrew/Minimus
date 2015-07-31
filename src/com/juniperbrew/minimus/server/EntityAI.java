@@ -71,7 +71,7 @@ public class EntityAI {
             Iterator<ServerEntity> iter = server.entities.values().iterator();
             while (iter.hasNext()) {
                 ServerEntity e = iter.next();
-                if (Intersector.overlaps(c, e.getGdxBounds())&&e.team!=entity.team) {
+                if (Intersector.overlaps(c, e.getGdxBounds())&&e.getTeam()!=entity.getTeam()) {
                     potentialTargets.add(e);
                 }
             }

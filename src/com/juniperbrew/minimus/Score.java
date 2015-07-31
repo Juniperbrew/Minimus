@@ -34,6 +34,11 @@ public class Score {
     }
 
 
+    public void clear(){
+        score.clear();
+        listener.scoreChanged();
+    }
+
     public void addDeath(int id){
         score.get(id).deaths++;
         listener.scoreChanged();

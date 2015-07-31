@@ -6,6 +6,7 @@ import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Rotation;
+import com.juniperbrew.minimus.components.Team;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -50,6 +51,7 @@ public class Network {
         kryo.register(AddNpcKill.class);
         kryo.register(AddDeath.class);
         kryo.register(Rotation.class);
+        kryo.register(Team.class);
         kryo.register(FakePing.class);
         kryo.register(SendFile.class);
         kryo.register(FileReceived.class);
@@ -61,6 +63,7 @@ public class Network {
         kryo.register(AddPowerup.class);
         kryo.register(RemovePowerup.class);
         kryo.register(Weapon.class);
+        kryo.register(TeamChangeRequest.class);
     }
 
     public static class Message{
@@ -72,6 +75,10 @@ public class Network {
     }
 
     public static class SpawnRequest{}
+
+    public static class TeamChangeRequest{
+        public int team;
+    }
 
     public static class FakePing {
         public int id;

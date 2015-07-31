@@ -20,7 +20,7 @@ public class ServerEntity extends Entity {
     }
 
     public Entity getNetworkEntity(){
-        Entity e = new Entity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading(), team);
+        Entity e = new Entity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading(), getTeam());
         return e;
     }
 
@@ -60,5 +60,10 @@ public class ServerEntity extends Entity {
     public void addHealth(int healing){
         super.setHealth(getHealth() + healing);
         listener.healthChanged(id);
+    }
+
+    public void setTeam(int team) {
+        super.setTeam(team);
+        listener.teamChanged(id);
     }
 }
