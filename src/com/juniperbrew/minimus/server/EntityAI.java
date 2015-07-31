@@ -42,6 +42,7 @@ public class EntityAI {
         this.aiType = aiType;
         attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
         this.weapon = weapon;
+        lastAttackDone = System.nanoTime();
     }
 
     public void act(double velocity, double delta){
