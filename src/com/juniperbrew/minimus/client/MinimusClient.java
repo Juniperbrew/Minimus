@@ -290,7 +290,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
-            logIntervalElapsed();
+            statusData.intervalElapsed();
         }
         if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
             statusData.updatePing();
@@ -1043,11 +1043,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(stateSnapshot!=null){
             player = stateSnapshot.get(playerID);
         }
-        if(player != null){
+        if(player != null) {
             //Cast values to int to avoid tile tearing
-            camera.position.set((int)(player.getX()+player.width/2f), (int)(player.getY()+player.height/2), 0);
-        }else{
-            camera.position.set(mapWidth/2f, mapHeight/2f, 0);
+            camera.position.set((int) (player.getX() + player.width / 2f), (int) (player.getY() + player.height / 2), 0);
         }
         camera.update();
     }
@@ -1160,17 +1158,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         consoleFrame.addLine(message);
     }
 
-    private void logIntervalElapsed(){
-        statusData.intervalElapsed();
-    }
-
     private void logReceivedPackets(Connection connection, Object packet){
         KryoSerialization s = (KryoSerialization) client.getSerialization();
         s.write(connection, buffer ,packet);
         statusData.addBytesReceived(buffer.position());
         buffer.clear();
     }
-
 
     public void updateFakePing() {
         Network.FakePing ping = new Network.FakePing();

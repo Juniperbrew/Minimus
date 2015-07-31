@@ -2,7 +2,10 @@ TODO add hitscan weapon sword with swinging line animation
 TODO fix first shot not sent to server
 TODO if a player dies or disconnects while being chased the enemy will get stuck where the player died
 TODO invulnerability after joining before moving, maybe have chasing enemies ignore the player too
+TODO fix so enemies dont shoot directly after they spawn
+TODO server crashes when player killed by multiple things at once (probably only relevant to contact damage)
 
+DONE dont move camera after player dies
 DONE change projectile damage
 DONE add healthpacks
 DONE add waves
