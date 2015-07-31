@@ -43,7 +43,7 @@ public class ClientLauncher {
             return false;
         }
         final MinimusClient minimusClient = client;
-        cfg.title = minimusClient.getClass().getSimpleName()+" "+ SharedMethods.VERSION_NAME;
+        cfg.title = minimusClient.getClass().getSimpleName();
 
         if(useJFrame) {
 

@@ -29,14 +29,14 @@ public class ServerLauncher {
         final MinimusServer minimusServer = new MinimusServer();
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
-        cfg.title = minimusServer.getClass().getSimpleName()+" "+SharedMethods.VERSION_NAME;
+        cfg.title = minimusServer.getClass().getSimpleName();
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            frame.setTitle(minimusServer.getClass().getSimpleName()+" "+ SharedMethods.VERSION_NAME);
+            frame.setTitle(minimusServer.getClass().getSimpleName());
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
 

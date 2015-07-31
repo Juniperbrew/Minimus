@@ -17,7 +17,6 @@ import java.util.TimerTask;
  */
 public class SharedMethods {
 
-    public static final String VERSION_NAME = "Projectiles";
     ConVars conVars;
     int mapWidth;
     int mapHeight;

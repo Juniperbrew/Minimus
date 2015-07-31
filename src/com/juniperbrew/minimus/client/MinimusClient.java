@@ -38,17 +38,13 @@ import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
-import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.StatusData;
 
 import java.awt.geom.Line2D;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -78,8 +74,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     //Sent input requests that haven't been acknowledged on server yet
     ArrayList<Network.UserInput> inputQueue = new ArrayList<>();
 
-    //Network thread adds new states to this list
-    ArrayList<Network.FullEntityUpdate> pendingReceivedStates = new ArrayList<>();
     //Stored states used for interpolation, each time a state snapshot is created we remove all states older than clientTime-interpolation,
     //one older state than this is still stored in interpFrom untill we reach the next interpolation interval
     ArrayList<Network.FullEntityUpdate> stateHistory = new ArrayList<>();
@@ -97,12 +91,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private Network.FullEntityUpdate interpFrom;
     private Network.FullEntityUpdate interpTo;
 
-    private ConcurrentLinkedQueue<Network.AddEntity> pendingAddedEntities = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<Integer> pendingRemovedEntities = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<Network.EntityAttacking> pendingAttacks = new ConcurrentLinkedQueue<>();
-
+    private ConcurrentLinkedQueue pendingPackets = new ConcurrentLinkedQueue<>();
 
     private HashMap<Integer,Powerup> powerups = new HashMap<>();
+    ArrayList<Integer> playerList = new ArrayList<>();
 
     int currentWave;
     int playerID = -1;
@@ -128,8 +120,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private OrthographicCamera camera;
     private OrthographicCamera hudCamera;
 
-    ArrayList<Integer> playerList = new ArrayList<>();
-
     int mapWidth;
     int mapHeight;
 
@@ -138,22 +128,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     Texture spriteSheet;
 
-    TextureRegion up;
     TextureRegion down;
-    TextureRegion right;
     SpriteBatch batch;
 
     Scoreboard scoreboard;
     Score score;
 
-    boolean titleSet;
-
     HashMap<String,Sound> sounds = new HashMap<>();
 
     Music backgroundMusic;
 
-    String mapName;
-    float mapScale;
     TiledMap map;
     OrthogonalTiledMapRenderer mapRenderer;
 
@@ -187,17 +171,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         statusFrame = new ClientStatusFrame(statusData);
         joinServer();
     }
-
-    private void logIntervalElapsed(){
-        statusData.intervalElapsed();
-    }
-
-    private void logReceivedPackets(Connection connection, Object packet){
-        KryoSerialization s = (KryoSerialization) client.getSerialization();
-        s.write(connection, buffer ,packet);
-        statusData.addBytesReceived(buffer.position());
-        buffer.clear();
-    }
     
     @Override
     public void create() {
@@ -219,8 +192,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         System.out.println("Spritesheet width:" +spriteSheet.getWidth());
         System.out.println("Spritesheet height:" +spriteSheet.getHeight());
         down = new TextureRegion(spriteSheet,171,129,16,22);
-        up = new TextureRegion(spriteSheet,526,133,16,22);
-        right = new TextureRegion(spriteSheet,857,128,16,23);
 
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
@@ -235,269 +206,121 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         backgroundMusic.play();
     }
 
-    public void showConsoleWindow(){
-        //TODO
-        //We need to delay showing the window or else
-        //the window steals the keyUP event on mac resulting
-        //in InputProcessor getting KeyTyped events indefinately
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                consoleFrame.setVisible(true);
-            }
-        }).start();
-    }
-
-    public void showScoreboard(){
-        //TODO
-        //We need to delay showing the window or else
-        //the window steals the keyUP event on mac resulting
-        //in InputProcessor getting KeyTyped events indefinately
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                scoreboard.setVisible(true);
-            }
-        }).start();
-    }
-
-    public void showStatusWindow(){
-        //TODO
-        //We need to delay showing the window or else
-        //the window steals the keyUP event on mac resulting
-        //in InputProcessor getting KeyTyped events indefinately
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                statusFrame.setVisible(true);
-            }
-        }).start();
-    }
-
-    private void showMessage(String message){
-        System.out.println(message);
-        consoleFrame.addLine(message);
-    }
-
-    private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
-        HashMap<Integer, Network.Position> changedEntityPositions = update.changedEntityPositions;
-        HashMap<Integer,Entity> newEntityList = new HashMap<>();
-        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
-        for(int id: oldEntityList.keySet()){
-            Entity e = oldEntityList.get(id);
-            if(changedEntityPositions.containsKey(id)){
-                Network.Position pos = changedEntityPositions.get(id);
-                Entity movedEntity = new Entity(e);
-                movedEntity.moveTo(pos.x,pos.y);
-                newEntityList.put(id,movedEntity);
+    private void handlePacket(Object object){
+        if(object instanceof Network.FullEntityUpdate){
+            Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
+            addServerState(fullUpdate);
+            showMessage("Received full update");
+        }else if(object instanceof Network.EntityPositionUpdate){
+            Network.EntityPositionUpdate update = (Network.EntityPositionUpdate) object;
+            if(authoritativeState!=null) {
+                addServerState(applyEntityPositionUpdate(update));
             }else{
-                newEntityList.put(id,e);
+                showMessage("Received entity position update but there is no complete state to apply it to");
             }
+        }else if(object instanceof Network.EntityComponentsUpdate){
+            Network.EntityComponentsUpdate update = (Network.EntityComponentsUpdate) object;
+            if (authoritativeState != null) {
+                addServerState(applyEntityComponentUpdate(update));
+            }else{
+                showMessage("Received entity component update but there is no complete state to apply it to");
+            }
+        }else if(object instanceof Network.EntityAttacking){
+            Network.EntityAttacking attack = (Network.EntityAttacking) object;
+            addAttack(attack);
+        }else if(object instanceof Network.AddDeath){
+            Network.AddDeath addDeath = (Network.AddDeath) object;
+            score.addDeath(addDeath.id);
+        }else if(object instanceof Network.AddPlayerKill){
+            Network.AddPlayerKill addPlayerKill = (Network.AddPlayerKill) object;
+            score.addPlayerKill(addPlayerKill.id);
+        }else if(object instanceof Network.AddNpcKill){
+            Network.AddNpcKill addNpcKill = (Network.AddNpcKill) object;
+            score.addNpcKill(addNpcKill.id);
+        }else if(object instanceof Network.AddPlayer){
+            Network.AddPlayer addPlayer = (Network.AddPlayer) object;
+            showMessage("PlayerID "+addPlayer.networkID+" added.");
+            playerList.add(addPlayer.networkID);
+            score.addPlayer(addPlayer.networkID);
+        }else if(object instanceof Network.AddEntity){
+            Network.AddEntity addEntity = (Network.AddEntity) object;
+            System.out.println("Adding entity " + addEntity.entity.id);
+            //Entities added to latest state despite their add time
+            authoritativeState.entities.put(addEntity.entity.id, addEntity.entity);
+        }else if(object instanceof Network.RemoveEntity){
+            Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
+            removeEntity(removeEntity.networkID);
+        }else if(object instanceof Network.AssignEntity){
+            Network.AssignEntity assign = (Network.AssignEntity) object;
+            setPlayerID(assign.networkID);
+            conVars.set("sv_player_velocity", assign.velocity);
+
+            loadMap(assign.mapName, assign.mapScale);
+            lives = assign.lives;
+
+            playerList = assign.playerList;
+            powerups = assign.powerups;
+            currentWave = assign.wave;
+            weaponList = assign.weaponList;
+            for(int id : playerList){
+                System.out.println("Adding id "+id+" to score");
+                score.addPlayer(id);
+            }
+        }else if(object instanceof Network.WaveChanged){
+            Network.WaveChanged waveChanged = (Network.WaveChanged) object;
+            currentWave = waveChanged.wave;
+        }else if(object instanceof Network.SetLives){
+            Network.SetLives setLives = (Network.SetLives) object;
+            lives = setLives.lives;
+        }else if(object instanceof Network.AddPowerup){
+            Network.AddPowerup addPowerup = (Network.AddPowerup) object;
+            powerups.put(addPowerup.networkID,addPowerup.powerup);
+        }else if(object instanceof Network.RemovePowerup){
+            Network.RemovePowerup removePowerup = (Network.RemovePowerup) object;
+            powerups.remove(removePowerup.networkID);
+        }else if(object instanceof String){
+            String command = (String) object;
+            consoleFrame.giveCommand(command);
         }
-        Network.FullEntityUpdate newFullEntityUpdate = new Network.FullEntityUpdate();
-        newFullEntityUpdate.lastProcessedInputID = update.lastProcessedInputID;
-        newFullEntityUpdate.serverTime = update.serverTime;
-        newFullEntityUpdate.entities = newEntityList;
-        return newFullEntityUpdate;
     }
 
-    private Network.FullEntityUpdate applyEntityComponentUpdate(Network.EntityComponentsUpdate update){
-        HashMap<Integer, ArrayList<Component>> changedEntityComponents = update.changedEntityComponents;
-        HashMap<Integer,Entity> newEntityList = new HashMap<>();
-        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
-        for(int id: oldEntityList.keySet()) {
-            Entity e = oldEntityList.get(id);
-            if (changedEntityComponents.containsKey(id)) {
-                ArrayList<Component> components = changedEntityComponents.get(id);
-                Entity changedEntity = new Entity(e);
-                for(Component component:components){
-                    if(component instanceof Position){
-                        Position pos = (Position) component;
-                        changedEntity.moveTo(pos.x,pos.y);
-                    }
-                    if(component instanceof Heading) {
-                        Heading heading = (Heading) component;
-                        changedEntity.setHeading(heading.heading);
-                    }
-                    if(component instanceof Health) {
-                        Health health = (Health) component;
-                        changedEntity.setHealth(health.health);
-                    }
-                    if(component instanceof Rotation){
-                        Rotation rotation = (Rotation) component;
-                        changedEntity.setRotation(rotation.degrees);
-                    }
-                    if(component instanceof Team){
-                        Team team = (Team) component;
-                        changedEntity.setTeam(team.team);
-                    }
-                }
-                newEntityList.put(id,changedEntity);
-            } else {
-                newEntityList.put(id, e);
-            }
+    private void doLogic(){
+
+        float delta = Gdx.graphics.getDeltaTime();
+
+        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
+            logIntervalStarted = System.nanoTime();
+            logIntervalElapsed();
         }
-        Network.FullEntityUpdate newFullEntityUpdate = new Network.FullEntityUpdate();
-        newFullEntityUpdate.lastProcessedInputID = update.lastProcessedInputID;
-        newFullEntityUpdate.serverTime = update.serverTime;
-        newFullEntityUpdate.entities = newEntityList;
-        return newFullEntityUpdate;
-    }
-
-    public void updateFakePing() {
-        Network.FakePing ping = new Network.FakePing();
-        ping.id = statusData.lastPingID++;
-        statusData.lastPingSendTime = System.currentTimeMillis();
-        sendTCP(ping);
-    }
-
-    private void joinServer() throws IOException {
-        Network.register(client);
-        Listener listener = new Listener() {
-
-            @Override
-            public void connected(Connection connection){
-            }
-
-            public void received(Connection connection, Object object) {
-                logReceivedPackets(connection, object);
-
-                if (object instanceof Network.FakePing) {
-                    Network.FakePing ping = (Network.FakePing)object;
-                    if (ping.isReply) {
-                        if (ping.id == statusData.lastPingID - 1) {
-                            statusData.setFakeReturnTripTime((int)(System.currentTimeMillis() - statusData.lastPingSendTime));
-                        }
-                    } else {
-                        ping.isReply = true;
-                        sendTCP(ping);
-                    }
-                }else if(object instanceof Network.FullEntityUpdate){
-                    Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
-                    pendingReceivedStates.add(fullUpdate);
-                    //System.out.println("Received full update");
-                }else if(object instanceof Network.EntityPositionUpdate){
-                    Network.EntityPositionUpdate update = (Network.EntityPositionUpdate) object;
-                    if(authoritativeState!=null) {
-                        pendingReceivedStates.add(applyEntityPositionUpdate(update));
-                    }else{
-                        showMessage("Received entity position update but there is no complete state to apply it to");
-                    }
-                }else if(object instanceof Network.EntityComponentsUpdate){
-                    Network.EntityComponentsUpdate update = (Network.EntityComponentsUpdate) object;
-                    if(authoritativeState!=null) {
-                        pendingReceivedStates.add(applyEntityComponentUpdate(update));
-                    }else{
-                        showMessage("Received entity component update but there is no complete state to apply it to");
-                    }
-                }else if(object instanceof Network.EntityAttacking){
-                    Network.EntityAttacking attack = (Network.EntityAttacking) object;
-                    if(attack.id == playerID){
-                        //Dont create own attacks again
-                        //This could be used to show debug info about where server sees players attacks
-                    }else{
-                        pendingAttacks.add(attack);
-                    }
-                }else if(object instanceof Network.AddDeath){
-                    Network.AddDeath addDeath = (Network.AddDeath) object;
-                    score.addDeath(addDeath.id);
-                }else if(object instanceof Network.AddPlayerKill){
-                    Network.AddPlayerKill addPlayerKill = (Network.AddPlayerKill) object;
-                    score.addPlayerKill(addPlayerKill.id);
-                }else if(object instanceof Network.AddNpcKill){
-                    Network.AddNpcKill addNpcKill = (Network.AddNpcKill) object;
-                    score.addNpcKill(addNpcKill.id);
-                }else if(object instanceof Network.AddPlayer){
-                    Network.AddPlayer addPlayer = (Network.AddPlayer) object;
-                    showMessage("PlayerID "+addPlayer.networkID+" added.");
-                    playerList.add(addPlayer.networkID);
-                    score.addPlayer(addPlayer.networkID);
-                }else if(object instanceof Network.AddEntity){
-                    Network.AddEntity addEntity = (Network.AddEntity) object;
-                    System.out.println("Adding entity " + addEntity.entity.id);
-                    pendingAddedEntities.add(addEntity);
-                }else if(object instanceof Network.RemoveEntity){
-                    Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
-                    pendingRemovedEntities.add(removeEntity.networkID);
-                }else if(object instanceof Network.AssignEntity){
-                    Network.AssignEntity assign = (Network.AssignEntity) object;
-                    playerID = assign.networkID;
-                    conVars.set("sv_player_velocity",assign.velocity);
-
-                    mapName = assign.mapName;
-                    mapScale = assign.mapScale;
-                    lives = assign.lives;
-
-                    playerList = assign.playerList;
-                    powerups = assign.powerups;
-                    currentWave = assign.wave;
-                    weaponList = assign.weaponList;
-                    for(int id : playerList){
-                        System.out.println("Adding id "+id+" to score");
-                        score.addPlayer(id);
-                    }
-                }else if(object instanceof Network.WaveChanged){
-                    Network.WaveChanged waveChanged = (Network.WaveChanged) object;
-                    currentWave = waveChanged.wave;
-                }else if(object instanceof Network.SetLives){
-                    Network.SetLives setLives = (Network.SetLives) object;
-                    lives = setLives.lives;
-                }else if(object instanceof Network.AddPowerup){
-                    Network.AddPowerup addPowerup = (Network.AddPowerup) object;
-                    powerups.put(addPowerup.networkID,addPowerup.powerup);
-                }else if(object instanceof Network.RemovePowerup){
-                    Network.RemovePowerup removePowerup = (Network.RemovePowerup) object;
-                    powerups.remove(removePowerup.networkID);
-                }else if(object instanceof String){
-                    String command = (String) object;
-                    consoleFrame.giveCommand(command);
-                }
-            }
-        };
-        double minPacketDelay = conVars.getDouble("sv_min_packet_delay");
-        double maxPacketDelay = conVars.getDouble("sv_max_packet_delay");
-        if(maxPacketDelay > 0){
-            int msMinDelay = (int) (minPacketDelay*1000);
-            int msMaxDelay = (int) (maxPacketDelay*1000);
-            Listener.LagListener lagListener = new Listener.LagListener(msMinDelay,msMaxDelay,listener);
-            client.addListener(lagListener);
-        }else{
-            client.addListener(listener);
+        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
+            statusData.updatePing();
+            updateFakePing();
+            lastPingRequest = System.nanoTime();
+        }
+        for(Object o;(o = pendingPackets.poll())!=null;){
+            handlePacket(o);
         }
 
-        client.start();
-        client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
-        client.sendTCP(new Network.SpawnRequest());
-    }
+        sendInputPackets();
+        updateProjectiles(delta);
 
+        //Dont pollInput or create snapshot if we have no state from server
+        if (authoritativeState != null){
+            if(stateSnapshot.get(playerID)!=null){
+                pollInput((short) (delta*1000));
+            }
+            createStateSnapshot(getClientTime());
+        }
 
-    private int getNextInputRequestID(){
-        return currentInputRequest++;
-    }
-
-    private void sendUDP(Object o){
-        int bytesSent = client.sendUDP(o);
-        statusData.addBytesSent(bytesSent);
-    }
-
-    private void sendTCP(Object o){
-        int bytesSent = client.sendTCP(o);
-        statusData.addBytesSent(bytesSent);
+        if(stateSnapshot!=null){
+            statusData.setEntityCount(stateSnapshot.size());
+        }
+        statusData.setFps(Gdx.graphics.getFramesPerSecond());
+        statusData.setServerTime(lastServerTime);
+        statusData.setClientTime(getClientTime());
+        statusData.currentInputRequest = currentInputRequest;
+        statusData.inputQueue = inputQueue.size();
+        statusFrame.update();
     }
 
     private void pollInput(short delta){
@@ -602,17 +425,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             mouse2Pressed = false;
         }
         attackCooldown -= (delta/1000d);
-    }
-
-    public void changeTeam(int team){
-        Network.TeamChangeRequest teamChangeRequest = new Network.TeamChangeRequest();
-        teamChangeRequest.team = team;
-        sendTCP(teamChangeRequest);
-    }
-
-    public void requestRespawn(){
-        Network.SpawnRequest spawnRequest = new Network.SpawnRequest();
-        sendTCP(spawnRequest);
     }
 
     private void playerAttack(Entity player, int weaponSlot, Network.UserInput input){
@@ -804,82 +616,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return packedInputs;
     }
 
-    private void applyNetworkUpdates(){
-
-        //Add new states to state history, sort states and store the latest state
-        if(pendingReceivedStates.size()>0){
-            stateHistory.addAll(pendingReceivedStates);
-            Collections.sort(stateHistory); //FIXME do i need this
-            pendingReceivedStates.clear();
-
-            if(authoritativeState==null){
-                authoritativeState = stateHistory.get(stateHistory.size()-1);
-                lastAuthoritativeStateReceived = System.nanoTime();
-            }else if (stateHistory.get(stateHistory.size()-1).serverTime != authoritativeState.serverTime){
-                authoritativeState = stateHistory.get(stateHistory.size()-1);
-                lastAuthoritativeStateReceived = System.nanoTime();
-            }
-            lastServerTime = authoritativeState.serverTime;
-            //System.out.println("InputID:"+authoritativeState.lastProcessedInputID+" Time:"+authoritativeState.serverTime+" is now authoritative state.");
-        }
-        //Entities will be added to latest state despite their add time
-        for(Network.AddEntity addEntity;(addEntity = pendingAddedEntities.poll())!=null;){
-            authoritativeState.entities.put(addEntity.entity.id,addEntity.entity);
-            //stateHistory.get(stateHistory.size()-1).entities.put(addEntity.entity.id,addEntity.entity); //TODO java.lang.ArrayIndexOutOfBoundsException: -1
-        }
-        //Entities will be removed from latest state despite their remove time
-        for(Integer id;(id=pendingRemovedEntities.poll())!=null;){
-            int index = stateHistory.size()-1;
-            if(index<0){
-                index = 0;
-            }
-            stateHistory.get(index).entities.remove(id);
-            if(playerList.contains(id)){
-                showMessage("PlayerID "+id+" removed.");
-                playerList.remove(id);
-                score.removePlayer(id);
-                if(id==playerID){
-                    playerID = -1;
-                    slot1Weapon = 0;
-                    slot2Weapon = 1;
-                }
-            }
-        }
-
-        //TODO Ignoring projectile team for now
-        for(Network.EntityAttacking attack;(attack=pendingAttacks.poll())!=null;){
-            Weapon weapon = weaponList.get(attack.weapon);
-            if(weapon!=null){
-                if(weapon.hitScan){
-                    sharedMethods.createHitscanAttack(weapon,attack.x,attack.y,attack.deg, attackVisuals);
-                }else{
-                    projectiles.addAll(sharedMethods.createProjectileAttack(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
-                }
-                if(weapon.sound!=null){
-                    sounds.get(weapon.sound).play(soundVolume);
-                }
-            }
-        }
-    }
-
-    private void doLogic(){
-
-        long logicStart = System.nanoTime();
-        float checkpoint0 = (System.nanoTime()-logicStart)/1000000f;
-        float delta = Gdx.graphics.getDeltaTime();
-
-        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
-            statusData.updatePing();
-            updateFakePing();
-            lastPingRequest = System.nanoTime();
-        }
-
-        applyNetworkUpdates();
-
-        float checkpoint1 = (System.nanoTime()-logicStart)/1000000f;
-
+    private void sendInputPackets(){
         //Send all gathered inputs at set interval
-        if(System.nanoTime()- lastInputSent > 1000000000/conVars.getInt("cl_input_update_rate")){
+        if(System.nanoTime()- lastInputSent > Tools.secondsToNano(1d/conVars.getInt("cl_input_update_rate"))){
             if(pendingInputPacket.size() > 0) {
                 Network.UserInputs inputPacket = new Network.UserInputs();
                 if(conVars.getBool("cl_compress_input")){
@@ -893,30 +632,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             lastInputSent = System.nanoTime();
         }
-
-        updateProjectiles(delta);
-
-        float checkpoint2 = (System.nanoTime()-logicStart)/1000000f;
-
-        //Dont pollInput or create snapshot if we have no state from server
-        if (authoritativeState != null){
-            if(stateSnapshot.get(playerID)!=null){
-                pollInput((short) (delta*1000));
-            }
-            createStateSnapshot(getClientTime()); //FIXME Will cause concurrent modifications
-        }
-        float checkpoint3 = (System.nanoTime()-logicStart)/1000000f;
-        if(checkpoint3-checkpoint0>1&& conVars.getBool("cl_show_performance_warnings")) {
-            showMessage("UpdateStates:" + (checkpoint1 - checkpoint0) + "ms");
-            showMessage("Send input:" + (checkpoint2 - checkpoint1) + "ms");
-            showMessage("PollInput&CreateStateSnapshot:" + (checkpoint3 - checkpoint2) + "ms");
-        }
-    }
-
-    private float getClientTime(){
-        //TODO adding half the latency to last server update this might cause some errors
-        //TODO using the fake ping here because i wont be able to test this properly without adding artificial lag
-        return lastServerTime + + ((statusData.getFakePing()/1000f)/2f) + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
     }
 
     private void updateProjectiles(float delta){
@@ -946,54 +661,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         projectiles.removeAll(destroyedProjectiles);
     }
 
-    private TextureRegion getTexture(Entity e) {
-        Enums.Heading heading = e.getHeading();
-        switch (heading) {
-            case NORTH:
-                return up;
-            case SOUTH:
-                return down;
-            case WEST:
-                if (!right.isFlipX()) {
-                    right.flip(true, false);
-                }
-                return right;
-            case EAST:
-                if (right.isFlipX()) {
-                    right.flip(true, false);
-                }
-                return right;
-        }
-        return null;
-    }
-
     @Override
     public void render() {
 
-        if(mapRenderer == null && mapName != null){
-            map = new TmxMapLoader().load("resources\\"+mapName);
-            mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-            mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
-            mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
-            sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
-        }
-
-        if(playerID != -1 && !titleSet){
-            Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"] "+sharedMethods.VERSION_NAME);
-            titleSet = true;
-        }
-        if((System.nanoTime()-renderStart)/1000000f > 30 && conVars.getBool("cl_show_performance_warnings")){
-            showMessage("Long time since last render() call:" + (System.nanoTime() - renderStart) / 1000000f);
-        }
-        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
-            logIntervalStarted = System.nanoTime();
-            logIntervalElapsed();
-        }
-        renderStart = System.nanoTime();
-
         doLogic();
 
-        statusFrame.update();
+        renderStart = System.nanoTime();
 
         Gdx.gl.glClearColor(0f, 0f, 0f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -1077,7 +750,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         batch.setProjectionMatrix(hudCamera.combined);
         int offset = 0;
         for(int id: playerList){
-            //TODO Nullpointer when someone connects as we're trying to get player team
             font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id) + " Team: "+authoritativeState.entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
@@ -1088,27 +760,71 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         glyphLayout.setText(font, "Lives: "+lives);
         font.draw(batch, "Lives: "+lives,windowWidth-glyphLayout.width ,windowHeight-5);
         batch.end();
-
-        if(stateSnapshot!=null){
-            statusData.setEntityCount(stateSnapshot.size());
-        }
-        statusData.setFps(Gdx.graphics.getFramesPerSecond());
-        statusData.setServerTime(lastServerTime);
-        statusData.setClientTime(getClientTime());
-        statusData.currentInputRequest = currentInputRequest;
-        statusData.inputQueue = inputQueue.size();
-
-        if((System.nanoTime()-renderStart)/1000000f>30 && conVars.getBool("cl_show_performance_warnings")){
-            showMessage("Long Render() duration:" + (System.nanoTime() - renderStart) / 1000000f);
-        }
-
     }
 
-    private void printPlayerList(){
-        showMessage("#Playerlist#");
-        for(int id:playerList){
-            showMessage("ID:"+id);
+    private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
+        HashMap<Integer, Network.Position> changedEntityPositions = update.changedEntityPositions;
+        HashMap<Integer,Entity> newEntityList = new HashMap<>();
+        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
+        for(int id: oldEntityList.keySet()){
+            Entity e = oldEntityList.get(id);
+            if(changedEntityPositions.containsKey(id)){
+                Network.Position pos = changedEntityPositions.get(id);
+                Entity movedEntity = new Entity(e);
+                movedEntity.moveTo(pos.x,pos.y);
+                newEntityList.put(id,movedEntity);
+            }else{
+                newEntityList.put(id,e);
+            }
         }
+        Network.FullEntityUpdate newFullEntityUpdate = new Network.FullEntityUpdate();
+        newFullEntityUpdate.lastProcessedInputID = update.lastProcessedInputID;
+        newFullEntityUpdate.serverTime = update.serverTime;
+        newFullEntityUpdate.entities = newEntityList;
+        return newFullEntityUpdate;
+    }
+
+    private Network.FullEntityUpdate applyEntityComponentUpdate(Network.EntityComponentsUpdate update){
+        HashMap<Integer, ArrayList<Component>> changedEntityComponents = update.changedEntityComponents;
+        HashMap<Integer,Entity> newEntityList = new HashMap<>();
+        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
+        for(int id: oldEntityList.keySet()) {
+            Entity e = oldEntityList.get(id);
+            if (changedEntityComponents.containsKey(id)) {
+                ArrayList<Component> components = changedEntityComponents.get(id);
+                Entity changedEntity = new Entity(e);
+                for(Component component:components){
+                    if(component instanceof Position){
+                        Position pos = (Position) component;
+                        changedEntity.moveTo(pos.x,pos.y);
+                    }
+                    if(component instanceof Heading) {
+                        Heading heading = (Heading) component;
+                        changedEntity.setHeading(heading.heading);
+                    }
+                    if(component instanceof Health) {
+                        Health health = (Health) component;
+                        changedEntity.setHealth(health.health);
+                    }
+                    if(component instanceof Rotation){
+                        Rotation rotation = (Rotation) component;
+                        changedEntity.setRotation(rotation.degrees);
+                    }
+                    if(component instanceof Team){
+                        Team team = (Team) component;
+                        changedEntity.setTeam(team.team);
+                    }
+                }
+                newEntityList.put(id,changedEntity);
+            } else {
+                newEntityList.put(id, e);
+            }
+        }
+        Network.FullEntityUpdate newFullEntityUpdate = new Network.FullEntityUpdate();
+        newFullEntityUpdate.lastProcessedInputID = update.lastProcessedInputID;
+        newFullEntityUpdate.serverTime = update.serverTime;
+        newFullEntityUpdate.entities = newEntityList;
+        return newFullEntityUpdate;
     }
 
     @Override
@@ -1280,6 +996,48 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return false;
     }
 
+    private void joinServer() throws IOException {
+        Network.register(client);
+        Listener listener = new Listener() {
+
+            @Override
+            public void connected(Connection connection){
+            }
+
+            public void received(Connection connection, Object object) {
+                logReceivedPackets(connection, object);
+                if (object instanceof Network.FakePing) {
+                    Network.FakePing ping = (Network.FakePing)object;
+                    if (ping.isReply) {
+                        if (ping.id == statusData.lastPingID - 1) {
+                            statusData.setFakeReturnTripTime((int)(System.currentTimeMillis() - statusData.lastPingSendTime));
+                        }
+                    } else {
+                        ping.isReply = true;
+                        sendTCP(ping);
+                    }
+                    return;
+                }
+
+                pendingPackets.add(object);
+            }
+        };
+        double minPacketDelay = conVars.getDouble("sv_min_packet_delay");
+        double maxPacketDelay = conVars.getDouble("sv_max_packet_delay");
+        if(maxPacketDelay > 0){
+            int msMinDelay = (int) (minPacketDelay*1000);
+            int msMaxDelay = (int) (maxPacketDelay*1000);
+            Listener.LagListener lagListener = new Listener.LagListener(msMinDelay,msMaxDelay,listener);
+            client.addListener(lagListener);
+        }else{
+            client.addListener(listener);
+        }
+
+        client.start();
+        client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
+        client.sendTCP(new Network.SpawnRequest());
+    }
+
     private void centerCameraOnPlayer(){
         Entity player = null;
         if(stateSnapshot!=null){
@@ -1296,7 +1054,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void loadSounds(){
 
-        ArrayList<File> files = new ArrayList<>();
         File soundFolder = new File("resources\\sounds");
         System.out.println("Loading sounds from: "+ soundFolder);
         for (final File file : soundFolder.listFiles()) {
@@ -1305,6 +1062,172 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 sounds.put(file.getName(), sound);
                 System.out.println("Loaded: "+file.getName());
             }
+        }
+    }
+
+    private void setPlayerID(int id){
+        playerID = id;
+        Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"]");
+    }
+
+    public void changeTeam(int team){
+        Network.TeamChangeRequest teamChangeRequest = new Network.TeamChangeRequest();
+        teamChangeRequest.team = team;
+        sendTCP(teamChangeRequest);
+    }
+
+    public void requestRespawn(){
+        Network.SpawnRequest spawnRequest = new Network.SpawnRequest();
+        sendTCP(spawnRequest);
+    }
+
+    private float getClientTime(){
+        //TODO adding half the latency to last server update this might cause some errors
+        //TODO using the fake ping here because i wont be able to test this properly without adding artificial lag
+        return lastServerTime + + ((statusData.getFakePing()/1000f)/2f) + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
+    }
+
+    private int getNextInputRequestID(){
+        return currentInputRequest++;
+    }
+
+    private void sendUDP(Object o){
+        int bytesSent = client.sendUDP(o);
+        statusData.addBytesSent(bytesSent);
+    }
+
+    private void sendTCP(Object o){
+        int bytesSent = client.sendTCP(o);
+        statusData.addBytesSent(bytesSent);
+    }
+
+    public void showConsoleWindow(){
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                consoleFrame.setVisible(true);
+            }
+        }).start();
+    }
+
+    public void showScoreboard(){
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                scoreboard.setVisible(true);
+            }
+        }).start();
+    }
+
+    public void showStatusWindow(){
+        //TODO
+        //We need to delay showing the window or else
+        //the window steals the keyUP event on mac resulting
+        //in InputProcessor getting KeyTyped events indefinately
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                statusFrame.setVisible(true);
+            }
+        }).start();
+    }
+
+    private void showMessage(String message){
+        System.out.println(message);
+        consoleFrame.addLine(message);
+    }
+
+    private void logIntervalElapsed(){
+        statusData.intervalElapsed();
+    }
+
+    private void logReceivedPackets(Connection connection, Object packet){
+        KryoSerialization s = (KryoSerialization) client.getSerialization();
+        s.write(connection, buffer ,packet);
+        statusData.addBytesReceived(buffer.position());
+        buffer.clear();
+    }
+
+
+    public void updateFakePing() {
+        Network.FakePing ping = new Network.FakePing();
+        ping.id = statusData.lastPingID++;
+        statusData.lastPingSendTime = System.currentTimeMillis();
+        sendTCP(ping);
+    }
+
+    private void addServerState(Network.FullEntityUpdate state){
+        stateHistory.add(state);
+        authoritativeState = state;
+        lastAuthoritativeStateReceived = System.nanoTime();
+        lastServerTime = authoritativeState.serverTime;
+    }
+
+    private void loadMap(String mapName, float mapScale){
+        map = new TmxMapLoader().load("resources\\"+mapName);
+        mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
+        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
+        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
+        sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
+    }
+
+    private void removeEntity(int id){
+        //Entities will be removed from latest state despite their remove time
+        authoritativeState.entities.remove(id);
+        if(playerList.contains(id)){
+            showMessage("PlayerID "+id+" removed.");
+            playerList.remove(Integer.valueOf(id));
+            score.removePlayer(id);
+            if(id==playerID){
+                setPlayerID(-1);
+                slot1Weapon = 0;
+                slot2Weapon = 1;
+            }
+        }
+    }
+
+    private void addAttack(Network.EntityAttacking attack){
+        //TODO Ignoring projectile team for now
+        Weapon weapon = weaponList.get(attack.weapon);
+        if(weapon!=null){
+            if(weapon.hitScan){
+                sharedMethods.createHitscanAttack(weapon,attack.x,attack.y,attack.deg, attackVisuals);
+            }else{
+                projectiles.addAll(sharedMethods.createProjectileAttack(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+            }
+            if(weapon.sound!=null){
+                sounds.get(weapon.sound).play(soundVolume);
+            }
+        }
+    }
+
+    private void printPlayerList(){
+        showMessage("#Playerlist#");
+        for(int id:playerList){
+            showMessage("ID:"+id);
         }
     }
 

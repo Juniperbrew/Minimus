@@ -539,7 +539,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         entityAttacking.deg = e.getRotation();
         entityAttacking.id = e.id;
         entityAttacking.weapon = weaponSlot;
-        sendTCPtoAll(entityAttacking);
+        if(playerList.keySet().contains(e.id)){
+            sendTCPtoAllExcept(playerList.get(e.id),entityAttacking);
+        }else{
+            sendTCPtoAll(entityAttacking);
+        }
 
         Weapon weapon = weaponList.get(weaponSlot);
         if(weapon==null){
