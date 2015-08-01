@@ -46,7 +46,7 @@ client in the future
 
 i have a server and client running at 30 ticks per second, client checks input once per tick and send it to server,
 
-client tick count will lag behind the server 
+client tick count will lag behind the server
 
 
 [server can run lower tickrate than client polls commands, this mean we apply multiple inputs per tick on server]

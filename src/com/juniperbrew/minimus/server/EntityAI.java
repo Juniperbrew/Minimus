@@ -4,10 +4,7 @@ import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Tools;
-import com.juniperbrew.minimus.client.MinimusClient;
-import com.juniperbrew.minimus.server.ServerEntity;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,15 +28,15 @@ public class EntityAI {
     long lastAttackDone;
     final float MIN_ATTACK_DELAY = 1;
     final float MAX_ATTACK_DELAY = 6;
-    MinimusServer server;
+    World world;
     int aiType;
     int weapon;
     float attackDelay;
     ServerEntity target;
 
-    public EntityAI(ServerEntity entity, int aiType, int weapon, MinimusServer server){
+    public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
         this.entity = entity;
-        this.server = server;
+        this.world = world;
         this.aiType = aiType;
         attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
         this.weapon = weapon;
@@ -48,18 +45,18 @@ public class EntityAI {
 
     public void act(double velocity, double delta){
         if(aiType == MOVING){
-            setRandomDestination(server.mapWidth,server.mapHeight);
+            setRandomDestination(world.mapWidth, world.mapHeight);
             move(velocity,delta);
         }else if(aiType == MOVING_AND_SHOOTING){
-            setRandomDestination(server.mapWidth,server.mapHeight);
+            setRandomDestination(world.mapWidth, world.mapHeight);
             move(velocity,delta);
             shoot();
         }else if(aiType == FOLLOWING){
-            setRandomDestination(server.mapWidth,server.mapHeight);
+            setRandomDestination(world.mapWidth, world.mapHeight);
             lookForTarget();
             move(velocity,delta);
         }else if(aiType == FOLLOWING_AND_SHOOTING){
-            setRandomDestination(server.mapWidth,server.mapHeight);
+            setRandomDestination(world.mapWidth, world.mapHeight);
             lookForTarget();
             move(velocity,delta);
             shoot();
@@ -70,7 +67,7 @@ public class EntityAI {
         if(target == null) {
             ArrayList<ServerEntity> potentialTargets = new ArrayList<>();
             Circle c = new Circle(entity.getCenterX(), entity.getCenterY(), ConVars.getFloat("sv_npc_target_search_radius"));
-            Iterator<ServerEntity> iter = server.entities.values().iterator();
+            Iterator<ServerEntity> iter = world.entities.values().iterator();
             while (iter.hasNext()) {
                 ServerEntity e = iter.next();
                 if (Intersector.overlaps(c, e.getGdxBounds())&&e.getTeam()!=entity.getTeam()) {
@@ -129,7 +126,7 @@ public class EntityAI {
         }
         lastAttackDone = System.nanoTime();
         attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
-        server.createAttack(entity, weapon);
+        world.createAttack(entity.id, weapon);
     }
 
     private void setDestination(float x, float y){
@@ -155,7 +152,7 @@ public class EntityAI {
         if(hasDestination||target != null){
             return;
         }
-        if(server.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
+        if(world.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
             return;
         }
 

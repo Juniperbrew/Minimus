@@ -7,9 +7,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
-import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryonet.Client;
@@ -23,82 +21,50 @@ import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.Powerup;
-import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.Score;
-import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
-import com.juniperbrew.minimus.Weapon;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
-import com.juniperbrew.minimus.components.Rotation;
-import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
-import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.ServerStatusFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 
-import java.awt.geom.Line2D;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusServer implements ApplicationListener, InputProcessor, EntityChangeListener, Score.ScoreChangeListener, ConVars.ConVarChangeListener {
+public class MinimusServer implements ApplicationListener, InputProcessor, Score.ScoreChangeListener, ConVars.ConVarChangeListener, World.WorldChangeListener {
 
     Server server;
     ShapeRenderer shapeRenderer;
-    HashMap<Integer,ServerEntity> entities = new HashMap<>();
-    ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
-    HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
-    BidiMap<Integer, Connection> playerList = new DualHashBidiMap<>();
     HashMap<Connection,Integer> lastInputIDProcessed = new HashMap<>();
     HashMap<Connection,Integer> connectionUpdateRate = new HashMap<>();
     HashMap<Connection, ArrayList<Network.UserInput>> inputQueue = new HashMap<>();
     HashMap<Connection, StatusData> connectionStatus = new HashMap<>();
     long lastUpdateSent;
 
-    ArrayList<Integer> posChangedEntities = new ArrayList<>();
-    ArrayList<Integer> healthChangedEntities = new ArrayList<>();
-    ArrayList<Integer> headingChangedEntities = new ArrayList<>();
-    ArrayList<Integer> rotationChangedEntities = new ArrayList<>();
-    ArrayList<Integer> teamChangedEntities = new ArrayList<>();
-    ArrayList<Integer> changedEntities = new ArrayList<>();
+    BidiMap<Integer, Connection> playerList = new DualHashBidiMap<>();
 
-    private int networkIDCounter = 1;
     private int currentTick = 0;
     long serverStartTime;
-
-    int screenW;
-    int screenH;
 
     private int writeBuffer = 16384; //Default 16384
     private int objectBuffer = 4096; //Default 2048
     private long lastPingUpdate;
-
-    HashMap<Connection,Double> attackCooldown = new HashMap<>();
-    Map<Integer,Integer> playerLives = new HashMap<>();
-    private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
-    private ArrayList<Projectile> projectiles = new ArrayList<>();
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
     long logIntervalStarted;
@@ -106,9 +72,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     ServerStatusFrame serverStatusFrame;
     ConsoleFrame consoleFrame;
     StatusData serverData;
-
-    int mapWidth;
-    int mapHeight;
 
     float viewPortX;
     float viewPortY;
@@ -120,57 +83,28 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     int pendingRandomNpcAdds = 0;
     int pendingRandomNpcRemovals = 0;
 
-    ArrayList<Integer> pendingEntityRemovals = new ArrayList<>();
     private ConcurrentLinkedQueue<Packet> pendingPackets = new ConcurrentLinkedQueue<>();
 
-    SharedMethods sharedMethods;
-
     Score score = new Score(this);
-    Scoreboard scoreboard = new Scoreboard(score);
 
-    TiledMap map;
-    private int wave;
-    private int spawnedHealthPacksCounter;
-    private long lastHealthPackSpawned;
-    private final int HEALTHPACK_SPAWN_DELAY = 10;
-
-    HashMap<Integer,WaveDefinition> waveList;
-    HashMap<Integer,Weapon> weaponList;
-
-    //This should not be more than 400 which is the max distance entities can look for a destination
-    final int SPAWN_AREA_WIDTH = 200;
-    public boolean spawnWaves;
-
-    Timer timer = new Timer();
-
-    private void initialize(){
-        shapeRenderer = new ShapeRenderer();
-        screenW = Gdx.graphics.getWidth();
-        screenH = Gdx.graphics.getHeight();
-        sharedMethods = new SharedMethods(mapWidth, mapHeight);
-    }
+    World world;
 
     @Override
     public void create() {
         ConVars.addListener(this);
-        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("world"));
         consoleFrame = new ConsoleFrame(this);
+        shapeRenderer = new ShapeRenderer();
+        world = new World(this, new TmxMapLoader().load("resources\\"+ ConVars.get("sv_map_name")));
 
-        waveList = readWaveList();
-        weaponList = readWeaponList();
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
         resize(h,w);
-
-        map = new TmxMapLoader().load("resources\\"+ConVars.get("sv_map_name"));
-        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* ConVars.getDouble("sv_map_scale"));
-        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* ConVars.getDouble("sv_map_scale"));
 
         serverStartTime = System.nanoTime();
         serverData = new StatusData(null,serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
         serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
-        initialize();
         startSimulation();
         Gdx.input.setInputProcessor(this);
 
@@ -207,6 +141,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 StatusData dataUsage = new StatusData(connection, System.nanoTime(),ConVars.getInt("cl_log_interval_seconds"));
                 connectionStatus.put(connection, dataUsage);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
+                Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
+                fullUpdate.entities = world.getNetworkedEntityList();
+                fullUpdate.serverTime = getServerTime();
+                connection.sendTCP(fullUpdate);
             }
 
             @Override
@@ -262,14 +200,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 inputQueue.put(connection, list);
             }
         }else if (object instanceof Network.SpawnRequest){
-            spawnPlayer(connection);
+            world.addPlayer(connection);
         }else if (object instanceof Network.TeamChangeRequest){
             Network.TeamChangeRequest teamChangeRequest = (Network.TeamChangeRequest) object;
-            entities.get(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
+            world.getEntity(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
         }else if(object instanceof Disconnect){
             connectionStatus.get(connection).disconnected();
             if(playerList.containsValue(connection)){
-                pendingEntityRemovals.add(playerList.getKey(connection));
+                world.removePlayer(playerList.getKey(connection));
             }
         }
     }
@@ -291,13 +229,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
 
         updatePing();
-        updateWaves();
         processPendingEntityAddsAndRemovals();
         processCommands();
-        updateEntityAI(delta);
-        updateProjectiles(delta);
-        checkPlayerEntityCollisions();
-        checkPowerupCollisions();
+        world.updateWorld(delta);
 
         if(System.nanoTime()-lastUpdateSent>(1000000000/ConVars.getInt("sv_updaterate"))){
             updateClients();
@@ -317,194 +251,21 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 inputList.clear();
                 continue;
             }
-            ServerEntity e = entities.get(playerList.getKey(connection));
-            Network.UserInput[] inputListCopy = inputList.toArray(new Network.UserInput[inputList.size()]);
+            int id = playerList.getKey(connection);
 
-            for(Network.UserInput input : inputListCopy){
-                sharedMethods.applyInput(e,input);
-                if(input.buttons.contains(Enums.Buttons.NUM1)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 0;
-                    }else{
-                        e.slot1Weapon = 0;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM2)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 1;
-                    }else{
-                        e.slot1Weapon = 1;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM3)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 2;
-                    }else{
-                        e.slot1Weapon = 2;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM4)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 3;
-                    }else{
-                        e.slot1Weapon = 3;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM5)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 4;
-                    }else{
-                        e.slot1Weapon = 4;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM6)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 5;
-                    }else{
-                        e.slot1Weapon = 5;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM7)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 6;
-                    }else{
-                        e.slot1Weapon = 6;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM8)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 7;
-                    }else{
-                        e.slot1Weapon = 7;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM9)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 8;
-                    }else{
-                        e.slot1Weapon = 8;
-                    }
-                }
-                if(input.buttons.contains(Enums.Buttons.NUM0)){
-                    if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                        e.slot2Weapon = 9;
-                    }else{
-                        e.slot1Weapon = 9;
-                    }
-                }
-
-                if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-                    attackWithPlayer(connection, e.slot1Weapon, input);
-                }
-                if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-                    attackWithPlayer(connection, e.slot2Weapon, input);
-                }
-
-                if(attackCooldown.get(connection)!=null){
-                    double cd = attackCooldown.get(connection);
-                    cd -= (input.msec/1000d);
-                    attackCooldown.put(connection,cd);
-                }
-
+            for(Network.UserInput input : inputList){
+                world.processInput(id, input);
                 lastInputIDProcessed.put(connection,input.inputID);
-                inputList.remove(input); //FIXME we are removing this element from the original arraylist
             }
+            inputList.clear();
         }
-    }
-
-    private void attackWithPlayer(Connection connection, int weapon, Network.UserInput input){
-        if(attackCooldown.get(connection)==null){
-            attackCooldown.put(connection,-1d);
-        }
-        if(attackCooldown.get(connection) > 0){
-            return;
-        }else{
-            attackCooldown.put(connection,ConVars.getDouble("sv_attack_delay"));
-            ServerEntity e = entities.get(playerList.getKey(connection));
-            if(weapon == 1){
-                showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
-            }
-            createAttack(e, weapon);
-        }
-    }
-
-    public void createAttack(ServerEntity e, int weaponSlot){
-
-        Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
-        entityAttacking.x = e.getCenterX();
-        entityAttacking.y = e.getCenterY();
-        entityAttacking.deg = e.getRotation();
-        entityAttacking.id = e.id;
-        entityAttacking.weapon = weaponSlot;
-        if(playerList.keySet().contains(e.id)){
-            sendTCPtoAllExcept(playerList.get(e.id),entityAttacking);
-        }else{
-            sendTCPtoAll(entityAttacking);
-        }
-
-        Weapon weapon = weaponList.get(weaponSlot);
-        if(weapon==null){
-            return;
-        }
-        if(weapon.hitScan){
-            ArrayList<Line2D.Float> hitScans = sharedMethods.createHitscanAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
-
-            for(int id:entities.keySet()){
-                ServerEntity target = entities.get(id);
-                for(Line2D hitScan:hitScans){
-                    if(target.getJavaBounds().intersectsLine(hitScan) && target.getTeam() != e.getTeam()){
-                        target.reduceHealth(weapon.damage,e.id);
-                    }
-                }
-            }
-        }else{
-            projectiles.addAll(sharedMethods.createProjectileAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.getTeam()));
-        }
-    }
-
-    private HashMap<Integer, Network.Position> getChangedEntityPositions(){
-        HashMap<Integer, Network.Position> positions = new HashMap<>();
-        for(int id: posChangedEntities){
-            ServerEntity e = entities.get(id);
-            positions.put(id,new Network.Position(e.getX(),e.getY()));
-        }
-        return positions;
-    }
-
-    private HashMap<Integer,ArrayList<Component>> getChangedEntityComponents(){
-        HashMap<Integer,ArrayList<Component>> changedComponents = new HashMap<>();
-        for(int id: changedEntities){
-            ArrayList<Component> components = new ArrayList<>();
-            changedComponents.put(id,components);
-            if(posChangedEntities.contains(id)){
-                ServerEntity e = entities.get(id);
-                components.add(new Position(e.getX(),e.getY()));
-            }
-            if(headingChangedEntities.contains(id)){
-                ServerEntity e = entities.get(id);
-                components.add(new Heading(e.getHeading()));
-            }
-            if(healthChangedEntities.contains(id)){
-                ServerEntity e = entities.get(id);
-                components.add(new Health(e.getHealth()));
-            }
-            if(rotationChangedEntities.contains(id)){
-                ServerEntity e = entities.get(id);
-                components.add(new Rotation(e.getRotation()));
-            }
-            if(teamChangedEntities.contains(id)){
-                ServerEntity e = entities.get(id);
-                components.add(new Team(e.getTeam()));
-            }
-        }
-        return changedComponents;
     }
 
     private void updateClients(){
         if(ConVars.getInt("sv_update_type")==0){
             Network.FullEntityUpdate update = new Network.FullEntityUpdate();
             update.serverTime = getServerTime();
-            update.entities = getNetworkedEntityList(entities);
+            update.entities = world.getNetworkedEntityList();
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -516,7 +277,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }else if(ConVars.getInt("sv_update_type")==1){
             Network.EntityPositionUpdate update = new Network.EntityPositionUpdate();
             update.serverTime = getServerTime();
-            update.changedEntityPositions = getChangedEntityPositions();
+            update.changedEntityPositions = world.getChangedEntityPositions();
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -528,7 +289,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }else if(ConVars.getInt("sv_update_type")==2){
             Network.EntityComponentsUpdate update = new Network.EntityComponentsUpdate();
             update.serverTime = getServerTime();
-            update.changedEntityComponents = getChangedEntityComponents();
+            update.changedEntityComponents = world.getChangedEntityComponents();
             for(Connection connection :server.getConnections()) {
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -538,11 +299,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 }
             }
         }
-
-        changedEntities.clear();
-        posChangedEntities.clear();
-        healthChangedEntities.clear();
-        healthChangedEntities.clear();
     }
 
     private int getLastInputIDProcessed(Connection connection){
@@ -553,256 +309,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         }
     }
 
-    private void addNPC(int aiType, int weapon){
-        System.out.println("Adding npc "+aiType+","+weapon);
-        int width = 50;
-        int height = 50;
-        float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH*-1,SPAWN_AREA_WIDTH);
-        float x;
-        float y;
-        if(MathUtils.randomBoolean()){
-            if(spawnPosition >= 0){
-                x = mapWidth+spawnPosition;
-            }else{
-                x = spawnPosition;
-            }
-            y = MathUtils.random(0-SPAWN_AREA_WIDTH,mapHeight+SPAWN_AREA_WIDTH);
-        }else{
-            if(spawnPosition >= 0){
-                y = mapHeight+spawnPosition;
-            }else{
-                y = spawnPosition;
-            }
-            x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth+SPAWN_AREA_WIDTH);
-        }
-        int networkID = getNextNetworkID();
-        ServerEntity npc = new ServerEntity(networkID,x,y,-1,this);
-        npc.height = height;
-        npc.width = width;
-        npc.reduceHealth(10,-1);
-        int randomHeading = MathUtils.random(Enums.Heading.values().length - 1);
-        npc.setHeading(Enums.Heading.values()[randomHeading]);
-        entityAIs.put(networkID,new EntityAI(npc,aiType,weapon,this));
-        addEntity(npc);
-    }
-
-    private void addRandomNPC(){
-        addNPC(MathUtils.random(0,3),MathUtils.random(0,2));
-    }
-
-    private void removeRandomNPC(){
-        Integer[] keys = entities.keySet().toArray(new Integer[entities.keySet().size()]);
-        if(keys.length != 0){
-            if(playerList.values().size() < entities.size()){
-                int networkID ;
-                int removeIndex;
-                do{
-                    removeIndex = MathUtils.random(keys.length - 1);
-                }while(playerList.keySet().contains(keys[removeIndex]));
-                showMessage("Remove index:" + removeIndex);
-                networkID = keys[removeIndex];
-                removeEntity(networkID);
-            }
-        }
-    }
-
-    private void addEntity(ServerEntity e){
-        showMessage("Adding entity ID:" + e.id);
-        entities.put(e.id,e);
-
-        Network.AddEntity addEntity = new Network.AddEntity();
-        addEntity.entity=e.getNetworkEntity();
-        addEntity.serverTime=getServerTime();
-        sendTCPtoAll(addEntity);
-    }
-
-    public void removeAllEntities(){
-        for(int id:entityAIs.keySet()){
-            pendingEntityRemovals.add(id);
-        }
-    }
-
-    private void removeEntity(int networkID){
-        showMessage("Removing entity ID:"+networkID);
-        entityAIs.remove(networkID);
-        entities.remove(networkID);
-
-        if(changedEntities.contains(networkID)){
-            changedEntities.remove((Integer)networkID);
-        }
-
-        if(playerList.keySet().contains(networkID)){
-            removePlayer(playerList.get(networkID));
-        }
-
-        Network.RemoveEntity removeEntity = new Network.RemoveEntity();
-        removeEntity.networkID=networkID;
-        removeEntity.serverTime=getServerTime();
-        sendTCPtoAll(removeEntity);
-    }
-
-    private void updateProjectiles(float delta){
-        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
-        for(Projectile projectile:projectiles){
-            Line2D.Float movedPath = projectile.move(delta);
-
-            for(int id:entities.keySet()){
-                if(projectile.ownerID==id){
-                    continue;
-                }
-                ServerEntity target = entities.get(id);
-                if(target.getJavaBounds().intersectsLine(movedPath)){
-                    projectile.destroyed = true;
-                    if(target.getTeam() != projectile.team){
-                        target.reduceHealth(projectile.damage,projectile.ownerID);
-                    }
-                }
-            }
-            if(projectile.destroyed){
-                destroyedProjectiles.add(projectile);
-            }
-        }
-        projectiles.removeAll(destroyedProjectiles);
-    }
-
-    private int getNextNetworkID(){
-        return networkIDCounter++;
-    }
-
-    private void checkPowerupCollisions(){
-        for(int playerID : playerList.keySet()){
-            ServerEntity player = entities.get(playerID);
-            for(int powerupID : powerups.keySet()){
-                Powerup p = powerups.get(powerupID);
-                if(player.getJavaBounds().contains(p.x,p.y)){
-                    if(p.type == Powerup.HEALTH){
-                        player.addHealth(p.value);
-                        despawnPowerup(powerupID);
-                    }
-                }
-            }
-        }
-    }
-
-    private void checkPlayerEntityCollisions(){
-
-        for(int playerID : playerList.keySet()){
-            ServerEntity player = entities.get(playerID);
-            Iterator<ServerEntity> iter = entities.values().iterator();
-            while(iter.hasNext()){
-                ServerEntity e = iter.next();
-                if(e.getTeam()!=player.getTeam()){
-                    if(player.getJavaBounds().intersects(e.getJavaBounds())){
-                        if(!isInvulnerable(player)) {
-                            player.lastDamageTaken = System.nanoTime();
-                            player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean isInvulnerable(ServerEntity e){
-        if(System.nanoTime()-e.lastDamageTaken> Tools.secondsToNano(ConVars.getDouble("sv_invulnerability_timer"))){
-            return false;
-        }else{
-            System.out.println(e.id + " is still invulnerable for " + (System.nanoTime()-e.lastDamageTaken));
-            return true;
-        }
-    }
-
-    private void spawnPlayer(Connection connection){
-        int networkID = getNextNetworkID();
-        playerList.put(networkID,connection);
-        Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
-        fullUpdate.entities = getNetworkedEntityList(entities);
-        connection.sendTCP(fullUpdate);
-
-        int width = 50;
-        int height = 50;
-        float x = MathUtils.random(mapWidth -width);
-        float y = MathUtils.random(mapHeight -height);
-        playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
-        ServerEntity newPlayer = new ServerEntity(networkID,x,y,1,MinimusServer.this);
-        newPlayer.width = width;
-        newPlayer.height = height;
-        addEntity(newPlayer);
-
-        serverData.addPlayer();
-        score.addPlayer(networkID);
-        Network.AddPlayer addPlayer = new Network.AddPlayer();
-        addPlayer.networkID = networkID;
-        sendTCPtoAllExcept(connection,addPlayer);
-
-        Network.AssignEntity assign = new Network.AssignEntity();
-        assign.networkID = networkID;
-        assign.lives = playerLives.get(networkID);
-        assign.velocity = ConVars.getFloat("sv_player_velocity");
-        assign.mapName = ConVars.get("sv_map_name");
-        assign.mapScale = ConVars.getFloat("sv_map_scale");
-        assign.playerList = new ArrayList<>(playerList.keySet());
-        assign.powerups = new HashMap<>(powerups);
-        assign.wave = wave;
-        assign.weaponList = new HashMap<>(weaponList);
-        connection.sendTCP(assign);
-    }
-
-    private void removePlayer(Connection connection){
-        int networkID = playerList.getKey(connection);
-        playerList.remove(networkID);
-        serverData.removePlayer();
-        score.removePlayer(networkID);
-    }
-
-    private void spawnPowerup(int type, int value, int duration){
-        int x = MathUtils.random(0,mapWidth);
-        int y = MathUtils.random(0,mapHeight);
-        final int id = getNextNetworkID();
-        Powerup powerup = new Powerup(x,y,type,value);
-        powerups.put(id,powerup);
-
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                despawnPowerup(id);
-            }
-        };
-        timer.schedule(task,Tools.secondsToMilli(duration));
-
-        Network.AddPowerup addPowerup = new Network.AddPowerup();
-        addPowerup.networkID = id;
-        addPowerup.powerup = powerup;
-        sendTCPtoAll(addPowerup);
-    }
-
-    private void despawnPowerup(int id){
-        powerups.remove(id);
-
-        Network.RemovePowerup removePowerup = new Network.RemovePowerup();
-        removePowerup.networkID = id;
-        sendTCPtoAll(removePowerup);
-    }
-
-    private void updateEntityAI(float delta){
-        for(EntityAI ai:entityAIs.values()){
-            ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
-        }
-    }
-
     private void processPendingEntityAddsAndRemovals(){
         for (int i = 0; i < pendingRandomNpcAdds; i++) {
-            addRandomNPC();
+            world.addRandomNPC();
         }
         pendingRandomNpcAdds = 0;
         for (int i = 0; i < pendingRandomNpcRemovals; i++) {
-            removeRandomNPC();
+            world.removeRandomNPC();
         }
         pendingRandomNpcRemovals = 0;
-        for(int id: pendingEntityRemovals){
-            removeEntity(id);
-        }
-        pendingEntityRemovals.clear();
     }
 
     private void startSimulation(){
@@ -821,6 +336,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     float delta = tickActualDuration/1000000000f;
 
                     doLogic(delta);
+                    updateStatusData();
 
                     tickWorkDuration=System.nanoTime()-tickStartTime;
 
@@ -840,29 +356,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         thread.start();
     }
 
-    private void updateWaves(){
-        if(spawnWaves){
-            if(entityAIs.isEmpty()){
-                spawnedHealthPacksCounter=0;
-                if(ConVars.getBool("sv_custom_waves")){
-                    spawnNextCustomWave();
-                }else{
-                    spawnNextWave();
-                }
-            }
-            WaveDefinition waveDefinition = waveList.get(wave);
-            if(waveDefinition!=null){
-                if(spawnedHealthPacksCounter < waveDefinition.healthPackCount){
-                    if(System.nanoTime()-lastHealthPackSpawned > Tools.secondsToNano(HEALTHPACK_SPAWN_DELAY)){
-                        lastHealthPackSpawned = System.nanoTime();
-                        spawnedHealthPacksCounter++;
-                        spawnPowerup(Powerup.HEALTH,30,30);
-                    }
-                }
-            }
-        }
-    }
-
     @Override
     public void render() {
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
@@ -877,37 +370,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        Gdx.gl.glLineWidth(3);
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0,0,0,1);
-        shapeRenderer.rect(0, 0, mapWidth, mapHeight);
-        shapeRenderer.setColor(1,1,1,1);
+        world.render(shapeRenderer);
 
-        ServerEntity[] entitiesCopy = entities.values().toArray(new ServerEntity[entities.values().size()]);
-        for(ServerEntity e : entitiesCopy) {
-            if(playerList.keySet().contains(e.id)){
-                shapeRenderer.setColor(0,0,1,1);
-            }else{
-                shapeRenderer.setColor(1,1,1,1);
-            }
-            shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
-            float health = 1-((float)e.getHealth()/e.maxHealth);
-            int healthWidth = (int) (e.width*health);
-            shapeRenderer.setColor(1, 0, 0, 1); //red
-            shapeRenderer.rect(e.getX(),e.getY(),e.width/2,e.height/2,healthWidth,e.height,1,1,e.getRotation());
-        }
-        for(Powerup p : powerups.values()){
-            shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
-            shapeRenderer.circle(p.x,p.y,5);
-        }
+    }
 
-        shapeRenderer.end();
+    public void startWaves(){
+        world.spawnWaves = true;
+    }
 
-        sharedMethods.renderAttackVisuals(shapeRenderer,attackVisuals);
-        sharedMethods.renderProjectiles(shapeRenderer,projectiles);
-
-        updateStatusData();
+    public void resetWaves(){
+        world.removeAllEntities();
+        world.spawnWaves = false;
+        world.setWave(0);
     }
 
     private void updateStatusData(){
@@ -915,46 +390,28 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             connectionStatus.get(c).inputQueue = inputQueue.get(c).size();
         }
         serverData.fps = Gdx.graphics.getFramesPerSecond();
-        serverData.setEntityCount(entities.size());
+        serverData.setEntityCount(world.getEntityCount());
         serverData.currentTick = currentTick;
         serverData.setServerTime((System.nanoTime() - serverStartTime) / 1000000000f);
     }
 
-    private void addPlayerKill(int id){
+    public void addPlayerKill(int id){
         score.addPlayerKill(id);
         Network.AddPlayerKill addPlayerKill = new Network.AddPlayerKill();
         addPlayerKill.id = id;
         sendTCPtoAll(addPlayerKill);
     }
-    private void addNpcKill(int id){
+    public void addNpcKill(int id){
         score.addNpcKill(id);
         Network.AddNpcKill addNpcKill = new Network.AddNpcKill();
         addNpcKill.id = id;
         sendTCPtoAll(addNpcKill);
     }
-    private void addDeath(int id){
+    public void addDeath(int id){
         score.addDeath(id);
         Network.AddDeath addDeath = new Network.AddDeath();
         addDeath.id = id;
         sendTCPtoAll(addDeath);
-    }
-
-    public void showScoreboard(){
-        //TODO
-        //We need to delay showing the window or else
-        //the window steals the keyUP event on mac resulting
-        //in InputProcessor getting KeyTyped events indefinately
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                scoreboard.setVisible(true);
-            }
-        }).start();
     }
 
     public void showConsoleWindow(){
@@ -1020,158 +477,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         c.sendTCP(fileReceived);
     }
 
-    private HashMap<Integer,Weapon> readWeaponList(){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponlist.txt");
-        if(!file.exists()){
-            file = new File("resources\\"+"defaultweaponlist.txt");
-        }
-        System.out.println("Loading weapons from file:"+file);
-        HashMap<Integer,Weapon> weapons = new HashMap<>();
-        Weapon weapon = null;
-        int weaponSlot = 0;
-
-        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            for (String line; (line = reader.readLine()) != null; ) {
-                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
-                    continue;
-                }
-                if(line.charAt(0) == '{'){
-                    weapon = new Weapon();
-                    continue;
-                }
-                if(line.charAt(0) == '}'){
-                    weapons.put(weaponSlot,weapon);
-                    weaponSlot++;
-                    continue;
-                }
-                String[] splits = line.split("=");
-                if(splits[0].equals("type")){
-                    if(splits[1].equals("hitscan")){
-                        weapon.hitScan = true;
-                    }
-                }
-                if(splits[0].equals("name")){
-                    weapon.name = splits[1];
-                }
-                if(splits[0].equals("range")){
-                    weapon.range = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("velocity")){
-                    weapon.velocity = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("spread")){
-                    weapon.spread = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("projectileCount")){
-                    weapon.projectileCount = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("damage")){
-                    weapon.damage = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("visualDuration")){
-                    weapon.visualDuration = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("sound")){
-                    weapon.sound = splits[1];
-                }
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        for(int i: weapons.keySet()){
-            Weapon w = weapons.get(i);
-            System.out.println("Slot: "+i);
-            System.out.println(w);
-            System.out.println();
-        }
-
-        return weapons;
-    }
-
-    private HashMap<Integer,WaveDefinition> readWaveList(){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"wavelist.txt");
-        if(!file.exists()){
-            file = new File("resources\\"+"defaultwavelist.txt");
-        }
-        System.out.println("Loading custom wave from file:"+file);
-        HashMap<Integer,WaveDefinition> waves = new HashMap<>();
-        int waveNumber = 0;
-        String aiType;
-        int weapon;
-        int count;
-        WaveDefinition wave = new WaveDefinition();
-
-        try(BufferedReader reader = new BufferedReader(new FileReader(file))){
-            for(String line;(line = reader.readLine())!=null;){
-                if(line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' '){
-                    continue;
-                }
-                if(line.charAt(0) == '{'){
-                    wave = new WaveDefinition();
-                    continue;
-                }
-                if(line.charAt(0) == '}'){
-                    waveNumber++;
-                    waves.put(waveNumber,wave);
-                    continue;
-                }
-                if(line.charAt(0) == '+'){
-                    wave.healthPackCount = Integer.parseInt(line.substring(2));
-                }
-                aiType = Character.toString(line.charAt(0));
-                weapon = Character.getNumericValue(line.charAt(1))-1;
-                count = Integer.parseInt(line.substring(3));
-                wave.addEnemy(aiType, weapon, count);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return waves;
-    }
-
-    public void setWave(int wave){
-        this.wave = wave;
-        Network.WaveChanged waveChanged = new Network.WaveChanged();
-        waveChanged.wave = wave;
-        sendTCPtoAll(waveChanged);
-    }
-
-    private void spawnNextCustomWave(){
-
-        WaveDefinition waveDef = waveList.get(wave+1);
-        if(waveDef!=null){
-            setWave(wave+1);
-
-            for(WaveDefinition.EnemyDefinition enemy:waveDef.enemies){
-                for (int i = 0; i < enemy.count; i++) {
-                    switch (enemy.aiType){
-                        case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
-                        case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
-                        case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
-                        case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
-                    }
-                }
-            }
-        }else{
-            spawnNextWave();
-        }
-
-    }
-
-    private void spawnNextWave(){
-        setWave(wave + 1);
-        for (int i = 0; i < (wave*2)+4; i++) {
-            addRandomNPC();
-        }
-    }
-
-    private void showMessage(String message){
+    public void showMessage(String message){
         System.out.println(message);
         consoleFrame.addLine(message);
     }
@@ -1257,14 +563,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         camera.update();
     }
 
-    private HashMap<Integer,Entity> getNetworkedEntityList(HashMap<Integer,ServerEntity> serverEntities){
-        HashMap<Integer,Entity> entities = new HashMap<>();
-        for(int id:serverEntities.keySet()){
-            entities.put(id,serverEntities.get(id).getNetworkEntity());
-        }
-        return entities;
-    }
-
     public void updateFakePing(Connection connection) {
         StatusData status = connectionStatus.get(connection);
         if(status != null){
@@ -1316,13 +614,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             pendingRandomNpcRemovals++;
         }
         if (character == 'p') {
-            spawnPowerup(Powerup.HEALTH,30,30);
+            world.spawnPowerup(Powerup.HEALTH,30,30);
         }
         if (character == 'w') {
             pendingRandomNpcAdds++;
-        }
-        if (character == 's') {
-            showScoreboard();
         }
         if (character == '-') {
             camera.zoom += 0.05;
@@ -1396,6 +691,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void resize(int w, int h) {
+        int mapWidth = world.getMapWidth();
+        int mapHeight = world.getMapHeight();
         if(h > ((float)w/ mapWidth)* mapHeight){
             camera = new OrthographicCamera(mapWidth, h*((float) mapWidth /w));
         }else{
@@ -1461,95 +758,106 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         return false;
     }
 
-    @Override
-    public void positionChanged(int id) {
-        if(!posChangedEntities.contains(id)){
-            posChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
-    }
-
-    @Override
-    public void healthChanged(int id) {
-        if(!healthChangedEntities.contains(id)){
-            healthChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
-    }
-
-    @Override
-    public void headingChanged(int id) {
-        if(!headingChangedEntities.contains(id)){
-            headingChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
-    }
-
-    @Override
-    public void rotationChanged(int id) {
-        if(!rotationChangedEntities.contains(id)){
-            rotationChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
-    }
-
-    @Override
-    public void teamChanged(int id) {
-        if(!teamChangedEntities.contains(id)){
-            teamChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
-    }
-
-    @Override
-    public void entityDied(int id, int sourceID) {
-        showMessage("Entity ID" + id + " is dead.");
-        if(playerList.keySet().contains(sourceID)) {
-            if (playerList.keySet().contains(id)) {
-                addPlayerKill(sourceID);
-            } else {
-                addNpcKill(sourceID);
-            }
-        }
-        if (playerList.keySet().contains(id)) {
-            addDeath(id);
-            Tools.addToMap(playerLives,id,-1);
-            Network.SetLives setLives = new Network.SetLives();
-            setLives.lives = playerLives.get(id);
-            sendTCP(playerList.get(id),setLives);
-            if(playerLives.get(id) >= 0){
-                //Respawn player if lives left
-                ServerEntity deadPlayer = entities.get(id);
-                deadPlayer.restoreMaxHealth();
-                float x = MathUtils.random(mapWidth - deadPlayer.width);
-                float y = MathUtils.random(mapHeight - deadPlayer.height);
-                deadPlayer.moveTo(x, y);
-            }else{
-                pendingEntityRemovals.add(id);
-            }
-        }else{
-            pendingEntityRemovals.add(id);
-        }
-    }
-
-    @Override
-    public void scoreChanged() {
-        scoreboard.updateScoreboard();
-    }
 
     @Override
     public void conVarChanged(String varName, String varValue) {
 
+    }
+
+    @Override
+    public void scoreChanged() {
+
+    }
+
+    @Override
+    public void playerAdded(Connection connection, Network.AssignEntity assign) {
+        playerList.put(assign.networkID,connection);
+
+        serverData.addPlayer();
+        score.addPlayer(assign.networkID);
+        Network.AddPlayer addPlayer = new Network.AddPlayer();
+        addPlayer.networkID = assign.networkID;
+        sendTCPtoAllExcept(connection,addPlayer);
+
+        connection.sendTCP(assign);
+    }
+
+    @Override
+    public void playerRemoved(int id){
+        playerList.remove(id);
+        serverData.removePlayer();
+        score.removePlayer(id);
+    }
+
+    @Override
+    public void playerLivesChanged(int id, int lives){
+        Network.SetLives setLives = new Network.SetLives();
+        setLives.lives = lives;
+        sendTCP(playerList.get(id),setLives);
+    }
+
+    @Override
+    public void entityRemoved(int id){
+        showMessage("Removed entity ID: " + id);
+        Network.RemoveEntity removeEntity = new Network.RemoveEntity();
+        removeEntity.networkID=id;
+        removeEntity.serverTime=getServerTime();
+        sendTCPtoAll(removeEntity);
+    }
+
+    @Override
+    public void powerupAdded(int id, Powerup powerup) {
+        Network.AddPowerup addPowerup = new Network.AddPowerup();
+        addPowerup.networkID = id;
+        addPowerup.powerup = powerup;
+        sendTCPtoAll(addPowerup);
+    }
+
+    @Override
+    public void powerupRemoved(int id) {
+        Network.RemovePowerup removePowerup = new Network.RemovePowerup();
+        removePowerup.networkID = id;
+        sendTCPtoAll(removePowerup);
+    }
+
+    @Override
+    public void waveChanged(int wave){
+        Network.WaveChanged waveChanged = new Network.WaveChanged();
+        waveChanged.wave = wave;
+        sendTCPtoAll(waveChanged);
+    }
+
+    @Override
+    public void attackCreated(Network.EntityAttacking entityAttacking) {
+        if(playerList.keySet().contains(entityAttacking.id)){
+            sendTCPtoAllExcept(playerList.get(entityAttacking.id),entityAttacking);
+        }else{
+            sendTCPtoAll(entityAttacking);
+        }
+    }
+
+    @Override
+    public void entityAdded(Entity e){
+        showMessage("Added entity ID: " + e.id);
+        Network.AddEntity addEntity = new Network.AddEntity();
+        addEntity.entity=e;
+        addEntity.serverTime=getServerTime();
+        sendTCPtoAll(addEntity);
+    }
+
+    @Override
+    public void entityKilled(int victimID, int killerID){
+        showMessage("Entity " + victimID + " killed by "+killerID+".");
+        if(playerList.keySet().contains(killerID)) {
+            if (playerList.keySet().contains(victimID)) {
+                addPlayerKill(killerID);
+            } else {
+                addNpcKill(killerID);
+            }
+        }
+        if(playerList.keySet().contains(victimID)){
+            addDeath(victimID);
+        }
     }
 
     private class Packet{

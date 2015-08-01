@@ -218,7 +218,7 @@ public class ConsoleFrame extends JFrame {
         }
         if(splits[0].equals("start")){
             if(minimusServer!=null){
-                minimusServer.spawnWaves = true;
+                minimusServer.startWaves();
             }else{
                 addLine("The "+splits[0]+" command can only be used on server");
             }
@@ -242,9 +242,7 @@ public class ConsoleFrame extends JFrame {
         }
         if(splits[0].equals("reset")){
             if(minimusServer!=null){
-                minimusServer.removeAllEntities();
-                minimusServer.spawnWaves = false;
-                minimusServer.setWave(0);
+                minimusServer.resetWaves();
             }else{
                 addLine("The "+splits[0]+" command can only be used on server");
             }

@@ -40,7 +40,6 @@ import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
-import com.juniperbrew.minimus.windows.Scoreboard;
 import com.juniperbrew.minimus.windows.StatusData;
 
 import java.awt.geom.Line2D;
@@ -68,8 +67,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private int currentInputRequest = 0;
     //Input requests that haven't been sent yet
     ArrayList<Network.UserInput> pendingInputPacket = new ArrayList<>();
-    //How many times per second we gather all created inputs and send them to server
-    //float inputUpdateRate =20;
     private long lastInputSent;
     //Sent input requests that haven't been acknowledged on server yet
     ArrayList<Network.UserInput> inputQueue = new ArrayList<>();
@@ -130,7 +127,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     TextureRegion down;
     SpriteBatch batch;
 
-    Scoreboard scoreboard;
     Score score;
 
     HashMap<String,Sound> sounds = new HashMap<>();
@@ -164,7 +160,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         consoleFrame = new ConsoleFrame(this);
         clientStartTime = System.nanoTime();
         score = new Score(this);
-        scoreboard = new Scoreboard(score);
         client = new Client(writeBuffer,objectBuffer);
         statusData = new StatusData(client,clientStartTime,ConVars.getInt("cl_log_interval_seconds"));
         statusFrame = new ClientStatusFrame(statusData);
@@ -250,6 +245,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
             removeEntity(removeEntity.networkID);
         }else if(object instanceof Network.AssignEntity){
+            System.out.println("Assigning entity");
             Network.AssignEntity assign = (Network.AssignEntity) object;
             setPlayerID(assign.networkID);
             ConVars.set("sv_player_velocity", assign.velocity);
@@ -342,7 +338,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //We need to move player here so we can spawn the potential projectiles at correct location
         Entity player = stateSnapshot.get(playerID);
         if(player != null){
-            sharedMethods.applyInput(player,input);
+            sharedMethods.applyInput(player,input, mapWidth, mapHeight);
         }
 
         if(buttons.contains(Enums.Buttons.NUM1)){
@@ -467,7 +463,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            sharedMethods.applyInput(state.get(playerID),input);
+            sharedMethods.applyInput(state.get(playerID),input,mapWidth,mapHeight);
         }
     }
 
@@ -893,9 +889,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(character == 'r'){
             printPlayerList();
         }
-        if(character == 'u'){
-            showScoreboard();
-        }
         if(character == 'l'){
             //Throw exception
             int kappa = 50/0;
@@ -1116,24 +1109,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }).start();
     }
 
-    public void showScoreboard(){
-        //TODO
-        //We need to delay showing the window or else
-        //the window steals the keyUP event on mac resulting
-        //in InputProcessor getting KeyTyped events indefinately
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                scoreboard.setVisible(true);
-            }
-        }).start();
-    }
-
     public void showStatusWindow(){
         //TODO
         //We need to delay showing the window or else
@@ -1183,7 +1158,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
         mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
         mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
-        sharedMethods = new SharedMethods(mapWidth,mapHeight);
     }
 
     private void removeEntity(int id){
@@ -1288,7 +1262,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void scoreChanged() {
-        scoreboard.updateScoreboard();
+
     }
 
     @Override
