@@ -111,8 +111,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     long clientStartTime;
 
     String serverIP;
-
-    ConVars conVars;
+    
     StatusData statusData;
     ClientStatusFrame statusFrame;
     ConsoleFrame consoleFrame;
@@ -159,22 +158,22 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
-        conVars = new ConVars(this);
-        soundVolume = conVars.getFloat("cl_volume_sound");
-        musicVolume = conVars.getFloat("cl_volume_music");
-        consoleFrame = new ConsoleFrame(conVars, this);
+        ConVars.addListener(this);
+        soundVolume = ConVars.getFloat("cl_volume_sound");
+        musicVolume = ConVars.getFloat("cl_volume_music");
+        consoleFrame = new ConsoleFrame(this);
         clientStartTime = System.nanoTime();
         score = new Score(this);
         scoreboard = new Scoreboard(score);
         client = new Client(writeBuffer,objectBuffer);
-        statusData = new StatusData(client,clientStartTime,conVars.getInt("cl_log_interval_seconds"));
+        statusData = new StatusData(client,clientStartTime,ConVars.getInt("cl_log_interval_seconds"));
         statusFrame = new ClientStatusFrame(statusData);
         joinServer();
     }
     
     @Override
     public void create() {
-        if(conVars.getBool("cl_auto_send_errorlogs")){
+        if(ConVars.getBool("cl_auto_send_errorlogs")){
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client", true, serverIP));
         }else{
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client"));
@@ -253,7 +252,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.AssignEntity){
             Network.AssignEntity assign = (Network.AssignEntity) object;
             setPlayerID(assign.networkID);
-            conVars.set("sv_player_velocity", assign.velocity);
+            ConVars.set("sv_player_velocity", assign.velocity);
 
             loadMap(assign.mapName, assign.mapScale);
             lives = assign.lives;
@@ -288,11 +287,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         float delta = Gdx.graphics.getDeltaTime();
 
-        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
+        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             statusData.intervalElapsed();
         }
-        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
+        if(System.nanoTime()-lastPingRequest>Tools.secondsToNano(ConVars.getDouble("cl_ping_update_delay"))){
             statusData.updatePing();
             updateFakePing();
             lastPingRequest = System.nanoTime();
@@ -431,7 +430,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(attackCooldown>0){
             return;
         }
-        attackCooldown = conVars.getDouble("sv_attack_delay");
+        attackCooldown = ConVars.getDouble("sv_attack_delay");
         //TODO Ignoring projectile team for now
 
         Weapon weapon = weaponList.get(weaponSlot);
@@ -453,7 +452,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             inputQueue.clear();
         }
 
-        if(!conVars.getBool("cl_clientside_prediction")){
+        if(!ConVars.getBool("cl_clientside_prediction")){
             return;
         }
         Iterator<Network.UserInput> iter = inputQueue.iterator();
@@ -486,7 +485,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         //printStateHistory();
         //If interp delay is 0 we simply copy the latest authorative state and run clientside prediction on that
-        if(conVars.getDouble("cl_interp") <= 0){
+        if(ConVars.getDouble("cl_interp") <= 0){
             HashMap<Integer, Entity> authoritativeStateCopy = new HashMap<Integer, Entity>();
             for(int id : authoritativeState.entities.keySet()){
                 Entity e = authoritativeState.entities.get(id);
@@ -498,7 +497,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             return;
         }
 
-        double renderTime = clientTime-conVars.getDouble("cl_interp");
+        double renderTime = clientTime-ConVars.getDouble("cl_interp");
 
         //Copy this because it's modified from network thread
         Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
@@ -618,10 +617,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void sendInputPackets(){
         //Send all gathered inputs at set interval
-        if(System.nanoTime()- lastInputSent > Tools.secondsToNano(1d/conVars.getInt("cl_input_update_rate"))){
+        if(System.nanoTime()- lastInputSent > Tools.secondsToNano(1d/ConVars.getInt("cl_input_update_rate"))){
             if(pendingInputPacket.size() > 0) {
                 Network.UserInputs inputPacket = new Network.UserInputs();
-                if(conVars.getBool("cl_compress_input")){
+                if(ConVars.getBool("cl_compress_input")){
                     ArrayList<Network.UserInput> packedInputs = compressInputPacket(pendingInputPacket);
                     inputPacket.inputs = packedInputs;
                 }else{
@@ -686,7 +685,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 mapRenderer.render();
             }
 
-            if(conVars.getBool("cl_show_debug")) {
+            if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
                 for (Entity e : interpFrom.entities.values()) {
@@ -905,13 +904,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             statusData.writeLog(false);
         }
         if(character == 'y'){
-            boolean showPerformanceWarnings = conVars.getBool("cl_show_performance_warnings");
+            boolean showPerformanceWarnings = ConVars.getBool("cl_show_performance_warnings");
             if(showPerformanceWarnings){
-                conVars.set("cl_show_performance_warnings",false);
+                ConVars.set("cl_show_performance_warnings",false);
             }else{
-                conVars.set("cl_show_performance_warnings",true);
+                ConVars.set("cl_show_performance_warnings",true);
             }
-            showMessage("ShowPerformanceWarnings:" + conVars.getBool("cl_show_performance_warnings"));
+            showMessage("ShowPerformanceWarnings:" + ConVars.getBool("cl_show_performance_warnings"));
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
@@ -969,28 +968,28 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showStatusWindow();
         }
         if(character == 'b'){
-            conVars.toggleVar("cl_clientside_prediction");
-            showMessage("UseClientSidePrediction:" + conVars.getBool("cl_clientside_prediction"));
+            ConVars.toggleVar("cl_clientside_prediction");
+            showMessage("UseClientSidePrediction:" + ConVars.getBool("cl_clientside_prediction"));
         }
         if(character == 'v'){
-            conVars.toggleVar("cl_compress_input");
-            showMessage("CompressInput:" + conVars.getBool("cl_compress_input"));
+            ConVars.toggleVar("cl_compress_input");
+            showMessage("CompressInput:" + ConVars.getBool("cl_compress_input"));
         }
         if(character == '0'){
-            conVars.toggleVar("cl_show_debug");
-            showMessage("Show debug:" + conVars.getBool("cl_show_debug"));
+            ConVars.toggleVar("cl_show_debug");
+            showMessage("Show debug:" + ConVars.getBool("cl_show_debug"));
         }
 
         if(character == '+'){
-            conVars.addToVar("cl_interp",0.05);
-            showMessage("Interpolation delay now:" + conVars.getDouble("cl_interp"));
+            ConVars.addToVar("cl_interp",0.05);
+            showMessage("Interpolation delay now:" + ConVars.getDouble("cl_interp"));
         }
         if(character == '-'){
-            conVars.addToVar("cl_interp",-0.05);
-            if(conVars.getDouble("cl_interp")<0){
-                conVars.set("cl_interp",0);
+            ConVars.addToVar("cl_interp",-0.05);
+            if(ConVars.getDouble("cl_interp")<0){
+                ConVars.set("cl_interp",0);
             }
-            showMessage("Interpolation delay now:" + conVars.getDouble("cl_interp"));
+            showMessage("Interpolation delay now:" + ConVars.getDouble("cl_interp"));
         }
 
         return false;
@@ -1022,8 +1021,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 pendingPackets.add(object);
             }
         };
-        double minPacketDelay = conVars.getDouble("sv_min_packet_delay");
-        double maxPacketDelay = conVars.getDouble("sv_max_packet_delay");
+        double minPacketDelay = ConVars.getDouble("sv_min_packet_delay");
+        double maxPacketDelay = ConVars.getDouble("sv_max_packet_delay");
         if(maxPacketDelay > 0){
             int msMinDelay = (int) (minPacketDelay*1000);
             int msMaxDelay = (int) (maxPacketDelay*1000);
@@ -1184,7 +1183,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
         mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
         mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
-        sharedMethods = new SharedMethods(conVars,mapWidth,mapHeight);
+        sharedMethods = new SharedMethods(mapWidth,mapHeight);
     }
 
     private void removeEntity(int id){
@@ -1295,9 +1294,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public void conVarChanged(String varName, String varValue) {
         if(varName.equals("cl_volume_sound")){
-            soundVolume = conVars.getFloat(varName);
+            soundVolume = ConVars.getFloat(varName);
         }else if(varName.equals("cl_volume_music")){
-            musicVolume = conVars.getFloat(varName);
+            musicVolume = ConVars.getFloat(varName);
             if(backgroundMusic!=null){
                 backgroundMusic.setVolume(musicVolume);
             }

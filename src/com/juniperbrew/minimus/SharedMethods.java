@@ -17,13 +17,11 @@ import java.util.TimerTask;
  */
 public class SharedMethods {
 
-    ConVars conVars;
     int mapWidth;
     int mapHeight;
     Timer timer;
 
-    public SharedMethods(ConVars conVars, int mapWidth, int mapHeight){
-        this.conVars = conVars;
+    public SharedMethods(int mapWidth, int mapHeight){
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
         timer = new Timer();
@@ -122,7 +120,7 @@ public class SharedMethods {
     public void applyInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;
-        float velocity = conVars.getFloat("sv_player_velocity");
+        float velocity = ConVars.getFloat("sv_player_velocity");
 
         setRotation(e, input);
 
@@ -149,7 +147,7 @@ public class SharedMethods {
         }
 
 
-        if(conVars.getBool("sv_check_map_collisions")) {
+        if(ConVars.getBool("sv_check_map_collisions")) {
             if (e.getX() + e.width + deltaX > mapWidth) {
                 deltaX = mapWidth - e.getX() - e.width;
             }

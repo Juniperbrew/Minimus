@@ -107,8 +107,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     ConsoleFrame consoleFrame;
     StatusData serverData;
 
-    public ConVars conVars;
-
     int mapWidth;
     int mapHeight;
 
@@ -149,14 +147,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         shapeRenderer = new ShapeRenderer();
         screenW = Gdx.graphics.getWidth();
         screenH = Gdx.graphics.getHeight();
-        sharedMethods = new SharedMethods(conVars, mapWidth, mapHeight);
+        sharedMethods = new SharedMethods(mapWidth, mapHeight);
     }
 
     @Override
     public void create() {
-        conVars = new ConVars(this);
+        ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
-        consoleFrame = new ConsoleFrame(conVars,this);
+        consoleFrame = new ConsoleFrame(this);
 
         waveList = readWaveList();
         weaponList = readWeaponList();
@@ -164,12 +162,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         int w = Gdx.graphics.getWidth();
         resize(h,w);
 
-        map = new TmxMapLoader().load("resources\\"+conVars.get("sv_map_name"));
-        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* conVars.getDouble("sv_map_scale"));
-        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* conVars.getDouble("sv_map_scale"));
+        map = new TmxMapLoader().load("resources\\"+ConVars.get("sv_map_name"));
+        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* ConVars.getDouble("sv_map_scale"));
+        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* ConVars.getDouble("sv_map_scale"));
 
         serverStartTime = System.nanoTime();
-        serverData = new StatusData(null,serverStartTime,conVars.getInt("cl_log_interval_seconds"));
+        serverData = new StatusData(null,serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
         serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
         initialize();
@@ -206,7 +204,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
         Listener listener = new Listener(){
             public void connected(Connection connection){
-                StatusData dataUsage = new StatusData(connection, System.nanoTime(),conVars.getInt("cl_log_interval_seconds"));
+                StatusData dataUsage = new StatusData(connection, System.nanoTime(),ConVars.getInt("cl_log_interval_seconds"));
                 connectionStatus.put(connection, dataUsage);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
             }
@@ -241,8 +239,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                 pendingPackets.add(new Packet(connection,object));
             }
         };
-        double minPacketDelay = conVars.getDouble("sv_min_packet_delay");
-        double maxPacketDelay = conVars.getDouble("sv_max_packet_delay");
+        double minPacketDelay = ConVars.getDouble("sv_min_packet_delay");
+        double maxPacketDelay = ConVars.getDouble("sv_max_packet_delay");
         if(maxPacketDelay > 0){
             int msMinDelay = (int) (minPacketDelay*1000);
             int msMaxDelay = (int) (maxPacketDelay*1000);
@@ -277,7 +275,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void updatePing(){
-        if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(conVars.getDouble("cl_ping_update_delay"))){
+        if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(ConVars.getDouble("cl_ping_update_delay"))){
             for(Connection c:server.getConnections()){
                 connectionStatus.get(c).updatePing();
                 updateFakePing(c);
@@ -301,7 +299,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         checkPlayerEntityCollisions();
         checkPowerupCollisions();
 
-        if(System.nanoTime()-lastUpdateSent>(1000000000/conVars.getInt("sv_updaterate"))){
+        if(System.nanoTime()-lastUpdateSent>(1000000000/ConVars.getInt("sv_updaterate"))){
             updateClients();
             lastUpdateSent = System.nanoTime();
         }
@@ -421,7 +419,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         if(attackCooldown.get(connection) > 0){
             return;
         }else{
-            attackCooldown.put(connection,conVars.getDouble("sv_attack_delay"));
+            attackCooldown.put(connection,ConVars.getDouble("sv_attack_delay"));
             ServerEntity e = entities.get(playerList.getKey(connection));
             if(weapon == 1){
                 showMessage(input.inputID + "> ["+getServerTime()+"] Creating projectile from PlayerCenterX: "+ e.getCenterX() + " PlayerCenterY: " + e.getCenterY() + " MouseX: " + input.mouseX + " MouseY: " + input.mouseY + " PlayerRotation: " + e.getRotation());
@@ -503,37 +501,37 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private void updateClients(){
-        if(conVars.getInt("sv_update_type")==0){
+        if(ConVars.getInt("sv_update_type")==0){
             Network.FullEntityUpdate update = new Network.FullEntityUpdate();
             update.serverTime = getServerTime();
             update.entities = getNetworkedEntityList(entities);
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
-                if(conVars.getBool("cl_udp")){
+                if(ConVars.getBool("cl_udp")){
                     sendUDP(connection,update);
                 }else{
                     sendTCP(connection, update);
                 }
             }
-        }else if(conVars.getInt("sv_update_type")==1){
+        }else if(ConVars.getInt("sv_update_type")==1){
             Network.EntityPositionUpdate update = new Network.EntityPositionUpdate();
             update.serverTime = getServerTime();
             update.changedEntityPositions = getChangedEntityPositions();
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
-                if(conVars.getBool("cl_udp")){
+                if(ConVars.getBool("cl_udp")){
                     sendUDP(connection, update);
                 }else{
                     sendTCP(connection, update);
                 }
             }
-        }else if(conVars.getInt("sv_update_type")==2){
+        }else if(ConVars.getInt("sv_update_type")==2){
             Network.EntityComponentsUpdate update = new Network.EntityComponentsUpdate();
             update.serverTime = getServerTime();
             update.changedEntityComponents = getChangedEntityComponents();
             for(Connection connection :server.getConnections()) {
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
-                if(conVars.getBool("cl_udp")){
+                if(ConVars.getBool("cl_udp")){
                     sendUDP(connection,update);
                 }else{
                     sendTCP(connection,update);
@@ -697,7 +695,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
                     if(player.getJavaBounds().intersects(e.getJavaBounds())){
                         if(!isInvulnerable(player)) {
                             player.lastDamageTaken = System.nanoTime();
-                            player.reduceHealth(conVars.getInt("sv_contact_damage"),e.id);
+                            player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
                         }
                     }
                 }
@@ -706,7 +704,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     }
 
     private boolean isInvulnerable(ServerEntity e){
-        if(System.nanoTime()-e.lastDamageTaken> Tools.secondsToNano(conVars.getDouble("sv_invulnerability_timer"))){
+        if(System.nanoTime()-e.lastDamageTaken> Tools.secondsToNano(ConVars.getDouble("sv_invulnerability_timer"))){
             return false;
         }else{
             System.out.println(e.id + " is still invulnerable for " + (System.nanoTime()-e.lastDamageTaken));
@@ -725,7 +723,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         int height = 50;
         float x = MathUtils.random(mapWidth -width);
         float y = MathUtils.random(mapHeight -height);
-        playerLives.put(networkID, conVars.getInt("sv_start_lives"));
+        playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,1,MinimusServer.this);
         newPlayer.width = width;
         newPlayer.height = height;
@@ -740,9 +738,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         Network.AssignEntity assign = new Network.AssignEntity();
         assign.networkID = networkID;
         assign.lives = playerLives.get(networkID);
-        assign.velocity = conVars.getFloat("sv_player_velocity");
-        assign.mapName = conVars.get("sv_map_name");
-        assign.mapScale = conVars.getFloat("sv_map_scale");
+        assign.velocity = ConVars.getFloat("sv_player_velocity");
+        assign.mapName = ConVars.get("sv_map_name");
+        assign.mapScale = ConVars.getFloat("sv_map_scale");
         assign.playerList = new ArrayList<>(playerList.keySet());
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
@@ -788,7 +786,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     private void updateEntityAI(float delta){
         for(EntityAI ai:entityAIs.values()){
-            ai.act(conVars.getDouble("sv_npc_velocity"), delta);
+            ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
         }
     }
 
@@ -814,7 +812,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
                 long targetTickDurationNano, tickStartTime = 0,tickEndTime = 0,tickActualDuration = 0, tickWorkDuration, sleepDuration;
                 while(true){
-                    targetTickDurationNano= (long) (1000000000/conVars.getInt("sv_tickrate"));
+                    targetTickDurationNano= (long) (1000000000/ConVars.getInt("sv_tickrate"));
                     if(tickEndTime>0){
                         tickActualDuration=tickEndTime-tickStartTime;
                     }
@@ -846,7 +844,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
         if(spawnWaves){
             if(entityAIs.isEmpty()){
                 spawnedHealthPacksCounter=0;
-                if(conVars.getBool("sv_custom_waves")){
+                if(ConVars.getBool("sv_custom_waves")){
                     spawnNextCustomWave();
                 }else{
                     spawnNextWave();
@@ -867,7 +865,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
 
     @Override
     public void render() {
-        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(conVars.getInt("cl_log_interval_seconds"))){
+        if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();
         }
@@ -1305,14 +1303,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
     @Override
     public boolean keyTyped(char character) {
         if (character == 'u') {
-            boolean useUDP = conVars.getBool("cl_udp");
+            boolean useUDP = ConVars.getBool("cl_udp");
             if(useUDP){
-                conVars.set("cl_udp",0);
+                ConVars.set("cl_udp",0);
             }else{
-                conVars.set("cl_udp",1);
+                ConVars.set("cl_udp",1);
             }
 
-            showMessage("UseUDP:" + conVars.getBool("cl_udp"));
+            showMessage("UseUDP:" + ConVars.getBool("cl_udp"));
         }
         if (character == 'q') {
             pendingRandomNpcRemovals++;
@@ -1351,46 +1349,46 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Entit
             showServerStatusWindow();
         }
         if (character == '3') {
-            if(conVars.getInt("sv_tickrate") <=1){
-                int tickRate = conVars.getInt("sv_tickrate") / 2;
-                conVars.set("sv_tickrate",tickRate);
+            if(ConVars.getInt("sv_tickrate") <=1){
+                int tickRate = ConVars.getInt("sv_tickrate") / 2;
+                ConVars.set("sv_tickrate",tickRate);
             }else{
-                int tickRate = conVars.getInt("sv_tickrate") - 1;
-                conVars.set("sv_tickrate",tickRate);
+                int tickRate = ConVars.getInt("sv_tickrate") - 1;
+                ConVars.set("sv_tickrate",tickRate);
             }
         }
         if (character == '4') {
-            if(conVars.getInt("sv_tickrate") <1){
-                int tickRate = conVars.getInt("sv_tickrate") * 2;
-                conVars.set("sv_tickrate",tickRate);
-                if(conVars.getInt("sv_tickrate") > 1){
-                    conVars.set("sv_tickrate",1);
+            if(ConVars.getInt("sv_tickrate") <1){
+                int tickRate = ConVars.getInt("sv_tickrate") * 2;
+                ConVars.set("sv_tickrate",tickRate);
+                if(ConVars.getInt("sv_tickrate") > 1){
+                    ConVars.set("sv_tickrate",1);
                 }
             }else{
-                int tickRate = conVars.getInt("sv_tickrate") + 1;
-                conVars.set("sv_tickrate",tickRate);
+                int tickRate = ConVars.getInt("sv_tickrate") + 1;
+                ConVars.set("sv_tickrate",tickRate);
             }
         }
         if (character == '8') {
-            if(conVars.getInt("sv_updaterate") <=1){
-                int updateRate = conVars.getInt("sv_updaterate")/2;
-                conVars.set("sv_updaterate",updateRate);
+            if(ConVars.getInt("sv_updaterate") <=1){
+                int updateRate = ConVars.getInt("sv_updaterate")/2;
+                ConVars.set("sv_updaterate",updateRate);
             }else{
-                int updateRate = conVars.getInt("sv_updaterate")-1;
-                conVars.set("sv_updaterate",updateRate);
+                int updateRate = ConVars.getInt("sv_updaterate")-1;
+                ConVars.set("sv_updaterate",updateRate);
             }
 
         }
         if (character == '9') {
-            if(conVars.getInt("sv_updaterate") <1){
-                int updateRate = conVars.getInt("sv_updaterate")*2;
-                conVars.set("sv_updaterate",updateRate);
-                if(conVars.getInt("sv_updaterate") > 1){
-                    conVars.set("sv_updaterate",1);
+            if(ConVars.getInt("sv_updaterate") <1){
+                int updateRate = ConVars.getInt("sv_updaterate")*2;
+                ConVars.set("sv_updaterate",updateRate);
+                if(ConVars.getInt("sv_updaterate") > 1){
+                    ConVars.set("sv_updaterate",1);
                 }
             }else{
-                int updateRate = conVars.getInt("sv_updaterate")+1;
-                conVars.set("sv_updaterate",updateRate);
+                int updateRate = ConVars.getInt("sv_updaterate")+1;
+                ConVars.set("sv_updaterate",updateRate);
             }
         }
         return false;

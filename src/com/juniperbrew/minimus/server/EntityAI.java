@@ -3,6 +3,7 @@ package com.juniperbrew.minimus.server;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
+import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.client.MinimusClient;
@@ -68,7 +69,7 @@ public class EntityAI {
     private void lookForTarget(){
         if(target == null) {
             ArrayList<ServerEntity> potentialTargets = new ArrayList<>();
-            Circle c = new Circle(entity.getCenterX(), entity.getCenterY(), server.conVars.getFloat("sv_npc_target_search_radius"));
+            Circle c = new Circle(entity.getCenterX(), entity.getCenterY(), ConVars.getFloat("sv_npc_target_search_radius"));
             Iterator<ServerEntity> iter = server.entities.values().iterator();
             while (iter.hasNext()) {
                 ServerEntity e = iter.next();
@@ -81,7 +82,7 @@ public class EntityAI {
                 target = potentialTargets.get(random);
             }
         }else{
-            if(Tools.getSquaredDistance(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY()) > Math.pow(server.conVars.getFloat("sv_npc_target_search_radius"),2)){
+            if(Tools.getSquaredDistance(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY()) > Math.pow(ConVars.getFloat("sv_npc_target_search_radius"),2)){
                 target = null;
             }else{
                 setDestination(target.getX(),target.getY());
@@ -154,7 +155,7 @@ public class EntityAI {
         if(hasDestination||target != null){
             return;
         }
-        if(server.posChangedEntities.size()>=server.conVars.getInt("sv_max_moving_entities")){
+        if(server.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
             return;
         }
 

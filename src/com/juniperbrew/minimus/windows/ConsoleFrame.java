@@ -30,7 +30,6 @@ import java.util.ArrayList;
 public class ConsoleFrame extends JFrame {
 
     JTextArea textArea = new JTextArea();
-    ConVars conVars;
     ArrayList<String> commandHistory = new ArrayList<>();
     private int historyIndex = 0;
     int maxHistory = 10;
@@ -39,20 +38,19 @@ public class ConsoleFrame extends JFrame {
     MinimusClient minimusClient;
     private static final String COMMIT_ACTION = "commit";
 
-    public ConsoleFrame(ConVars conVars, MinimusServer minimusServer){
-        this(conVars);
+    public ConsoleFrame(MinimusServer minimusServer){
+        this();
         setTitle("Console[SERVER]");
         this.minimusServer = minimusServer;
     }
 
-    public ConsoleFrame(ConVars conVars, MinimusClient minimusClient){
-        this(conVars);
+    public ConsoleFrame(MinimusClient minimusClient){
+        this();
         setTitle("Console[CLIENT]");
         this.minimusClient = minimusClient;
     }
 
-    private ConsoleFrame(ConVars conVars){
-        this.conVars = conVars;
+    private ConsoleFrame(){
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setLayout(new MigLayout("wrap"));
         setPreferredSize(new Dimension(800, 400));
@@ -66,7 +64,7 @@ public class ConsoleFrame extends JFrame {
         add(scrollPane, "grow,push");
         final JTextField textField = new JTextField();
 
-        Autocomplete autoComplete = new Autocomplete(textField, conVars.getVarList());
+        Autocomplete autoComplete = new Autocomplete(textField, ConVars.getVarList());
         textField.getDocument().addDocumentListener(autoComplete);
 
         // Without this, cursor always leaves text field
@@ -174,24 +172,24 @@ public class ConsoleFrame extends JFrame {
         }else{
             addLine("autoexec.txt doesn't exist, creating default autoexec.txt");
             try(PrintWriter writer = new PrintWriter(new FileWriter(file))){
-                for(String line : conVars.getVarListWithValues()){
+                for(String line : ConVars.getVarListWithValues()){
                     writer.println(line);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        addLine(conVars.getVarDump());
+        addLine(ConVars.getVarDump());
     }
 
     private void parseCommand(String command){
         String[] splits = command.split(" ");
-        if(conVars.has(splits[0])){
+        if(ConVars.has(splits[0])){
             if(splits.length>1){
-                conVars.set(splits[0], splits[1]);
+                ConVars.set(splits[0], splits[1]);
                 addLine("set "+ splits[0] + " = " + splits[1]);
             }else{
-                addLine(splits[0]+ " = " + conVars.get(splits[0]));
+                addLine(splits[0]+ " = " + ConVars.get(splits[0]));
             }
             return;
         }
@@ -200,7 +198,7 @@ public class ConsoleFrame extends JFrame {
             return;
         }
         if(splits[0].equals("cvarlist")){
-            addLine(conVars.getVarDump());
+            addLine(ConVars.getVarDump());
             return;
         }
         if(splits[0].equals("help")){

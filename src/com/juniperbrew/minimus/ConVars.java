@@ -10,25 +10,29 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * Created by Juniperbrew on 20.6.2015.
  */
 public class ConVars {
 
-    private TreeMap<String,String> vars = new TreeMap<>();
-    ConVarChangeListener listener;
+    private static ConcurrentSkipListMap<String,String> vars = new ConcurrentSkipListMap<>();
+    private static ArrayList<ConVarChangeListener> listeners = new ArrayList<>();
 
-    public ConVars(ConVarChangeListener listener){
-        this.listener = listener;
+    static{
         readVars();
     }
 
-    public boolean has(String varName){
+    public static void addListener(ConVarChangeListener listener){
+        listeners.add(listener);
+    }
+
+    public static boolean has(String varName){
         return vars.containsKey(varName);
     }
 
-    public String getVarDump(){
+    public static String getVarDump(){
         StringBuilder list = new StringBuilder();
         for(String varName:vars.keySet()){
             list.append(varName + " = " + vars.get(varName)+"\n");
@@ -36,10 +40,10 @@ public class ConVars {
         return list.toString();
     }
 
-    public ArrayList<String> getVarList(){
+    public static ArrayList<String> getVarList(){
         return new ArrayList<>(vars.keySet());
     }
-    public ArrayList<String> getVarListWithValues(){
+    public static ArrayList<String> getVarListWithValues(){
         ArrayList<String> varListWithValues = new ArrayList<>();
         for(String varName : vars.keySet()){
             varListWithValues.add(varName+" "+vars.get(varName));
@@ -47,16 +51,22 @@ public class ConVars {
         return varListWithValues;
     }
 
-    public void set(String varName, String varValue){
+    public static void set(String varName, String varValue){
         vars.put(varName,varValue);
-        listener.conVarChanged(varName,varValue);
+        notifyConVarChanged(varName, varValue);
     }
 
-    public void set(String varName, double varValue){
+    private static void notifyConVarChanged(String varName,String varValue){
+        for(ConVarChangeListener listener:listeners){
+            listener.conVarChanged(varName, varValue);
+        }
+    }
+
+    public static void set(String varName, double varValue){
         set(varName,String.valueOf(varValue));
     }
 
-    public void set(String varName, boolean varValue) {
+    public static void set(String varName, boolean varValue) {
         if(varValue){
             set(varName,"1");
         }else{
@@ -64,23 +74,23 @@ public class ConVars {
         }
     }
 
-    public String get(String varName){
+    public static String get(String varName){
         return vars.get(varName);
     }
 
-    public double getDouble(String varName){
+    public static double getDouble(String varName){
         return Double.valueOf(vars.get(varName));
     }
 
-    public float getFloat(String varName){
+    public static float getFloat(String varName){
         return Float.valueOf(vars.get(varName));
     }
 
-    public int getInt(String varName){
+    public static int getInt(String varName){
         return (int) getDouble(varName);
     }
 
-    public boolean getBool(String varName){
+    public static boolean getBool(String varName){
         if(getInt(varName) == 1){
             return true;
         }else{
@@ -88,24 +98,24 @@ public class ConVars {
         }
     }
 
-    public void toggleVar(String varName){
+    public static void toggleVar(String varName){
         boolean value = getBool(varName);
         set(varName,!value);
     }
 
-    public void addToVar(String varName,double add){
+    public static void addToVar(String varName,double add){
         double value = getDouble(varName);
         value += add;
         set(varName,value);
     }
 
-    public void printVars(){
+    public static void printVars(){
         for(String varName:vars.keySet()){
             System.out.println(varName + " = " + vars.get(varName));
         }
     }
 
-    private void readVars(){
+    private static void readVars(){
         try(BufferedReader reader = new BufferedReader(new FileReader("resources\\conVars.txt"))){
             String line;
             while((line = reader.readLine()) != null){
