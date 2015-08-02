@@ -32,7 +32,7 @@ public class EntityAI {
     int aiType;
     int weapon;
     float attackDelay;
-    ServerEntity target;
+    int targetID = -1;
 
     public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
         this.entity = entity;
@@ -64,7 +64,7 @@ public class EntityAI {
     }
 
     private void lookForTarget(){
-        if(target == null) {
+        if(targetID == -1) {
             ArrayList<ServerEntity> potentialTargets = new ArrayList<>();
             Circle c = new Circle(entity.getCenterX(), entity.getCenterY(), ConVars.getFloat("sv_npc_target_search_radius"));
             Iterator<ServerEntity> iter = world.entities.values().iterator();
@@ -76,11 +76,16 @@ public class EntityAI {
             }
             if(!potentialTargets.isEmpty()){
                 int random = MathUtils.random(0, potentialTargets.size() - 1);
-                target = potentialTargets.get(random);
+                targetID = potentialTargets.get(random).id;
             }
         }else{
+            ServerEntity target = world.entities.get(targetID);
+            if(target==null){
+                targetID = -1;
+                return;
+            }
             if(Tools.getSquaredDistance(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY()) > Math.pow(ConVars.getFloat("sv_npc_target_search_radius"),2)){
-                target = null;
+                targetID = -1;
             }else{
                 setDestination(target.getX(),target.getY());
             }
@@ -149,7 +154,7 @@ public class EntityAI {
 
     private void setRandomDestination(int mapWidth,int mapHeight){
 
-        if(hasDestination||target != null){
+        if(hasDestination||targetID != -1){
             return;
         }
         if(world.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
