@@ -212,17 +212,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
     }
 
-    private void updatePing(){
-        if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(ConVars.getDouble("cl_ping_update_delay"))){
-            for(Connection c:server.getConnections()){
-                connectionStatus.get(c).updatePing();
-                updateFakePing(c);
-            }
-            lastPingUpdate = System.nanoTime();
-        }
-    }
-
     private void doLogic(float delta){
+
+        updateStatusData();
 
         for(Packet p;(p = pendingPackets.poll())!=null;){
             handlePacket(p.connection,p.content);
@@ -239,8 +231,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
     }
 
-    private float getServerTime(){
-        return ((System.nanoTime()-serverStartTime)/1000000000f);
+    private void updatePing(){
+        if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(ConVars.getDouble("cl_ping_update_delay"))){
+            for(Connection c:server.getConnections()){
+                connectionStatus.get(c).updatePing();
+                updateFakePing(c);
+            }
+            lastPingUpdate = System.nanoTime();
+        }
     }
 
     private void processCommands(){
@@ -309,6 +307,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
     }
 
+    private float getServerTime(){
+        return ((System.nanoTime()-serverStartTime)/1000000000f);
+    }
+
     private void processPendingEntityAddsAndRemovals(){
         for (int i = 0; i < pendingRandomNpcAdds; i++) {
             world.addRandomNPC();
@@ -336,7 +338,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                     float delta = tickActualDuration/1000000000f;
 
                     doLogic(delta);
-                    updateStatusData();
 
                     tickWorkDuration=System.nanoTime()-tickStartTime;
 
@@ -790,19 +791,28 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void playerLivesChanged(int id, int lives){
-        Network.SetLives setLives = new Network.SetLives();
-        setLives.lives = lives;
-        sendTCP(playerList.get(id),setLives);
-    }
-
-    @Override
     public void entityRemoved(int id){
         showMessage("Removed entity ID: " + id);
         Network.RemoveEntity removeEntity = new Network.RemoveEntity();
         removeEntity.networkID=id;
         removeEntity.serverTime=getServerTime();
         sendTCPtoAll(removeEntity);
+    }
+
+    @Override
+    public void entityAdded(Entity e){
+        showMessage("Added entity ID: " + e.id);
+        Network.AddEntity addEntity = new Network.AddEntity();
+        addEntity.entity=e;
+        addEntity.serverTime=getServerTime();
+        sendTCPtoAll(addEntity);
+    }
+
+    @Override
+    public void playerLivesChanged(int id, int lives){
+        Network.SetLives setLives = new Network.SetLives();
+        setLives.lives = lives;
+        sendTCP(playerList.get(id),setLives);
     }
 
     @Override
@@ -834,15 +844,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }else{
             sendTCPtoAll(entityAttacking);
         }
-    }
-
-    @Override
-    public void entityAdded(Entity e){
-        showMessage("Added entity ID: " + e.id);
-        Network.AddEntity addEntity = new Network.AddEntity();
-        addEntity.entity=e;
-        addEntity.serverTime=getServerTime();
-        sendTCPtoAll(addEntity);
     }
 
     @Override

@@ -32,8 +32,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,17 +45,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class World implements EntityChangeListener{
 
-    ArrayList<Integer> playerList = new ArrayList<>();
+    Set<Integer> playerList = new HashSet<>();
     HashMap<Integer,ServerEntity> entities = new HashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
 
-    ArrayList<Integer> posChangedEntities = new ArrayList<>();
-    ArrayList<Integer> healthChangedEntities = new ArrayList<>();
-    ArrayList<Integer> headingChangedEntities = new ArrayList<>();
-    ArrayList<Integer> rotationChangedEntities = new ArrayList<>();
-    ArrayList<Integer> teamChangedEntities = new ArrayList<>();
-    ArrayList<Integer> changedEntities = new ArrayList<>();
+    Set<Integer> posChangedEntities = new HashSet<>();
+    Set<Integer> healthChangedEntities = new HashSet<>();
+    Set<Integer> headingChangedEntities = new HashSet<>();
+    Set<Integer> rotationChangedEntities = new HashSet<>();
+    Set<Integer> teamChangedEntities = new HashSet<>();
 
     ArrayList<Integer> pendingEntityRemovals = new ArrayList<>();
 
@@ -573,6 +574,13 @@ public class World implements EntityChangeListener{
 
     public HashMap<Integer,ArrayList<Component>> getChangedEntityComponents(){
         HashMap<Integer,ArrayList<Component>> changedComponents = new HashMap<>();
+        Set<Integer> changedEntities = new HashSet<>();
+        changedEntities.addAll(posChangedEntities);
+        changedEntities.addAll(headingChangedEntities);
+        changedEntities.addAll(healthChangedEntities);
+        changedEntities.addAll(rotationChangedEntities);
+        changedEntities.addAll(teamChangedEntities);
+
         for(int id: changedEntities){
             ArrayList<Component> components = new ArrayList<>();
             changedComponents.put(id,components);
@@ -597,7 +605,6 @@ public class World implements EntityChangeListener{
                 components.add(new Team(e.getTeam()));
             }
         }
-        changedEntities.clear();
         posChangedEntities.clear();
         headingChangedEntities.clear();
         healthChangedEntities.clear();
@@ -692,20 +699,15 @@ public class World implements EntityChangeListener{
         entityAIs.remove(networkID);
         entities.remove(networkID);
 
-        if(changedEntities.contains(networkID)){
-            changedEntities.remove((Integer)networkID);
-            healthChangedEntities.remove((Integer)networkID);
-            posChangedEntities.remove((Integer)networkID);
-            headingChangedEntities.remove((Integer)networkID);
-            teamChangedEntities.remove((Integer)networkID);
-            rotationChangedEntities.remove((Integer)networkID);
-        }
+        healthChangedEntities.remove(networkID);
+        posChangedEntities.remove(networkID);
+        headingChangedEntities.remove(networkID);
+        teamChangedEntities.remove(networkID);
+        rotationChangedEntities.remove(networkID);
 
-        if(playerList.contains(networkID)){
-            playerList.remove(Integer.valueOf(networkID));
+        if(playerList.remove(networkID)){
             listener.playerRemoved(networkID);
         }
-
         listener.entityRemoved(networkID);
     }
 
@@ -726,52 +728,27 @@ public class World implements EntityChangeListener{
 
     @Override
     public void positionChanged(int id) {
-        if(!posChangedEntities.contains(id)){
-            posChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
+        posChangedEntities.add(id);
     }
 
     @Override
     public void healthChanged(int id) {
-        if(!healthChangedEntities.contains(id)){
-            healthChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
+        healthChangedEntities.add(id);
     }
 
     @Override
     public void headingChanged(int id) {
-        if(!headingChangedEntities.contains(id)){
-            headingChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
+        headingChangedEntities.add(id);
     }
 
     @Override
     public void rotationChanged(int id) {
-        if(!rotationChangedEntities.contains(id)){
-            rotationChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
+        rotationChangedEntities.add(id);
     }
 
     @Override
     public void teamChanged(int id) {
-        if(!teamChangedEntities.contains(id)){
-            teamChangedEntities.add(id);
-        }
-        if(!changedEntities.contains(id)){
-            changedEntities.add(id);
-        }
+        teamChangedEntities.add(id);
     }
 
     @Override
