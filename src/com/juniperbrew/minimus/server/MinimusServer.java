@@ -479,8 +479,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     public void showMessage(String message){
-        System.out.println(message);
-        consoleFrame.addLine(message);
+        String line = "["+Tools.secondsToMilliTimestamp(getServerTime())+ "] " + message;
+        System.out.println(line);
+        consoleFrame.addLine(line);
     }
 
     private int measureKryoEntitySize(){

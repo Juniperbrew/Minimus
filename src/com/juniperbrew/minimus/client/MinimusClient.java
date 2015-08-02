@@ -178,7 +178,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         windowWidth = Gdx.graphics.getWidth();
         windowHeight = Gdx.graphics.getHeight();
-        System.out.println("Window size: "+windowWidth+"x"+windowHeight);
+        showMessage("Window size: " + windowWidth + "x" + windowHeight);
         camera = new OrthographicCamera(windowWidth,windowHeight);
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
         hudCamera.position.set(windowWidth/2,windowHeight/2,0);
@@ -186,8 +186,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         Gdx.input.setInputProcessor(this);
         spriteSheet = new Texture(Gdx.files.internal("resources\\spritesheetAlpha.png"));
-        System.out.println("Spritesheet width:" +spriteSheet.getWidth());
-        System.out.println("Spritesheet height:" +spriteSheet.getHeight());
+        showMessage("Spritesheet width:" + spriteSheet.getWidth());
+        showMessage("Spritesheet height:" + spriteSheet.getHeight());
         down = new TextureRegion(spriteSheet,171,129,16,22);
 
         batch = new SpriteBatch();
@@ -241,14 +241,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             score.addPlayer(addPlayer.networkID);
         }else if(object instanceof Network.AddEntity){
             Network.AddEntity addEntity = (Network.AddEntity) object;
-            System.out.println("Adding entity " + addEntity.entity.id);
+            showMessage("Adding entity " + addEntity.entity.id);
             //Entities added to latest state despite their add time
             authoritativeState.entities.put(addEntity.entity.id, addEntity.entity);
         }else if(object instanceof Network.RemoveEntity){
             Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
             removeEntity(removeEntity.networkID);
         }else if(object instanceof Network.AssignEntity){
-            System.out.println("Assigning entity");
+            showMessage("Assigning entity");
             Network.AssignEntity assign = (Network.AssignEntity) object;
             setPlayerID(assign.networkID);
             ConVars.set("sv_player_velocity", assign.velocity);
@@ -261,7 +261,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             currentWave = assign.wave;
             weaponList = assign.weaponList;
             for(int id : playerList){
-                System.out.println("Adding id "+id+" to score");
+                showMessage("Adding id " + id + " to score");
                 score.addPlayer(id);
             }
         }else if(object instanceof Network.WaveChanged){
@@ -1064,12 +1064,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void loadSounds(){
 
         File soundFolder = new File("resources\\sounds");
-        System.out.println("Loading sounds from: "+ soundFolder);
+        showMessage("Loading sounds from: " + soundFolder);
         for (final File file : soundFolder.listFiles()) {
             if (!file.isDirectory()) {
                 Sound sound = Gdx.audio.newSound(new FileHandle(file));
                 sounds.put(file.getName(), sound);
-                System.out.println("Loaded: "+file.getName());
+                showMessage("Loaded: " + file.getName());
             }
         }
     }
@@ -1147,8 +1147,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void showMessage(String message){
-        System.out.println(message);
-        consoleFrame.addLine(message);
+        String line = "["+Tools.secondsToMilliTimestamp(getClientTime())+ "] " + message;
+        System.out.println(line);
+        consoleFrame.addLine(line);
     }
 
     private void logReceivedPackets(Connection connection, Object packet){
