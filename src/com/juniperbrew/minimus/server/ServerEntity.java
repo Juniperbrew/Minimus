@@ -12,7 +12,7 @@ import java.awt.geom.Rectangle2D;
 public class ServerEntity extends Entity {
 
     EntityChangeListener listener;
-    long lastDamageTaken;
+    long lastContactDamageTaken;
     boolean invulnerable;
 
     public ServerEntity(int id, float x, float y, int team, EntityChangeListener listener) {

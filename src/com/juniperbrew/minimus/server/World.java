@@ -1,11 +1,8 @@
 package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.assets.loaders.FileHandleResolver;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.ConVars;
@@ -172,7 +169,7 @@ public class World implements EntityChangeListener{
                 if(e.getTeam()!=player.getTeam()){
                     if(player.getJavaBounds().intersects(e.getJavaBounds())){
                         if(!isInvulnerable(player)) {
-                            player.lastDamageTaken = System.nanoTime();
+                            player.lastContactDamageTaken = System.nanoTime();
                             player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
                         }
                     }
@@ -198,7 +195,6 @@ public class World implements EntityChangeListener{
 
     public void processInput(int id, Network.UserInput input){
         ServerEntity e = entities.get(id);
-        System.out.println("Processing input ID: " + input.inputID);
         if(e.invulnerable){
             e.invulnerable = false;
         }
@@ -478,10 +474,9 @@ public class World implements EntityChangeListener{
     }
 
     private boolean isInvulnerable(ServerEntity e){
-        if(System.nanoTime()-e.lastDamageTaken> Tools.secondsToNano(ConVars.getDouble("sv_invulnerability_timer"))){
+        if(System.nanoTime()-e.lastContactDamageTaken > Tools.secondsToNano(ConVars.getDouble("sv_invulnerability_timer"))){
             return false;
         }else{
-            System.out.println(e.id + " is still invulnerable for " + (System.nanoTime()-e.lastDamageTaken));
             return true;
         }
     }

@@ -329,8 +329,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             lastMouseY = mouseY;
         }
         if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY){
-            System.out.println(lastMouseX+"!="+mouseX);
-            System.out.println(lastMouseY+"!="+mouseY);
             int inputRequestID = getNextInputRequestID();
             Network.UserInput input = new Network.UserInput();
             input.msec = delta;
