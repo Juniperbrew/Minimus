@@ -103,7 +103,7 @@ public class ErrorLogSender {
         File errorFolder = new File(errorFolderPath);
         if(errorFolder.exists()){
             for (final File fileEntry : errorFolder.listFiles()) {
-                if (!fileEntry.isDirectory()) {
+                if (!fileEntry.isDirectory()&&!fileEntry.isHidden()) {
                     files.add(fileEntry);
                 }
             }

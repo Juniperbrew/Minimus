@@ -34,7 +34,7 @@ public class ExceptionLogger implements Thread.UncaughtExceptionHandler {
         SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy-HHmmss");
         String date = format.format(Calendar.getInstance().getTime());
 
-        final File file = new File(Tools.getUserDataDirectory()+"logs\\errors\\"+folderName+"\\"+date+".txt");
+        final File file = new File(Tools.getUserDataDirectory()+"logs"+File.separator+"errors"+File.separator+folderName+File.separator+date+".txt");
         file.getParentFile().mkdirs();
         try(PrintWriter writer = new PrintWriter(new FileWriter(file))){
             e.printStackTrace(writer);

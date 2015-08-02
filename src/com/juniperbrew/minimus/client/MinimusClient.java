@@ -185,7 +185,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         hudCamera.update();
 
         Gdx.input.setInputProcessor(this);
-        spriteSheet = new Texture(Gdx.files.internal("resources\\spritesheetAlpha.png"));
+        spriteSheet = new Texture(Gdx.files.internal("resources"+File.separator+"spritesheetAlpha.png"));
         showMessage("Spritesheet width:" + spriteSheet.getWidth());
         showMessage("Spritesheet height:" + spriteSheet.getHeight());
         down = new TextureRegion(spriteSheet,171,129,16,22);
@@ -197,7 +197,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         loadSounds();
 
-        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources\\taustamuusik.mp3"));
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.setVolume(musicVolume);
         backgroundMusic.play();
@@ -1070,7 +1070,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void loadSounds(){
 
-        File soundFolder = new File("resources\\sounds");
+        File soundFolder = new File("resources"+File.separator+"sounds");
         showMessage("Loading sounds from: " + soundFolder);
         for (final File file : soundFolder.listFiles()) {
             if (!file.isDirectory()) {
@@ -1181,7 +1181,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void loadMap(String mapName, float mapScale){
-        map = new TmxMapLoader().load("resources\\"+mapName);
+        map = new TmxMapLoader().load("resources"+File.separator+mapName);
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
         mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
         mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);

@@ -95,7 +95,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("world"));
         consoleFrame = new ConsoleFrame(this);
         shapeRenderer = new ShapeRenderer();
-        world = new World(this, new TmxMapLoader().load("resources\\"+ ConVars.get("sv_map_name")));
+        world = new World(this, new TmxMapLoader().load("resources"+ File.separator+ ConVars.get("sv_map_name")));
 
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();

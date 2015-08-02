@@ -279,7 +279,7 @@ public class StatusData {
         }else{
             logname = "clientLog";
         }
-        File file = new File(Tools.getUserDataDirectory()+"logs\\"+logname+".csv");
+        File file = new File(Tools.getUserDataDirectory()+"logs"+File.separator+logname+".csv");
         file.getParentFile().mkdirs();
 
         StringBuilder bTitle = new StringBuilder();

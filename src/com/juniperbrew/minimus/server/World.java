@@ -331,7 +331,7 @@ public class World implements EntityChangeListener{
     private HashMap<Integer,Weapon> readWeaponList(){
         File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponlist.txt");
         if(!file.exists()){
-            file = new File("resources\\"+"defaultweaponlist.txt");
+            file = new File("resources"+File.separator+"defaultweaponlist.txt");
         }
         System.out.println("Loading weapons from file:"+file);
         HashMap<Integer,Weapon> weapons = new HashMap<>();
@@ -522,7 +522,7 @@ public class World implements EntityChangeListener{
     private HashMap<Integer,WaveDefinition> readWaveList(){
         File file = new File(Tools.getUserDataDirectory()+ File.separator+"wavelist.txt");
         if(!file.exists()){
-            file = new File("resources\\"+"defaultwavelist.txt");
+            file = new File("resources"+ File.separator+"defaultwavelist.txt");
         }
         System.out.println("Loading custom wave from file:"+file);
         HashMap<Integer,WaveDefinition> waves = new HashMap<>();

@@ -1,9 +1,6 @@
 package com.juniperbrew.minimus;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,7 +60,7 @@ public class ConVars {
     }
 
     public static void set(String varName, double varValue){
-        set(varName,String.valueOf(varValue));
+        set(varName, String.valueOf(varValue));
     }
 
     public static void set(String varName, boolean varValue) {
@@ -116,7 +113,7 @@ public class ConVars {
     }
 
     private static void readVars(){
-        try(BufferedReader reader = new BufferedReader(new FileReader("resources\\conVars.txt"))){
+        try(BufferedReader reader = new BufferedReader(new FileReader("resources"+ File.separator+"conVars.txt"))){
             String line;
             while((line = reader.readLine()) != null){
                 String[] splits = line.split(" ");
