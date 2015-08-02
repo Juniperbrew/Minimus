@@ -198,6 +198,10 @@ public class World implements EntityChangeListener{
 
     public void processInput(int id, Network.UserInput input){
         ServerEntity e = entities.get(id);
+        System.out.println("Processing input ID: " + input.inputID);
+        if(e.invulnerable){
+            e.invulnerable = false;
+        }
         SharedMethods.applyInput(e, input, mapWidth, mapHeight);
         if(input.buttons.contains(Enums.Buttons.NUM1)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
@@ -413,6 +417,7 @@ public class World implements EntityChangeListener{
         float y = MathUtils.random(mapHeight -height);
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,1,this);
+        newPlayer.invulnerable = true;
         newPlayer.width = width;
         newPlayer.height = height;
         addEntity(newPlayer);

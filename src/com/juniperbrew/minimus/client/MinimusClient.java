@@ -152,8 +152,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     HashMap<Integer,Weapon> weaponList;
 
-    float lastMouseX;
-    float lastMouseY;
+    float lastMouseX = -1;
+    float lastMouseY = -1;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -324,7 +324,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void pollInput(short delta){
         float mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
         float mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
+        if(lastMouseX==-1&&lastMouseY==-1){
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+        }
         if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY){
+            System.out.println(lastMouseX+"!="+mouseX);
+            System.out.println(lastMouseY+"!="+mouseY);
             int inputRequestID = getNextInputRequestID();
             Network.UserInput input = new Network.UserInput();
             input.msec = delta;

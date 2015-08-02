@@ -70,6 +70,9 @@ public class EntityAI {
             Iterator<ServerEntity> iter = world.entities.values().iterator();
             while (iter.hasNext()) {
                 ServerEntity e = iter.next();
+                if(e.invulnerable){
+                    continue;
+                }
                 if (Intersector.overlaps(c, e.getGdxBounds())&&e.getTeam()!=entity.getTeam()) {
                     potentialTargets.add(e);
                 }

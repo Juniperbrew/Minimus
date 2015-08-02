@@ -1,7 +1,7 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO invulnerability after joining before moving, maybe have chasing enemies ignore the player too
 TODO server crashes when player killed by multiple things at once (probably only relevant to contact damage)
 
+DONE invulnerability after joining before moving, maybe have chasing enemies ignore the player too
 DONE if a player dies or disconnects while being chased the enemy will get stuck where the player died
 DONE fix first shot not sent to server
 DONE fix so enemies dont shoot directly after they spawn

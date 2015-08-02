@@ -13,6 +13,7 @@ public class ServerEntity extends Entity {
 
     EntityChangeListener listener;
     long lastDamageTaken;
+    boolean invulnerable;
 
     public ServerEntity(int id, float x, float y, int team, EntityChangeListener listener) {
         super(id,x,y, team);
@@ -50,10 +51,12 @@ public class ServerEntity extends Entity {
     }
 
     public void reduceHealth(int healthReduction, int sourceID){
-        super.setHealth(getHealth() - healthReduction);
-        listener.healthChanged(id);
-        if(getHealth()<=0){
-            listener.entityDied(id, sourceID);
+        if(!invulnerable){
+            super.setHealth(getHealth() - healthReduction);
+            listener.healthChanged(id);
+            if(getHealth()<=0){
+                listener.entityDied(id, sourceID);
+            }
         }
     }
 
