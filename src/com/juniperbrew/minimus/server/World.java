@@ -195,7 +195,7 @@ public class World implements EntityChangeListener{
 
     public void processInput(int id, Network.UserInput input){
         ServerEntity e = entities.get(id);
-        if(e.invulnerable){
+        if(e.invulnerable&&input.buttons.size()>0){
             e.invulnerable = false;
         }
         SharedMethods.applyInput(e, input, mapWidth, mapHeight);
