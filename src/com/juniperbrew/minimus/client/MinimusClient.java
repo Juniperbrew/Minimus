@@ -152,6 +152,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     HashMap<Integer,Weapon> weaponList;
 
+    float lastMouseX;
+    float lastMouseY;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         ConVars.addListener(this);
@@ -319,27 +322,39 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void pollInput(short delta){
-        //TODO only save input if mouse has moved or button pressed
-        int inputRequestID = getNextInputRequestID();
-        Network.UserInput input = new Network.UserInput();
-        input.msec = delta;
-        input.buttons = buttons.clone();
-        if(mouse1Pressed) input.buttons.add(Enums.Buttons.MOUSE1);
-        if(mouse2Pressed) input.buttons.add(Enums.Buttons.MOUSE2);
+        float mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
+        float mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
+        if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY){
+            int inputRequestID = getNextInputRequestID();
+            Network.UserInput input = new Network.UserInput();
+            input.msec = delta;
+            input.buttons = buttons.clone();
+            if(mouse1Pressed) input.buttons.add(Enums.Buttons.MOUSE1);
+            if(mouse2Pressed) input.buttons.add(Enums.Buttons.MOUSE2);
 
-        if(autoWalk) input.buttons.add(Enums.Buttons.W);
+            if(autoWalk) input.buttons.add(Enums.Buttons.W);
 
-        input.inputID = inputRequestID;
-        input.mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
-        input.mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
-        inputQueue.add(input);
-        pendingInputPacket.add(input);
+            input.inputID = inputRequestID;
+            input.mouseX = mouseX;
+            input.mouseY = mouseY;
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+            inputQueue.add(input);
+            pendingInputPacket.add(input);
+
+            processClientInput(input);
+        }
+    }
+
+    private void processClientInput(Network.UserInput input){
 
         //We need to move player here so we can spawn the potential projectiles at correct location
         Entity player = stateSnapshot.get(playerID);
         if(player != null){
             sharedMethods.applyInput(player,input, mapWidth, mapHeight);
         }
+
+        EnumSet<Enums.Buttons> buttons = input.buttons;
 
         if(buttons.contains(Enums.Buttons.NUM1)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
@@ -411,18 +426,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 slot1Weapon = 9;
             }
         }
-        if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-            playerAttack(stateSnapshot.get(playerID), slot1Weapon, input);
+        if(buttons.contains(Enums.Buttons.MOUSE1)){
+            playerAttack(stateSnapshot.get(playerID), slot1Weapon);
             mouse1Pressed = false;
         }
-        if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-            playerAttack(stateSnapshot.get(playerID), slot2Weapon, input);
+        if(buttons.contains(Enums.Buttons.MOUSE2)){
+            playerAttack(stateSnapshot.get(playerID), slot2Weapon);
             mouse2Pressed = false;
         }
-        attackCooldown -= (delta/1000d);
+        attackCooldown -= (input.msec/1000d);
     }
 
-    private void playerAttack(Entity player, int weaponSlot, Network.UserInput input){
+    private void playerAttack(Entity player, int weaponSlot){
         if(attackCooldown>0){
             return;
         }

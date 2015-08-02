@@ -46,6 +46,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class World implements EntityChangeListener{
 
     Set<Integer> playerList = new HashSet<>();
+    Map<Integer,Double> attackCooldown = new HashMap<>();
+    Map<Integer,Integer> playerLives = new HashMap<>();
+
     HashMap<Integer,ServerEntity> entities = new HashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
@@ -60,8 +63,6 @@ public class World implements EntityChangeListener{
 
     private int networkIDCounter = 1;
 
-    HashMap<Integer,Double> attackCooldown = new HashMap<>();
-    Map<Integer,Integer> playerLives = new HashMap<>();
     private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
 
@@ -80,7 +81,6 @@ public class World implements EntityChangeListener{
     //This should not be more than 400 which is the max distance entities can look for a destination
     final int SPAWN_AREA_WIDTH = 200;
     public boolean spawnWaves;
-    //MinimusServer server;
     WorldChangeListener listener;
 
     Timer timer = new Timer();
