@@ -99,7 +99,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int slot2Weapon = 1;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ConcurrentLinkedQueue<Line2D.Float> attackVisuals = new ConcurrentLinkedQueue<>();
-    private ArrayList<Projectile> projectiles = new ArrayList<>();
+    private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
     double attackCooldown;
 
     long lastPingRequest;

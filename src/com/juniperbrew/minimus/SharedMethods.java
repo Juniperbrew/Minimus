@@ -146,11 +146,10 @@ public class SharedMethods {
         shapeRenderer.end();
     }
 
-    public static void renderProjectiles(ShapeRenderer shapeRenderer, ArrayList<Projectile> projectiles){
-        Projectile[] projectilesCopy = projectiles.toArray(new Projectile[projectiles.size()]);
+    public static void renderProjectiles(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<Projectile> projectiles){
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,1,0,1);
-        for(Projectile projectile: projectilesCopy){
+        for(Projectile projectile: projectiles){
             if(projectile!=null){
                 shapeRenderer.circle(projectile.getX(),projectile.getY(),5);
             }

@@ -47,7 +47,7 @@ public class World implements EntityChangeListener{
     Map<Integer,Double> attackCooldown = new HashMap<>();
     Map<Integer,Integer> playerLives = new HashMap<>();
 
-    HashMap<Integer,ServerEntity> entities = new HashMap<>();
+    ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
 
@@ -62,7 +62,7 @@ public class World implements EntityChangeListener{
     private int networkIDCounter = 1;
 
     private ConcurrentLinkedQueue<Line2D.Float> attackVisuals = new ConcurrentLinkedQueue<>();
-    private ArrayList<Projectile> projectiles = new ArrayList<>();
+    private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
 
     int mapWidth;
     int mapHeight;
