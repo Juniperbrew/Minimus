@@ -64,6 +64,7 @@ public class Network {
         kryo.register(RemovePowerup.class);
         kryo.register(Weapon.class);
         kryo.register(TeamChangeRequest.class);
+        kryo.register(GameClockCompare.class);
     }
 
     public static class Message{
@@ -72,6 +73,10 @@ public class Network {
 
     public static class WaveChanged{
         public int wave;
+    }
+
+    public static class GameClockCompare{
+        public float serverTime;
     }
 
     public static class SpawnRequest{}

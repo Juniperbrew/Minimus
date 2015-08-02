@@ -209,6 +209,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             if(playerList.containsValue(connection)){
                 world.removePlayer(playerList.getKey(connection));
             }
+        }else if(object instanceof Network.GameClockCompare){
+            Network.GameClockCompare gameClockCompare = (Network.GameClockCompare) object;
+            showMessage("Received gameClockCompare("+playerList.getKey(connection)+"): "+gameClockCompare.serverTime + " Delta: "+(gameClockCompare.serverTime-getServerTime()));
         }
     }
 
@@ -620,6 +623,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
         if (character == 'w') {
             pendingRandomNpcAdds++;
+        }
+        if (character == 'c') {
+            Network.GameClockCompare gameClockCompare = new Network.GameClockCompare();
+            gameClockCompare.serverTime = getServerTime();
+            showMessage("Sending gameClockCompare: "+gameClockCompare.serverTime);
+            sendTCPtoAll(gameClockCompare);
         }
         if (character == '-') {
             camera.zoom += 0.05;

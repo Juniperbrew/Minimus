@@ -276,7 +276,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.RemovePowerup){
             Network.RemovePowerup removePowerup = (Network.RemovePowerup) object;
             powerups.remove(removePowerup.networkID);
-        }else if(object instanceof String){
+        }else if(object instanceof Network.GameClockCompare){
+            Network.GameClockCompare gameClockCompare = (Network.GameClockCompare) object;
+            showMessage("Received gameClockCompare: "+gameClockCompare.serverTime + " Delta: "+(gameClockCompare.serverTime-getClientTime()));
+            sendTCP(gameClockCompare);
+        }
+
+
+        if(object instanceof String){
             String command = (String) object;
             consoleFrame.giveCommand(command);
         }
@@ -1093,7 +1100,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private float getClientTime(){
         //TODO adding half the latency to last server update this might cause some errors
         //TODO using the fake ping here because i wont be able to test this properly without adding artificial lag
-        return lastServerTime + + ((statusData.getFakePing()/1000f)/2f) + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
+        return lastServerTime + ((statusData.getFakePing()/1000f)/2f) + ((System.nanoTime() - lastAuthoritativeStateReceived) / 1000000000f);
     }
 
     private int getNextInputRequestID(){
