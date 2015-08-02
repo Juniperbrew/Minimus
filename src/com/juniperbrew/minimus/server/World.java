@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Juniperbrew on 1.8.2015.
@@ -60,7 +61,7 @@ public class World implements EntityChangeListener{
 
     private int networkIDCounter = 1;
 
-    private ArrayList<Line2D.Float> attackVisuals = new ArrayList<>();
+    private ConcurrentLinkedQueue<Line2D.Float> attackVisuals = new ConcurrentLinkedQueue<>();
     private ArrayList<Projectile> projectiles = new ArrayList<>();
 
     int mapWidth;

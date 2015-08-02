@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Juniperbrew on 24.6.2015.
@@ -19,7 +20,7 @@ public class SharedMethods {
 
     static Timer timer = new Timer();
 
-    public static ArrayList<Line2D.Float> createHitscanAttack(Weapon weapon, float x, float y, int deg, final ArrayList<Line2D.Float> attackVisuals){
+    public static ArrayList<Line2D.Float> createHitscanAttack(Weapon weapon, float x, float y, int deg, final ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
         ArrayList<Line2D.Float> hitscans = new ArrayList<>();
         int range = weapon.range;
         int startDistanceX = 25;
@@ -135,17 +136,14 @@ public class SharedMethods {
         e.setRotation(degrees);
     }
 
-    public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ArrayList<Line2D.Float> attackVisuals){
-        Line2D.Float[] attackVisualsCopy = attackVisuals.toArray(new Line2D.Float[attackVisuals.size()]);
-        if(attackVisualsCopy.length>0){
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(1,0,0,1); //red
-            for(Line2D.Float line:attackVisualsCopy){
-                //TODO getting nullpointers here when spamming attack for some time
-                shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
-            }
-            shapeRenderer.end();
+    public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(1,0,0,1); //red
+        for(Line2D.Float line:attackVisuals){
+            //TODO null exception should be fixed here
+            shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
         }
+        shapeRenderer.end();
     }
 
     public static void renderProjectiles(ShapeRenderer shapeRenderer, ArrayList<Projectile> projectiles){
