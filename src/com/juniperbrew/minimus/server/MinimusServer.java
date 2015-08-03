@@ -92,7 +92,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     @Override
     public void create() {
         ConVars.addListener(this);
-        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("world"));
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
         shapeRenderer = new ShapeRenderer();
         world = new World(this, new TmxMapLoader().load("resources"+ File.separator+ ConVars.get("sv_map_name")));
@@ -782,6 +782,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void playerAdded(Connection connection, Network.AssignEntity assign) {
+        showMessage("Added player ID: " + assign.networkID);
         playerList.put(assign.networkID,connection);
 
         serverData.addPlayer();
@@ -795,6 +796,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void playerRemoved(int id){
+        showMessage("Removed player ID: " + id);
         playerList.remove(id);
         serverData.removePlayer();
         score.removePlayer(id);
@@ -820,6 +822,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void playerLivesChanged(int id, int lives){
+        showMessage("Player("+id+") lives is now: "+lives);
         Network.SetLives setLives = new Network.SetLives();
         setLives.lives = lives;
         sendTCP(playerList.get(id),setLives);
@@ -827,6 +830,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void powerupAdded(int id, Powerup powerup) {
+        showMessage("Powerup("+powerup.type+") added: "+id);
         Network.AddPowerup addPowerup = new Network.AddPowerup();
         addPowerup.networkID = id;
         addPowerup.powerup = powerup;
@@ -835,6 +839,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void powerupRemoved(int id) {
+        showMessage("Powerup removed: "+id);
         Network.RemovePowerup removePowerup = new Network.RemovePowerup();
         removePowerup.networkID = id;
         sendTCPtoAll(removePowerup);
@@ -842,6 +847,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void waveChanged(int wave){
+        showMessage("Current wave: "+wave);
         Network.WaveChanged waveChanged = new Network.WaveChanged();
         waveChanged.wave = wave;
         sendTCPtoAll(waveChanged);

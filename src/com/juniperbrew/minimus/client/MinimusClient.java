@@ -1203,6 +1203,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void addAttack(Network.EntityAttacking attack){
+        if(weaponList==null){
+            return;
+        }
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
         if(weapon!=null){
