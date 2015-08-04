@@ -1,11 +1,15 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.math.MathUtils;
 import com.juniperbrew.minimus.server.ServerEntity;
 
 import javax.sound.sampled.Line;
+import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Line2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.ConvolveOp;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -19,6 +23,47 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class SharedMethods {
 
     static Timer timer = new Timer();
+    static AffineTransform transform = new AffineTransform();
+
+    public static ArrayList<Line2D.Float> createAttack(Weapon weapon, float x, float y, int deg, final ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
+        ProjectileDefinition projectileDefinition = weapon.projectile;
+        if(projectileDefinition.hitscan){
+            ArrayList<Shape> hitscans = new ArrayList<>();
+            int length = projectileDefinition.length;
+            int width = projectileDefinition.width;
+            int startDistanceX = 25;
+            int startDistanceY = 25;
+
+            deg -= weapon.spread/2f;
+            for (int i = 0; i < weapon.projectileCount; i++) {
+                float sina = MathUtils.sinDeg(deg);
+                float cosa = MathUtils.cosDeg(deg);
+
+                float startX = x + cosa*startDistanceX;
+                float startY = y + sina*startDistanceY;
+                float targetX = startX + cosa*length;
+                float targetY = startY + sina*length;
+
+                Rectangle2D.Float rectangle = new Rectangle2D.Float(x+startDistanceX,y-width/2,length,width);
+                transform.rotate(Math.toRadians(deg),x, y);
+                Shape hitScan = transform.createTransformedShape(rectangle);
+
+                hitscans.add(hitScan);
+                attackVisuals.add(hitScan);
+                TimerTask task = new TimerTask() {
+                    @Override
+                    public void run() {
+                        attackVisuals.remove(hitScan);
+                    }
+                };
+                timer.schedule(task,Tools.secondsToMilli(weapon.visualDuration));
+
+                if(weapon.projectileCount>1){
+                    deg += weapon.spread/(weapon.projectileCount-1);
+                }
+            }
+        }
+    }
 
     public static ArrayList<Line2D.Float> createHitscanAttack(Weapon weapon, float x, float y, int deg, final ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
         ArrayList<Line2D.Float> hitscans = new ArrayList<>();

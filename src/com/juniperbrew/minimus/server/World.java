@@ -11,6 +11,7 @@ import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.Powerup;
 import com.juniperbrew.minimus.Projectile;
+import com.juniperbrew.minimus.ProjectileDefinition;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.Weapon;
@@ -21,6 +22,7 @@ import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
 
+import java.awt.*;
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
 import java.io.File;
@@ -309,6 +311,7 @@ public class World implements EntityChangeListener{
         listener.attackCreated(entityAttacking);
 
         Weapon weapon = weaponList.get(weaponSlot);
+        ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon==null){
             return;
         }
@@ -328,7 +331,83 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private HashMap<Integer,Weapon> readWeaponList(){
+    private HashMap<String,ProjectileDefinition> readProjectileList(){
+        File file = new File(Tools.getUserDataDirectory()+ File.separator+"projectilelist.txt");
+        if(!file.exists()){
+            file = new File("resources"+File.separator+"defaultprojectilelist.txt");
+        }
+        System.out.println("Loading projectiles from file:"+file);
+        HashMap<String,ProjectileDefinition> projectiles = new HashMap<>();
+        ProjectileDefinition projectileDefinition = null;
+        String projectileName = null;
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
+                    continue;
+                }
+                if (line.charAt(0) == '{') {
+                    projectileDefinition = new ProjectileDefinition();
+                    continue;
+                }
+                if (line.charAt(0) == '}') {
+                    projectiles.put(projectileName, projectileDefinition);
+                    projectileName=null;
+                    continue;
+                }
+                String[] splits = line.split("=");
+                if(splits[0].equals("name")){
+                    projectileName = splits[1];
+                }
+                if(splits[0].equals("type")){
+                    if(splits[1].equals("hitscan")){
+                        projectileDefinition.hitscan = true;
+                    }
+                }
+                if(splits[0].equals("damage")){
+                    projectileDefinition.damage = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("range")){
+                    projectileDefinition.range = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("velocity")){
+                    projectileDefinition.velocity = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("duration")){
+                    projectileDefinition.duration = Float.parseFloat(splits[1]);
+                }
+                if(splits[0].equals("shape")){
+                    projectileDefinition.shape = splits[1];
+                }
+                if(splits[0].equals("color")){
+                    String strip = splits[1].substring(1,splits[1].length()-1);
+                    String[] rgb = strip.split(",");
+                    projectileDefinition.color = new Color(Integer.parseInt(rgb[0]),Integer.parseInt(rgb[1]),Integer.parseInt(rgb[2]));
+                }
+                if(splits[0].equals("width")){
+                    projectileDefinition.width = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("length")){
+                    projectileDefinition.length = Integer.parseInt(splits[1]);
+                }
+                if(splits[0].equals("image")){
+                    projectileDefinition.image = splits[1];
+                }
+                if(splits[0].equals("animation")){
+                    projectileDefinition.animation = splits[1];
+                }
+                if(splits[0].equals("frameDuration")){
+                    projectileDefinition.frameDuration = Float.parseFloat(splits[1]);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private HashMap<Integer,Weapon> readWeaponList(HashMap<String,ProjectileDefinition> projectileList){
         File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponlist.txt");
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponlist.txt");
@@ -353,19 +432,8 @@ public class World implements EntityChangeListener{
                     continue;
                 }
                 String[] splits = line.split("=");
-                if(splits[0].equals("type")){
-                    if(splits[1].equals("hitscan")){
-                        weapon.hitScan = true;
-                    }
-                }
                 if(splits[0].equals("name")){
                     weapon.name = splits[1];
-                }
-                if(splits[0].equals("range")){
-                    weapon.range = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("velocity")){
-                    weapon.velocity = Integer.parseInt(splits[1]);
                 }
                 if(splits[0].equals("spread")){
                     weapon.spread = Integer.parseInt(splits[1]);
@@ -373,14 +441,11 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("projectileCount")){
                     weapon.projectileCount = Integer.parseInt(splits[1]);
                 }
-                if(splits[0].equals("damage")){
-                    weapon.damage = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("visualDuration")){
-                    weapon.visualDuration = Float.parseFloat(splits[1]);
-                }
                 if(splits[0].equals("sound")){
                     weapon.sound = splits[1];
+                }
+                if(splits[0].equals("projectile")){
+                    weapon.projectile = projectileList.get(splits[1]);
                 }
             }
         } catch (FileNotFoundException e) {
