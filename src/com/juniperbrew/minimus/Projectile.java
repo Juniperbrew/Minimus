@@ -2,10 +2,9 @@ package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 
-import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Rectangle2D;
 
 /**
  * Created by Juniperbrew on 28.6.2015.
@@ -22,7 +21,7 @@ public class Projectile extends AttackVisual{
 
     float totalDistanceTraveled;
 
-    public Projectile(Rectangle2D.Float bounds, int rotation, float originX, float originY, Color color, float range, float velocity, int ownerID, int team, int damage) {
+    public Projectile(Rectangle bounds, int rotation, float originX, float originY, Color color, float range, float velocity, int ownerID, int team, int damage) {
         super(bounds, rotation, originX, originY, color);
         this.range = range;
         this.velocity = velocity;
@@ -41,6 +40,12 @@ public class Projectile extends AttackVisual{
             moveDistance(distance);
             totalDistanceTraveled += distance;
         }
+    }
+
+    public void moveDistance(float distance){
+        float x = MathUtils.cosDeg(rotation)*distance;
+        float y = MathUtils.sinDeg(rotation)*distance;
+        bounds.translate(x,y);
     }
 
 }

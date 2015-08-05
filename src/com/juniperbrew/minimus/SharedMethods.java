@@ -2,6 +2,7 @@ package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Line2D;
@@ -61,7 +62,7 @@ public class SharedMethods {
 
         deg -= weapon.spread/2f;
         for (int i = 0; i < weapon.projectileCount; i++) {
-            Rectangle2D.Float bounds = new Rectangle2D.Float(centerX+startDistanceX,centerY-width/2,length,width);
+            Rectangle bounds = new Rectangle(centerX+startDistanceX,centerY-width/2,length,width);
             final AttackVisual hitscan = new AttackVisual(bounds,deg,centerX,centerY,projectileDefinition.color);
 
             hitscans.add(hitscan);
@@ -91,7 +92,7 @@ public class SharedMethods {
         deg -= weapon.spread/2f;
         for (int i = 0; i < weapon.projectileCount; i++) {
 
-            Rectangle2D.Float bounds = new Rectangle2D.Float(centerX+startDistanceX,centerY-width/2,length,width);
+            Rectangle bounds = new Rectangle(centerX+startDistanceX,centerY-width/2,length,width);
 
             projectiles.add(new Projectile(bounds,deg,centerX,centerY,projectileDefinition.color,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage));
             if(weapon.projectileCount>1){

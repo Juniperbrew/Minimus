@@ -136,7 +136,6 @@ public class World implements EntityChangeListener{
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.move(delta);
-            Shape hitbox = projectile.getHitbox();
             //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
 
             for(int id:entities.keySet()){
@@ -144,7 +143,7 @@ public class World implements EntityChangeListener{
                     continue;
                 }
                 ServerEntity target = entities.get(id);
-                if(hitbox.intersects(target.getJavaBounds())){
+                if(Tools.intersects(projectile.getHitbox(),target.getGdxBounds())){
                     projectile.destroyed = true;
                     if(target.getTeam() != projectile.team){
                         target.reduceHealth(projectile.damage,projectile.ownerID);
@@ -317,7 +316,7 @@ public class World implements EntityChangeListener{
             for(int targetId:entities.keySet()){
                 ServerEntity target = entities.get(targetId);
                 for(AttackVisual hitScan:hitScans){
-                    if(hitScan.getHitbox().intersects(target.getJavaBounds()) && target.getTeam() != e.getTeam()){
+                    if(Tools.intersects(hitScan.getHitbox(), target.getGdxBounds()) && target.getTeam() != e.getTeam()){
                         target.reduceHealth(projectileDefinition.damage,e.id);
                     }
                 }
