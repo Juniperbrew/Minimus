@@ -1,7 +1,10 @@
 package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.*;
@@ -79,11 +82,14 @@ public class World implements EntityChangeListener{
 
     Timer timer = new Timer();
 
+    HashMap<String,Texture> textures;
+
     public World(WorldChangeListener listener, TiledMap map){
         this.listener = listener;
         waveList = readWaveList();
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
+        textures = loadImages();
 
         this.map = map;
         mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* ConVars.getDouble("sv_map_scale"));
@@ -312,7 +318,7 @@ public class World implements EntityChangeListener{
             return;
         }
         if(projectileDefinition.hitscan){
-            ArrayList<AttackVisual> hitScans = SharedMethods.createHitscanAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
+            ArrayList<AttackVisual> hitScans = SharedMethods.createHitscanAttack(textures, weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
 
             for(int targetId:entities.keySet()){
                 ServerEntity target = entities.get(targetId);
@@ -323,7 +329,7 @@ public class World implements EntityChangeListener{
                 }
             }
         }else{
-            projectiles.addAll(SharedMethods.createProjectileAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.getTeam()));
+            projectiles.addAll(SharedMethods.createProjectileAttack(textures, weapon,e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.getTeam()));
         }
     }
 
@@ -459,6 +465,18 @@ public class World implements EntityChangeListener{
         }
 
         return weapons;
+    }
+
+    private HashMap<String,Texture> loadImages(){
+        HashMap<String,Texture> textures = new HashMap<>();
+        File imageFolder = new File("resources"+File.separator+"images");
+        for (final File file : imageFolder.listFiles()) {
+            if (!file.isDirectory()) {
+                Texture texture = new Texture(new FileHandle(file));
+                textures.put(file.getName(), texture);
+            }
+        }
+        return textures;
     }
 
     private void addEntity(ServerEntity e){
@@ -728,7 +746,7 @@ public class World implements EntityChangeListener{
         }
     }
 
-    public void render(ShapeRenderer shapeRenderer){
+    public void render(ShapeRenderer shapeRenderer, SpriteBatch batch){
         Gdx.gl.glLineWidth(3);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,0,0,1);
@@ -753,9 +771,8 @@ public class World implements EntityChangeListener{
         }
 
         shapeRenderer.end();
-
-        SharedMethods.renderAttackVisuals(shapeRenderer,attackVisuals);
-        SharedMethods.renderProjectiles(shapeRenderer,projectiles);
+        SharedMethods.renderAttack(batch,shapeRenderer, attackVisuals);
+        SharedMethods.renderAttack(batch,shapeRenderer, projectiles);
     }
 
     private void removeEntity(int networkID){

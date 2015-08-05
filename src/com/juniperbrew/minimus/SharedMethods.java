@@ -1,6 +1,8 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
@@ -9,6 +11,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -54,7 +57,7 @@ public class SharedMethods {
         }
     }*/
 
-    public static ArrayList<AttackVisual> createHitscanAttack(Weapon weapon, float centerX, float centerY, int deg, final ConcurrentLinkedQueue<AttackVisual> attackVisuals){
+    public static ArrayList<AttackVisual> createHitscanAttack(HashMap<String,Texture> textureList, Weapon weapon, float centerX, float centerY, int deg, final ConcurrentLinkedQueue<AttackVisual> attackVisuals){
         ProjectileDefinition projectileDefinition = weapon.projectile;
         ArrayList<AttackVisual> hitscans = new ArrayList<>();
         int length = projectileDefinition.length;
@@ -70,6 +73,7 @@ public class SharedMethods {
             }else{
                 color = projectileDefinition.color;
             }
+
             final AttackVisual hitscan = new AttackVisual(bounds,deg,centerX,centerY,color);
 
             hitscans.add(hitscan);
@@ -89,7 +93,7 @@ public class SharedMethods {
         return hitscans;
     }
 
-    public static ArrayList<Projectile> createProjectileAttack(Weapon weapon, float centerX, float centerY, int deg, int entityId, int team){
+    public static ArrayList<Projectile> createProjectileAttack(HashMap<String,Texture> textureList, Weapon weapon, float centerX, float centerY, int deg, int entityId, int team){
         ProjectileDefinition projectileDefinition = weapon.projectile;
         ArrayList<Projectile> projectiles = new ArrayList<>();
         int length = projectileDefinition.length;
@@ -101,14 +105,21 @@ public class SharedMethods {
 
             Rectangle bounds = new Rectangle(centerX+startDistanceX,centerY-width/2,length,width);
 
-            Color color;
-            if(projectileDefinition.color==null){
-                color = new Color(MathUtils.random(),MathUtils.random(),MathUtils.random(),1);
+            Projectile projectile;
+            if(projectileDefinition.image!=null){
+                Texture texture = textureList.get(projectileDefinition.image);
+                projectile = new Projectile(bounds,texture,deg,centerX,centerY,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage);
             }else{
-                color = projectileDefinition.color;
+                Color color;
+                if(projectileDefinition.color==null){
+                    color = new Color(MathUtils.random(),MathUtils.random(),MathUtils.random(),1);
+                }else{
+                    color = projectileDefinition.color;
+                }
+                projectile = new Projectile(bounds,deg,centerX,centerY,color,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage);
             }
 
-            projectiles.add(new Projectile(bounds,deg,centerX,centerY,color,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage));
+            projectiles.add(projectile);
             if(weapon.projectileCount>1){
                 deg += weapon.spread/(weapon.projectileCount-1);
             }
@@ -177,9 +188,18 @@ public class SharedMethods {
         e.setRotation(degrees);
     }
 
-    public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<AttackVisual> attackVisuals){
+    public static void renderAttack(SpriteBatch batch, ShapeRenderer renderer, ConcurrentLinkedQueue<? extends AttackVisual> attackVisuals){
+        for(AttackVisual attackVisual:attackVisuals){
+            if(attackVisual.sprite!=null){
+                attackVisual.render(batch);
+            }else{
+                attackVisual.render(renderer);
+            }
+        }
+    }
+
+    /*public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<AttackVisual> attackVisuals){
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(1,0,0,1); //red
         for(AttackVisual attackVisual:attackVisuals){
             //TODO null exception should be fixed here
             attackVisual.render(shapeRenderer);
@@ -189,12 +209,11 @@ public class SharedMethods {
 
     public static void renderProjectiles(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<Projectile> projectiles){
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0,1,0,1);
         for(Projectile projectile: projectiles){
             if(projectile!=null){
                 projectile.render(shapeRenderer);
             }
         }
         shapeRenderer.end();
-    }
+    }*/
 }

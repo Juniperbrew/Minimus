@@ -121,6 +121,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Score score;
 
     HashMap<String,Sound> sounds = new HashMap<>();
+    HashMap<String,Texture> textures = new HashMap<>();
 
     Music backgroundMusic;
 
@@ -187,6 +188,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         font.setColor(Color.RED);
 
         loadSounds();
+        loadImages();
 
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
@@ -450,9 +452,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon!=null){
             if(projectileDefinition.hitscan){
-                sharedMethods.createHitscanAttack(weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
+                sharedMethods.createHitscanAttack(textures, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
             }else{
-                projectiles.addAll(sharedMethods.createProjectileAttack(weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
+                projectiles.addAll(sharedMethods.createProjectileAttack(textures, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
             }
             if(weapon.sound!=null){
                 sounds.get(weapon.sound).play(soundVolume);
@@ -750,8 +752,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
 
             shapeRenderer.end();
-            sharedMethods.renderAttackVisuals(shapeRenderer,attackVisuals);
-            sharedMethods.renderProjectiles(shapeRenderer,projectiles);
+            SharedMethods.renderAttack(batch,shapeRenderer, attackVisuals);
+            SharedMethods.renderAttack(batch,shapeRenderer, projectiles);
         }
 
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
@@ -1071,6 +1073,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
+    private void loadImages(){
+        File imageFolder = new File("resources"+File.separator+"images");
+        showMessage("Loading imagess from: " + imageFolder);
+        for (final File file : imageFolder.listFiles()) {
+            if (!file.isDirectory()) {
+                Texture texture = new Texture(new FileHandle(file));
+                textures.put(file.getName(), texture);
+                showMessage("Loaded: " + file.getName());
+            }
+        }
+    }
+
     private void setPlayerID(int id){
         playerID = id;
         Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"]");
@@ -1200,9 +1214,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Weapon weapon = weaponList.get(attack.weapon);
         if(weapon!=null){
             if(weapon.projectile.hitscan){
-                sharedMethods.createHitscanAttack(weapon,attack.x,attack.y,attack.deg, attackVisuals);
+                sharedMethods.createHitscanAttack(textures,weapon,attack.x,attack.y,attack.deg, attackVisuals);
             }else{
-                projectiles.addAll(sharedMethods.createProjectileAttack(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                projectiles.addAll(sharedMethods.createProjectileAttack(textures,weapon, attack.x, attack.y, attack.deg, attack.id, -1));
             }
             if(weapon.sound!=null){
                 sounds.get(weapon.sound).play(soundVolume);

@@ -4,8 +4,11 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.esotericsoftware.kryo.Kryo;
@@ -51,6 +54,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     Server server;
     ShapeRenderer shapeRenderer;
+    SpriteBatch batch;
     HashMap<Connection,Integer> lastInputIDProcessed = new HashMap<>();
     HashMap<Connection,Integer> connectionUpdateRate = new HashMap<>();
     HashMap<Connection, ArrayList<Network.UserInput>> inputQueue = new HashMap<>();
@@ -95,6 +99,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
         shapeRenderer = new ShapeRenderer();
+        batch = new SpriteBatch();
         world = new World(this, new TmxMapLoader().load("resources"+ File.separator+ ConVars.get("sv_map_name")));
 
         int h = Gdx.graphics.getHeight();
@@ -370,12 +375,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
         moveViewport(Gdx.graphics.getDeltaTime());
         shapeRenderer.setProjectionMatrix(camera.combined);
+        batch.setProjectionMatrix(camera.combined);
 
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        world.render(shapeRenderer);
+        world.render(shapeRenderer,batch);
 
     }
 
@@ -567,6 +573,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         camera.position.set(viewPortX, viewPortY, 0);
         camera.update();
     }
+
+
 
     public void updateFakePing(Connection connection) {
         StatusData status = connectionStatus.get(connection);

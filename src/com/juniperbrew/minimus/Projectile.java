@@ -1,6 +1,7 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
@@ -30,6 +31,15 @@ public class Projectile extends AttackVisual{
         this.damage = damage;
     }
 
+    public Projectile(Rectangle bounds, Texture texture, int rotation, float originX, float originY, float range, float velocity, int ownerID, int team, int damage) {
+        super(bounds, texture, rotation, originX, originY, null);
+        this.range = range;
+        this.velocity = velocity;
+        this.ownerID = ownerID;
+        this.team = team;
+        this.damage = damage;
+    }
+
     public void move(float delta){
         float distance = velocity * delta;
         if(totalDistanceTraveled+distance>range){
@@ -40,12 +50,6 @@ public class Projectile extends AttackVisual{
             moveDistance(distance);
             totalDistanceTraveled += distance;
         }
-    }
-
-    public void moveDistance(float distance){
-        float x = MathUtils.cosDeg(rotation)*distance;
-        float y = MathUtils.sinDeg(rotation)*distance;
-        bounds.translate(x,y);
     }
 
 }

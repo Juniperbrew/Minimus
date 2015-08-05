@@ -1,6 +1,10 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.EarClippingTriangulator;
 import com.badlogic.gdx.math.MathUtils;
@@ -15,6 +19,7 @@ import com.badlogic.gdx.utils.ShortArray;
 public class AttackVisual {
     int rotation;
     Polygon bounds;
+    Sprite sprite;
     //float originX;
     //float originY;
     Color color;
@@ -23,10 +28,37 @@ public class AttackVisual {
     float playerOriginX = -25;
     EarClippingTriangulator t = new EarClippingTriangulator();
 
+    static Pixmap pixmap = new Pixmap(1,1,Pixmap.Format.RGBA8888);
+
     public AttackVisual(Rectangle rectangle, int rotation, float originX, float originY, Color color) {
         this.bounds = Tools.getRotatedRectangle(rectangle,rotation,originX,originY);
         this.rotation = rotation;
         this.color = color;
+        //pixmap.drawPixel(0,0,color.toIntBits());
+        //createSprite(new Texture(pixmap),rectangle,originX,originY);
+    }
+    public AttackVisual(Rectangle rectangle, Texture texture, int rotation, float originX, float originY, Color color) {
+        this.bounds = Tools.getRotatedRectangle(rectangle,rotation,originX,originY);
+        this.rotation = rotation;
+        this.color = color;
+        createSprite(texture,rectangle,originX,originY);
+    }
+
+    private void createSprite(Texture texture, Rectangle rectangle, float originX, float originY){
+        sprite = new Sprite(texture);
+        sprite.setPosition(rectangle.x,rectangle.y);
+        sprite.setOrigin(-25,0);
+        sprite.setSize(rectangle.width,rectangle.height);
+        sprite.setRotation(rotation);
+    }
+
+    public void moveDistance(float distance){
+        float x = MathUtils.cosDeg(rotation)*distance;
+        float y = MathUtils.sinDeg(rotation)*distance;
+        bounds.translate(x,y);
+        if(sprite!=null){
+            sprite.translate(x,y);
+        }
     }
 
     public Polygon getHitbox(){
@@ -34,7 +66,7 @@ public class AttackVisual {
     }
 
     public void render(ShapeRenderer renderer){
-
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
         renderer.setColor(color);
         float[] verts = bounds.getTransformedVertices();
         ShortArray indices = t.computeTriangles(verts);
@@ -51,6 +83,12 @@ public class AttackVisual {
                     verts[v3 + 1]
             );
         }
-        //renderer.rect(bounds.x,bounds.y,playerOriginX,bounds.height/2,bounds.width,bounds.height,1,1,rotation);
+        renderer.end();
+    }
+
+    public void render(SpriteBatch batch){
+        batch.begin();
+        sprite.draw(batch);
+        batch.end();
     }
 }
