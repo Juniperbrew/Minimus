@@ -4,7 +4,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.math.Polygon;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
@@ -143,7 +144,7 @@ public class World implements EntityChangeListener{
                     continue;
                 }
                 ServerEntity target = entities.get(id);
-                if(Tools.intersects(projectile.getHitbox(),target.getGdxBounds())){
+                if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
                     projectile.destroyed = true;
                     if(target.getTeam() != projectile.team){
                         target.reduceHealth(projectile.damage,projectile.ownerID);
@@ -316,7 +317,7 @@ public class World implements EntityChangeListener{
             for(int targetId:entities.keySet()){
                 ServerEntity target = entities.get(targetId);
                 for(AttackVisual hitScan:hitScans){
-                    if(Tools.intersects(hitScan.getHitbox(), target.getGdxBounds()) && target.getTeam() != e.getTeam()){
+                    if(Intersector.overlapConvexPolygons(hitScan.getHitbox(), target.getPolygonBounds()) && target.getTeam() != e.getTeam()){
                         target.reduceHealth(projectileDefinition.damage,e.id);
                     }
                 }

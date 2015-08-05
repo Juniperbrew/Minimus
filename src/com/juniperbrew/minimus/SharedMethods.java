@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
@@ -63,7 +64,13 @@ public class SharedMethods {
         deg -= weapon.spread/2f;
         for (int i = 0; i < weapon.projectileCount; i++) {
             Rectangle bounds = new Rectangle(centerX+startDistanceX,centerY-width/2,length,width);
-            final AttackVisual hitscan = new AttackVisual(bounds,deg,centerX,centerY,projectileDefinition.color);
+            Color color;
+            if(projectileDefinition.color==null){
+                color = new Color(MathUtils.random(),MathUtils.random(),MathUtils.random(),1);
+            }else{
+                color = projectileDefinition.color;
+            }
+            final AttackVisual hitscan = new AttackVisual(bounds,deg,centerX,centerY,color);
 
             hitscans.add(hitscan);
             attackVisuals.add(hitscan);
@@ -94,7 +101,14 @@ public class SharedMethods {
 
             Rectangle bounds = new Rectangle(centerX+startDistanceX,centerY-width/2,length,width);
 
-            projectiles.add(new Projectile(bounds,deg,centerX,centerY,projectileDefinition.color,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage));
+            Color color;
+            if(projectileDefinition.color==null){
+                color = new Color(MathUtils.random(),MathUtils.random(),MathUtils.random(),1);
+            }else{
+                color = projectileDefinition.color;
+            }
+
+            projectiles.add(new Projectile(bounds,deg,centerX,centerY,color,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage));
             if(weapon.projectileCount>1){
                 deg += weapon.spread/(weapon.projectileCount-1);
             }

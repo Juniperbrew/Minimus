@@ -82,10 +82,12 @@ public class Tools {
         vertices[5] = p3.y;
         vertices[6] = p4.x;
         vertices[7] = p4.y;
+        Polygon polygon = new Polygon(vertices);
+        polygon.translate(originX,originY);
         return new Polygon(vertices);
     }
 
-    public static boolean intersects(Polygon polygon, Rectangle rectangle){
+    /*public static boolean intersects(Polygon polygon, Rectangle rectangle){
         Vector2 v1 = new Vector2(rectangle.x,rectangle.y);
         Vector2 v2 = new Vector2(rectangle.x,rectangle.y+rectangle.height);
         Vector2 v3 = new Vector2(rectangle.x+rectangle.width,rectangle.y+rectangle.height);
@@ -97,12 +99,16 @@ public class Tools {
         }else{
             return false;
         }
-    }
+    }*/
 
     private static Point2D.Float rotatePoint(float x, float y, float originX, float originY,int rotation){
         float x1 = (x-originX) * MathUtils.cosDeg(rotation) - (y-originY) * MathUtils.sinDeg(rotation) + originX;
         float y1 = (y-originY) * MathUtils.cosDeg(rotation) + (x-originX) * MathUtils.sinDeg(rotation) + originY;
         return new Point2D.Float(x1,y1);
+    }
 
+
+    public static void main(String[] args) {
+        System.out.println(rotatePoint(5, 0, 1, 0, 360));
     }
 }

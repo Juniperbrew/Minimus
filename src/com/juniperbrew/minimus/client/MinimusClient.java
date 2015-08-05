@@ -17,6 +17,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Intersector;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -650,13 +651,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.move(delta);
-            showMessage(projectile.getHitbox().toString());
             for(int id:stateSnapshot.keySet()){
                 if(id==projectile.ownerID){
                     continue;
                 }
                 Entity target = stateSnapshot.get(id);
-                if(Tools.intersects(projectile.getHitbox(),target.getGdxBounds())) {
+                if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
                     if(id == playerID){
                         sounds.get("hurt.ogg").play(soundVolume);
                     }else{

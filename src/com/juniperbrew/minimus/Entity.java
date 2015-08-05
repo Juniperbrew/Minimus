@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
 import java.awt.geom.Rectangle2D;
@@ -133,5 +134,18 @@ public class Entity {
 
     public Rectangle2D.Float getJavaBounds(){
         return new Rectangle2D.Float(x,y,width,height);
+    }
+
+    public Polygon getPolygonBounds(){
+        float[] vertices = new float[8];
+        vertices[0] = x;
+        vertices[1] = y;
+        vertices[2] = x+width;
+        vertices[3] = y;
+        vertices[4] = x+width;
+        vertices[5] = y+height;
+        vertices[6] = x;
+        vertices[7] = y+height;
+        return new Polygon(vertices);
     }
 }
