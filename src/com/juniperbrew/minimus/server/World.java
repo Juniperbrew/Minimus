@@ -1,20 +1,12 @@
 package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.MathUtils;
 import com.esotericsoftware.kryonet.Connection;
-import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.Entity;
-import com.juniperbrew.minimus.Enums;
-import com.juniperbrew.minimus.Network;
-import com.juniperbrew.minimus.Powerup;
-import com.juniperbrew.minimus.Projectile;
-import com.juniperbrew.minimus.ProjectileDefinition;
-import com.juniperbrew.minimus.SharedMethods;
-import com.juniperbrew.minimus.Tools;
-import com.juniperbrew.minimus.Weapon;
+import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
@@ -63,7 +55,7 @@ public class World implements EntityChangeListener{
 
     private int networkIDCounter = 1;
 
-    private ConcurrentLinkedQueue<Line2D.Float> attackVisuals = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<AttackVisual> attackVisuals = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
 
     int mapWidth;
@@ -77,6 +69,7 @@ public class World implements EntityChangeListener{
 
     HashMap<Integer,WaveDefinition> waveList;
     HashMap<Integer,Weapon> weaponList;
+    HashMap<String,ProjectileDefinition> projectileList;
 
     //This should not be more than 400 which is the max distance entities can look for a destination
     final int SPAWN_AREA_WIDTH = 200;
@@ -88,7 +81,8 @@ public class World implements EntityChangeListener{
     public World(WorldChangeListener listener, TiledMap map){
         this.listener = listener;
         waveList = readWaveList();
-        weaponList = readWeaponList();
+        projectileList = readProjectileList();
+        weaponList = readWeaponList(projectileList);
 
         this.map = map;
         mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* ConVars.getDouble("sv_map_scale"));
@@ -141,14 +135,16 @@ public class World implements EntityChangeListener{
     private void updateProjectiles(float delta){
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
-            Line2D.Float movedPath = projectile.move(delta);
+            projectile.move(delta);
+            Shape hitbox = projectile.getHitbox();
+            //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
 
             for(int id:entities.keySet()){
                 if(projectile.ownerID==id){
                     continue;
                 }
                 ServerEntity target = entities.get(id);
-                if(target.getJavaBounds().intersectsLine(movedPath)){
+                if(hitbox.intersects(target.getJavaBounds())){
                     projectile.destroyed = true;
                     if(target.getTeam() != projectile.team){
                         target.reduceHealth(projectile.damage,projectile.ownerID);
@@ -315,14 +311,14 @@ public class World implements EntityChangeListener{
         if(weapon==null){
             return;
         }
-        if(weapon.hitScan){
-            ArrayList<Line2D.Float> hitScans = SharedMethods.createHitscanAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
+        if(projectileDefinition.hitscan){
+            ArrayList<AttackVisual> hitScans = SharedMethods.createHitscanAttack(weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
 
             for(int targetId:entities.keySet()){
                 ServerEntity target = entities.get(targetId);
-                for(Line2D hitScan:hitScans){
-                    if(target.getJavaBounds().intersectsLine(hitScan) && target.getTeam() != e.getTeam()){
-                        target.reduceHealth(weapon.damage,e.id);
+                for(AttackVisual hitScan:hitScans){
+                    if(hitScan.getHitbox().intersects(target.getJavaBounds()) && target.getTeam() != e.getTeam()){
+                        target.reduceHealth(projectileDefinition.damage,e.id);
                     }
                 }
             }
@@ -382,7 +378,7 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("color")){
                     String strip = splits[1].substring(1,splits[1].length()-1);
                     String[] rgb = strip.split(",");
-                    projectileDefinition.color = new Color(Integer.parseInt(rgb[0]),Integer.parseInt(rgb[1]),Integer.parseInt(rgb[2]));
+                    projectileDefinition.color = new Color(Integer.parseInt(rgb[0])/255f,Integer.parseInt(rgb[1])/255f,Integer.parseInt(rgb[2])/255f,1f);
                 }
                 if(splits[0].equals("width")){
                     projectileDefinition.width = Integer.parseInt(splits[1]);
@@ -405,6 +401,7 @@ public class World implements EntityChangeListener{
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return projectiles;
     }
 
     private HashMap<Integer,Weapon> readWeaponList(HashMap<String,ProjectileDefinition> projectileList){

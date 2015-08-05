@@ -1,55 +1,46 @@
 package com.juniperbrew.minimus;
 
-import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-import java.awt.geom.Line2D;
-import java.util.ArrayList;
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Rectangle2D;
 
 /**
  * Created by Juniperbrew on 28.6.2015.
  */
-public class Projectile {
+public class Projectile extends AttackVisual{
 
-    float range;
-    float totalDistanceTraveled;
-    float velocity;
-    int angle; //deg
-    Line2D.Float path;
     public boolean destroyed;
     public int ownerID;
     public int team;
     public int damage;
 
-    public Projectile(float startX, float startY, float range, float velocity, int angle, int ownerID, int team, int damage) {
-        float targetX = startX+MathUtils.cosDeg(angle)*range;
-        float targetY = startY+MathUtils.sinDeg(angle)*range;
-        path = new Line2D.Float(startX,startY,targetX,targetY);
+    float range;
+    float velocity;
+
+    float totalDistanceTraveled;
+
+    public Projectile(Rectangle2D.Float bounds, int rotation, float originX, float originY, Color color, float range, float velocity, int ownerID, int team, int damage) {
+        super(bounds, rotation, originX, originY, color);
         this.range = range;
         this.velocity = velocity;
-        this.angle = angle;
         this.ownerID = ownerID;
         this.team = team;
         this.damage = damage;
     }
 
-    public Line2D.Float move(float delta){
-        float startX = getX();
-        float startY = getY();
-        float distanceTraveled = velocity * delta;
-        totalDistanceTraveled += distanceTraveled;
-
-        if(totalDistanceTraveled>range){
+    public void move(float delta){
+        float distance = velocity * delta;
+        if(totalDistanceTraveled+distance>range){
+            bounds.x += range-totalDistanceTraveled;
             totalDistanceTraveled = range;
             destroyed = true;
+        }else{
+            bounds.x += distance;
+            totalDistanceTraveled += distance;
         }
-
-        return new Line2D.Float(startX,startY,getX(),getY());
     }
 
-    public float getX(){
-        return path.x1+MathUtils.cosDeg(angle)*totalDistanceTraveled;
-    }
-    public float getY(){
-        return path.y1+MathUtils.sinDeg(angle)*totalDistanceTraveled;
-    }
 }

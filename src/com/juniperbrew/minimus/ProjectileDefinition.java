@@ -1,6 +1,7 @@
 package com.juniperbrew.minimus;
 
-import java.awt.*;
+
+import com.badlogic.gdx.graphics.Color;
 
 /**
  * Created by Juniperbrew on 3.8.2015.

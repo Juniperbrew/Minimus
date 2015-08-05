@@ -21,17 +21,7 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
-import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.Entity;
-import com.juniperbrew.minimus.Enums;
-import com.juniperbrew.minimus.ExceptionLogger;
-import com.juniperbrew.minimus.Network;
-import com.juniperbrew.minimus.Powerup;
-import com.juniperbrew.minimus.Projectile;
-import com.juniperbrew.minimus.Score;
-import com.juniperbrew.minimus.SharedMethods;
-import com.juniperbrew.minimus.Tools;
-import com.juniperbrew.minimus.Weapon;
+import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
@@ -98,7 +88,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int slot1Weapon = 0;
     int slot2Weapon = 1;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
-    private ConcurrentLinkedQueue<Line2D.Float> attackVisuals = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<AttackVisual> attackVisuals = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
     double attackCooldown;
 
@@ -456,8 +446,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO Ignoring projectile team for now
 
         Weapon weapon = weaponList.get(weaponSlot);
+        ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon!=null){
-            if(weapon.hitScan){
+            if(projectileDefinition.hitscan){
                 sharedMethods.createHitscanAttack(weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
             }else{
                 projectiles.addAll(sharedMethods.createProjectileAttack(weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
@@ -659,14 +650,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
-            Line2D.Float movedPath = projectile.move(delta);
-
+            projectile.move(delta);
             for(int id:stateSnapshot.keySet()){
                 if(id==projectile.ownerID){
                     continue;
                 }
                 Entity target = stateSnapshot.get(id);
-                if(target.getJavaBounds().intersectsLine(movedPath)){
+                if(projectile.getHitbox().contains(target.getJavaBounds())){
                     if(id == playerID){
                         sounds.get("hurt.ogg").play(soundVolume);
                     }else{
@@ -1209,7 +1199,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
         if(weapon!=null){
-            if(weapon.hitScan){
+            if(weapon.projectile.hitscan){
                 sharedMethods.createHitscanAttack(weapon,attack.x,attack.y,attack.deg, attackVisuals);
             }else{
                 projectiles.addAll(sharedMethods.createProjectileAttack(weapon, attack.x, attack.y, attack.deg, attack.id, -1));

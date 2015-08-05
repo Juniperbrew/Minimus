@@ -1,18 +1,12 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.math.MathUtils;
-import com.juniperbrew.minimus.server.ServerEntity;
 
-import javax.sound.sampled.Line;
-import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
-import java.awt.image.ConvolveOp;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -23,12 +17,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class SharedMethods {
 
     static Timer timer = new Timer();
-    static AffineTransform transform = new AffineTransform();
 
-    public static ArrayList<Line2D.Float> createAttack(Weapon weapon, float x, float y, int deg, final ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
+    /*
+    public static ArrayList<AttackVisual> createAttack(Weapon weapon, float centerX, float centerY, int deg, final ConcurrentLinkedQueue<AttackVisual> attackVisuals){
+
         ProjectileDefinition projectileDefinition = weapon.projectile;
         if(projectileDefinition.hitscan){
-            ArrayList<Shape> hitscans = new ArrayList<>();
+            ArrayList<AttackVisual> hitscans = new ArrayList<>();
             int length = projectileDefinition.length;
             int width = projectileDefinition.width;
             int startDistanceX = 25;
@@ -36,61 +31,48 @@ public class SharedMethods {
 
             deg -= weapon.spread/2f;
             for (int i = 0; i < weapon.projectileCount; i++) {
-                float sina = MathUtils.sinDeg(deg);
-                float cosa = MathUtils.cosDeg(deg);
 
-                float startX = x + cosa*startDistanceX;
-                float startY = y + sina*startDistanceY;
-                float targetX = startX + cosa*length;
-                float targetY = startY + sina*length;
+                Rectangle2D.Float bounds = new Rectangle2D.Float(centerX+startDistanceX,centerY-width/2,length,width);
+                final AttackVisual hitscan = new AttackVisual(bounds,deg,centerX,centerY,projectileDefinition.color);
 
-                Rectangle2D.Float rectangle = new Rectangle2D.Float(x+startDistanceX,y-width/2,length,width);
-                transform.rotate(Math.toRadians(deg),x, y);
-                Shape hitScan = transform.createTransformedShape(rectangle);
-
-                hitscans.add(hitScan);
-                attackVisuals.add(hitScan);
+                hitscans.add(hitscan);
+                attackVisuals.add(hitscan);
                 TimerTask task = new TimerTask() {
                     @Override
                     public void run() {
-                        attackVisuals.remove(hitScan);
+                        attackVisuals.remove(hitscan);
                     }
                 };
-                timer.schedule(task,Tools.secondsToMilli(weapon.visualDuration));
+                timer.schedule(task,Tools.secondsToMilli(projectileDefinition.duration));
 
                 if(weapon.projectileCount>1){
                     deg += weapon.spread/(weapon.projectileCount-1);
                 }
             }
         }
-    }
+    }*/
 
-    public static ArrayList<Line2D.Float> createHitscanAttack(Weapon weapon, float x, float y, int deg, final ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
-        ArrayList<Line2D.Float> hitscans = new ArrayList<>();
-        int range = weapon.range;
+    public static ArrayList<AttackVisual> createHitscanAttack(Weapon weapon, float centerX, float centerY, int deg, final ConcurrentLinkedQueue<AttackVisual> attackVisuals){
+        ProjectileDefinition projectileDefinition = weapon.projectile;
+        ArrayList<AttackVisual> hitscans = new ArrayList<>();
+        int length = projectileDefinition.length;
+        int width = projectileDefinition.width;
         int startDistanceX = 25;
-        int startDistanceY = 25;
 
         deg -= weapon.spread/2f;
         for (int i = 0; i < weapon.projectileCount; i++) {
-            float sina = MathUtils.sinDeg(deg);
-            float cosa = MathUtils.cosDeg(deg);
+            Rectangle2D.Float bounds = new Rectangle2D.Float(centerX+startDistanceX,centerY-width/2,length,width);
+            final AttackVisual hitscan = new AttackVisual(bounds,deg,centerX,centerY,projectileDefinition.color);
 
-            float startX = x + cosa*startDistanceX;
-            float startY = y + sina*startDistanceY;
-            float targetX = startX + cosa*range;
-            float targetY = startY + sina*range;
-
-            final Line2D.Float hitScan = new Line2D.Float(startX,startY,targetX,targetY);
-            hitscans.add(hitScan);
-            attackVisuals.add(hitScan);
+            hitscans.add(hitscan);
+            attackVisuals.add(hitscan);
             TimerTask task = new TimerTask() {
                 @Override
                 public void run() {
-                    attackVisuals.remove(hitScan);
+                    attackVisuals.remove(hitscan);
                 }
             };
-            timer.schedule(task,Tools.secondsToMilli(weapon.visualDuration));
+            timer.schedule(task,Tools.secondsToMilli(projectileDefinition.duration));
 
             if(weapon.projectileCount>1){
                 deg += weapon.spread/(weapon.projectileCount-1);
@@ -99,20 +81,19 @@ public class SharedMethods {
         return hitscans;
     }
 
-    public static ArrayList<Projectile> createProjectileAttack(Weapon weapon, float x, float y, int deg, int entityId, int team){
+    public static ArrayList<Projectile> createProjectileAttack(Weapon weapon, float centerX, float centerY, int deg, int entityId, int team){
+        ProjectileDefinition projectileDefinition = weapon.projectile;
         ArrayList<Projectile> projectiles = new ArrayList<>();
-        int projectileStartDistanceX = 25;
-        int projectileStartDistanceY = 25;
+        int length = projectileDefinition.length;
+        int width = projectileDefinition.width;
+        int startDistanceX = 25;
 
         deg -= weapon.spread/2f;
         for (int i = 0; i < weapon.projectileCount; i++) {
-            float sina = MathUtils.sinDeg(deg);
-            float cosa = MathUtils.cosDeg(deg);
 
-            float startX = x + cosa*projectileStartDistanceX;
-            float startY = y + sina*projectileStartDistanceY;
+            Rectangle2D.Float bounds = new Rectangle2D.Float(centerX+startDistanceX,centerY-width/2,length,width);
 
-            projectiles.add(new Projectile(startX,startY,weapon.range,weapon.velocity,deg,entityId,team,weapon.damage));
+            projectiles.add(new Projectile(bounds,deg,centerX,centerY,projectileDefinition.color,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage));
             if(weapon.projectileCount>1){
                 deg += weapon.spread/(weapon.projectileCount-1);
             }
@@ -181,12 +162,12 @@ public class SharedMethods {
         e.setRotation(degrees);
     }
 
-    public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<Line2D.Float> attackVisuals){
+    public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<AttackVisual> attackVisuals){
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(1,0,0,1); //red
-        for(Line2D.Float line:attackVisuals){
+        for(AttackVisual attackVisual:attackVisuals){
             //TODO null exception should be fixed here
-            shapeRenderer.line(line.x1, line.y1, line.x2, line.y2);
+            attackVisual.render(shapeRenderer);
         }
         shapeRenderer.end();
     }
@@ -196,7 +177,7 @@ public class SharedMethods {
         shapeRenderer.setColor(0,1,0,1);
         for(Projectile projectile: projectiles){
             if(projectile!=null){
-                shapeRenderer.circle(projectile.getX(),projectile.getY(),5);
+                projectile.render(shapeRenderer);
             }
         }
         shapeRenderer.end();
