@@ -163,7 +163,7 @@ public class SharedMethods {
     }
 
     public static void renderAttackVisuals(ShapeRenderer shapeRenderer, ConcurrentLinkedQueue<AttackVisual> attackVisuals){
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(1,0,0,1); //red
         for(AttackVisual attackVisual:attackVisuals){
             //TODO null exception should be fixed here

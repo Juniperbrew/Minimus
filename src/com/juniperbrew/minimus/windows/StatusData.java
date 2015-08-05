@@ -83,6 +83,11 @@ public class StatusData {
         this.logIntervalSeconds = logIntervalSeconds;
     }
 
+    public StatusData(long connectionTime, int logIntervalSeconds){
+        this.connectionTime = connectionTime;
+        this.logIntervalSeconds = logIntervalSeconds;
+    }
+
     public void setFakeReturnTripTime(int rtt){
         fakeReturnTripTime = rtt;
         averageData.fakePing += rtt;
@@ -184,7 +189,11 @@ public class StatusData {
     }
     public String getUdpAddress() {
         InetSocketAddress address = connection.getRemoteAddressUDP();
-        return address.getAddress().getHostAddress() + ":" + address.getPort();
+        if(address!=null){
+            return address.getAddress().getHostAddress() + ":" + address.getPort();
+        }else{
+            return null;
+        }
     }
     public int getPacketsSentPerSecond(){
         int packetsSentPerSecond = packetsSentInterval/logIntervalSeconds;

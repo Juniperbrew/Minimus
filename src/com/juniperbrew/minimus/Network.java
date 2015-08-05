@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.Color;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
@@ -63,8 +64,10 @@ public class Network {
         kryo.register(AddPowerup.class);
         kryo.register(RemovePowerup.class);
         kryo.register(Weapon.class);
+        kryo.register(ProjectileDefinition.class);
         kryo.register(TeamChangeRequest.class);
         kryo.register(GameClockCompare.class);
+        kryo.register(Color.class);
     }
 
     public static class Message{

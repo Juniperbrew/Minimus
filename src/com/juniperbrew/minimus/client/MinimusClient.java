@@ -647,16 +647,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void updateProjectiles(float delta){
-
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.move(delta);
+            showMessage(projectile.getHitbox().getBounds2D().toString());
             for(int id:stateSnapshot.keySet()){
                 if(id==projectile.ownerID){
                     continue;
                 }
                 Entity target = stateSnapshot.get(id);
-                if(projectile.getHitbox().contains(target.getJavaBounds())){
+                if(projectile.getHitbox().contains(target.getJavaBounds())) {
                     if(id == playerID){
                         sounds.get("hurt.ogg").play(soundVolume);
                     }else{

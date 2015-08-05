@@ -34,11 +34,11 @@ public class Projectile extends AttackVisual{
     public void move(float delta){
         float distance = velocity * delta;
         if(totalDistanceTraveled+distance>range){
-            bounds.x += range-totalDistanceTraveled;
+            moveDistance(range-totalDistanceTraveled);
             totalDistanceTraveled = range;
             destroyed = true;
         }else{
-            bounds.x += distance;
+            moveDistance(distance);
             totalDistanceTraveled += distance;
         }
     }

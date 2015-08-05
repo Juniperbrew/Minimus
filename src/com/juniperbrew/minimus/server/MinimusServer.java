@@ -102,7 +102,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         resize(h,w);
 
         serverStartTime = System.nanoTime();
-        serverData = new StatusData(null,serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
+        serverData = new StatusData(serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
         serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
         startSimulation();
