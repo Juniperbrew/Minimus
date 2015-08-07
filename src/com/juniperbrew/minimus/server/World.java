@@ -295,7 +295,6 @@ public class World implements EntityChangeListener{
         if(attackCooldown.get(id)==null){
             attackCooldown.put(id,new HashMap<Integer, Double>());
             for(int weaponslot: weaponList.keySet()){
-                //
                 attackCooldown.get(id).put(weaponslot,-1d);
             }
         }
