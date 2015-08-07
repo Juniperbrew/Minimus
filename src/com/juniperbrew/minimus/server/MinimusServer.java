@@ -367,13 +367,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void render() {
+        float delta = Gdx.graphics.getDeltaTime();
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();
         }
         serverStatusFrame.update();
 
-        moveViewport(Gdx.graphics.getDeltaTime());
+        moveViewport(delta);
         shapeRenderer.setProjectionMatrix(camera.combined);
         batch.setProjectionMatrix(camera.combined);
 
@@ -381,7 +382,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        world.render(shapeRenderer,batch);
+        world.render(delta, shapeRenderer,batch);
 
     }
 
@@ -868,6 +869,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }else{
             sendTCPtoAll(entityAttacking);
         }
+    }
+
+    @Override
+    public void message(String message) {
+        showMessage(message);
     }
 
     @Override

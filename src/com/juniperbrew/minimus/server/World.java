@@ -1,14 +1,12 @@
 package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.math.Polygon;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
@@ -18,8 +16,6 @@ import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
 
-import java.awt.*;
-import java.awt.geom.Line2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,7 +38,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class World implements EntityChangeListener{
 
     Set<Integer> playerList = new HashSet<>();
-    Map<Integer,Double> attackCooldown = new HashMap<>();
+    Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
     Map<Integer,Integer> playerLives = new HashMap<>();
 
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
@@ -59,7 +55,6 @@ public class World implements EntityChangeListener{
 
     private int networkIDCounter = 1;
 
-    private ConcurrentLinkedQueue<AttackVisual> attackVisuals = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
 
     int mapWidth;
@@ -82,14 +77,15 @@ public class World implements EntityChangeListener{
 
     Timer timer = new Timer();
 
-    HashMap<String,Texture> textures;
+    //HashMap<String,Texture> textures;
+    TextureAtlas atlas;
 
     public World(WorldChangeListener listener, TiledMap map){
         this.listener = listener;
         waveList = readWaveList();
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
-        textures = loadImages();
+        loadImages();
 
         this.map = map;
         mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* ConVars.getDouble("sv_map_scale"));
@@ -142,21 +138,24 @@ public class World implements EntityChangeListener{
     private void updateProjectiles(float delta){
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
-            projectile.move(delta);
-            //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
+            projectile.update(delta);
 
-            for(int id:entities.keySet()){
-                if(projectile.ownerID==id){
-                    continue;
-                }
-                ServerEntity target = entities.get(id);
-                if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
-                    projectile.destroyed = true;
-                    if(target.getTeam() != projectile.team){
-                        target.reduceHealth(projectile.damage,projectile.ownerID);
+            //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
+            if(!projectile.hitscan){
+                for(int id:entities.keySet()){
+                    if(projectile.ownerID==id){
+                        continue;
+                    }
+                    ServerEntity target = entities.get(id);
+                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
+                        projectile.destroyed = true;
+                        if(target.getTeam() != projectile.team){
+                            target.reduceHealth(projectile.damage,projectile.ownerID);
+                        }
                     }
                 }
             }
+
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
             }
@@ -283,21 +282,27 @@ public class World implements EntityChangeListener{
         }
 
         if(attackCooldown.get(id)!=null){
-            double cd = attackCooldown.get(id);
-            cd -= (input.msec/1000d);
-            attackCooldown.put(id,cd);
+            Map<Integer,Double> cooldowns = attackCooldown.get(id);
+            for(int weaponslot : cooldowns.keySet()){
+                double cd = cooldowns.get(weaponslot);
+                cd -= (input.msec/1000d);
+                cooldowns.put(weaponslot,cd);
+            }
         }
     }
 
-    private void attackWithPlayer(int id, int weapon){
+    private void attackWithPlayer(int id, int weaponSlot){
         if(attackCooldown.get(id)==null){
-            attackCooldown.put(id,-1d);
+            attackCooldown.put(id,new HashMap<Integer, Double>());
+            for(int weaponslot: weaponList.keySet()){
+                attackCooldown.get(id).put(weaponslot,-1d);
+            }
         }
-        if(attackCooldown.get(id) > 0){
+        if(attackCooldown.get(id).get(weaponSlot) > 0){
             return;
         }else{
-            attackCooldown.put(id,ConVars.getDouble("sv_attack_delay"));
-            createAttack(id, weapon);
+            attackCooldown.get(id).put(weaponSlot, weaponList.get(weaponSlot).cooldown);
+            createAttack(id, weaponSlot);
         }
     }
 
@@ -317,20 +322,19 @@ public class World implements EntityChangeListener{
         if(weapon==null){
             return;
         }
-        if(projectileDefinition.hitscan){
-            ArrayList<AttackVisual> hitScans = SharedMethods.createHitscanAttack(textures, weapon,e.getCenterX(),e.getCenterY(),e.getRotation(), attackVisuals);
+        ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
 
-            for(int targetId:entities.keySet()){
-                ServerEntity target = entities.get(targetId);
-                for(AttackVisual hitScan:hitScans){
-                    if(Intersector.overlapConvexPolygons(hitScan.getHitbox(), target.getPolygonBounds()) && target.getTeam() != e.getTeam()){
+        for(int targetId:entities.keySet()){
+            ServerEntity target = entities.get(targetId);
+            for(Projectile projectile:newProjectiles){
+                if(projectile.hitscan){
+                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds()) && target.getTeam() != e.getTeam()){
                         target.reduceHealth(projectileDefinition.damage,e.id);
                     }
                 }
             }
-        }else{
-            projectiles.addAll(SharedMethods.createProjectileAttack(textures, weapon,e.getCenterX(),e.getCenterY(),e.getRotation(),e.id, e.getTeam()));
         }
+        projectiles.addAll(newProjectiles);
     }
 
     private HashMap<String,ProjectileDefinition> readProjectileList(){
@@ -450,6 +454,9 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("projectile")){
                     weapon.projectile = projectileList.get(splits[1]);
                 }
+                if(splits[0].equals("cooldown")){
+                    weapon.cooldown = Float.parseFloat(splits[1]);
+                }
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -467,16 +474,9 @@ public class World implements EntityChangeListener{
         return weapons;
     }
 
-    private HashMap<String,Texture> loadImages(){
-        HashMap<String,Texture> textures = new HashMap<>();
-        File imageFolder = new File("resources"+File.separator+"images");
-        for (final File file : imageFolder.listFiles()) {
-            if (!file.isDirectory()) {
-                Texture texture = new Texture(new FileHandle(file));
-                textures.put(file.getName(), texture);
-            }
-        }
-        return textures;
+    private void loadImages(){
+        listener.message("Loading texture atlas");
+        atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
     }
 
     private void addEntity(ServerEntity e){
@@ -746,7 +746,7 @@ public class World implements EntityChangeListener{
         }
     }
 
-    public void render(ShapeRenderer shapeRenderer, SpriteBatch batch){
+    public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch){
         Gdx.gl.glLineWidth(3);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0,0,0,1);
@@ -771,8 +771,7 @@ public class World implements EntityChangeListener{
         }
 
         shapeRenderer.end();
-        SharedMethods.renderAttack(batch,shapeRenderer, attackVisuals);
-        SharedMethods.renderAttack(batch,shapeRenderer, projectiles);
+        SharedMethods.renderAttack(delta, batch, projectiles);
     }
 
     private void removeEntity(int networkID){
@@ -863,5 +862,6 @@ public class World implements EntityChangeListener{
         public void powerupRemoved(int id);
         public void waveChanged(int wave);
         public void attackCreated(Network.EntityAttacking entityAttacking);
+        public void message(String message);
     }
 }

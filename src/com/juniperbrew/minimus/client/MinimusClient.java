@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
@@ -33,7 +34,6 @@ import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 
-import java.awt.geom.Line2D;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -89,9 +90,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int slot1Weapon = 0;
     int slot2Weapon = 1;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
-    private ConcurrentLinkedQueue<AttackVisual> attackVisuals = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
-    double attackCooldown;
+    Map<Integer,Double> cooldowns = new HashMap<>();
 
     long lastPingRequest;
     long renderStart;
@@ -121,7 +121,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Score score;
 
     HashMap<String,Sound> sounds = new HashMap<>();
-    HashMap<String,Texture> textures = new HashMap<>();
+    //HashMap<String,Texture> textures = new HashMap<>();
+    TextureAtlas atlas;
 
     Music backgroundMusic;
 
@@ -282,9 +283,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void doLogic(){
-
-        float delta = Gdx.graphics.getDeltaTime();
+    private void doLogic(float delta){
 
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
@@ -438,24 +437,29 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             playerAttack(stateSnapshot.get(playerID), slot2Weapon);
             mouse2Pressed = false;
         }
-        attackCooldown -= (input.msec/1000d);
+        for(int weaponslot : cooldowns.keySet()){
+            double cd = cooldowns.get(weaponslot);
+            cd -= (input.msec/1000d);
+            cooldowns.put(weaponslot,cd);
+        }
     }
 
     private void playerAttack(Entity player, int weaponSlot){
-        if(attackCooldown>0){
+        if(cooldowns.get(0)==null){
+            for(int weaponslot: weaponList.keySet()){
+                cooldowns.put(weaponslot,-1d);
+            }
+        }
+        if(cooldowns.get(weaponSlot)>0){
             return;
         }
-        attackCooldown = ConVars.getDouble("sv_attack_delay");
+        cooldowns.put(weaponSlot,weaponList.get(weaponSlot).cooldown);
         //TODO Ignoring projectile team for now
 
         Weapon weapon = weaponList.get(weaponSlot);
-        ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon!=null){
-            if(projectileDefinition.hitscan){
-                sharedMethods.createHitscanAttack(textures, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), attackVisuals);
-            }else{
-                projectiles.addAll(sharedMethods.createProjectileAttack(textures, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1));
-            }
+            ArrayList<Projectile> newProjectiles = sharedMethods.createProjectile(atlas, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
+            projectiles.addAll(newProjectiles);
             if(weapon.sound!=null){
                 sounds.get(weapon.sound).play(soundVolume);
             }
@@ -652,19 +656,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void updateProjectiles(float delta){
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
-            projectile.move(delta);
+            projectile.update(delta);
             for(int id:stateSnapshot.keySet()){
                 if(id==projectile.ownerID){
                     continue;
                 }
-                Entity target = stateSnapshot.get(id);
-                if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
-                    if(id == playerID){
-                        sounds.get("hurt.ogg").play(soundVolume);
-                    }else{
-                        sounds.get("hit.ogg").play(soundVolume);
+                if(!projectile.hitscan){
+                    Entity target = stateSnapshot.get(id);
+                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
+                        if(id == playerID){
+                            sounds.get("hurt.ogg").play(soundVolume);
+                        }else{
+                            sounds.get("hit.ogg").play(soundVolume);
+                        }
+                        projectile.destroyed = true;
                     }
-                    projectile.destroyed = true;
                 }
             }
             if(projectile.destroyed){
@@ -677,7 +683,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public void render() {
 
-        doLogic();
+        float delta = Gdx.graphics.getDeltaTime();
+        doLogic(delta);
 
         renderStart = System.nanoTime();
 
@@ -752,8 +759,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
 
             shapeRenderer.end();
-            SharedMethods.renderAttack(batch,shapeRenderer, attackVisuals);
-            SharedMethods.renderAttack(batch,shapeRenderer, projectiles);
+            SharedMethods.renderAttack(delta, batch, projectiles);
         }
 
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
@@ -1074,15 +1080,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void loadImages(){
-        File imageFolder = new File("resources"+File.separator+"images");
-        showMessage("Loading imagess from: " + imageFolder);
-        for (final File file : imageFolder.listFiles()) {
-            if (!file.isDirectory()) {
-                Texture texture = new Texture(new FileHandle(file));
-                textures.put(file.getName(), texture);
-                showMessage("Loaded: " + file.getName());
-            }
-        }
+        showMessage("Loading texture atlas");
+        atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
     }
 
     private void setPlayerID(int id){
@@ -1213,11 +1212,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
         if(weapon!=null){
-            if(weapon.projectile.hitscan){
-                sharedMethods.createHitscanAttack(textures,weapon,attack.x,attack.y,attack.deg, attackVisuals);
-            }else{
-                projectiles.addAll(sharedMethods.createProjectileAttack(textures,weapon, attack.x, attack.y, attack.deg, attack.id, -1));
-            }
+            ArrayList<Projectile> newProjectiles = (sharedMethods.createProjectile(atlas, weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+            projectiles.addAll(newProjectiles);
             if(weapon.sound!=null){
                 sounds.get(weapon.sound).play(soundVolume);
             }

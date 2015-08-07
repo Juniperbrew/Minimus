@@ -9,6 +9,7 @@ public class Weapon {
     public int projectileCount;
     public String sound;
     public ProjectileDefinition projectile;
+    public double cooldown;
 
     @Override
     public String toString() {
