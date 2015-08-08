@@ -36,7 +36,7 @@ public class Network {
         kryo.register(FullEntityUpdate.class);
         kryo.register(AddEntity.class);
         kryo.register(RemoveEntity.class);
-        kryo.register(Entity.class);
+        kryo.register(NetworkEntity.class);
         kryo.register(Enums.Buttons.class);
         kryo.register(Enums.Heading.class);
         kryo.register(EnumSet.class);
@@ -167,7 +167,7 @@ public class Network {
 
     public static class AddEntity{
         public float serverTime;
-        public Entity entity;
+        public NetworkEntity entity;
     }
 
     public static class RemoveEntity{
@@ -178,7 +178,7 @@ public class Network {
     public static class FullEntityUpdate implements Comparable<FullEntityUpdate>{
         public float serverTime;
         public int lastProcessedInputID;
-        public HashMap<Integer,Entity> entities;
+        public HashMap<Integer,NetworkEntity> entities;
 
         @Override
         public int compareTo(FullEntityUpdate o) {

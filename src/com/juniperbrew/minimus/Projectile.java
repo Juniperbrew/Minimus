@@ -68,7 +68,7 @@ public class Projectile{
     private void createSprite(TextureRegion texture, Rectangle rectangle){
         sprite = new Sprite(texture);
         sprite.setPosition(rectangle.x,rectangle.y);
-        sprite.setOrigin(-25,0);
+        sprite.setOrigin(-25,texture.getRegionHeight()/2);
         sprite.setSize(rectangle.width,rectangle.height);
         sprite.setRotation(rotation);
     }
@@ -84,11 +84,9 @@ public class Projectile{
     public void render(SpriteBatch batch, float delta){
         if(animation!=null){
             stateTime += delta;
-            sprite.setRegion(animation.getKeyFrame(stateTime,true));
+            sprite.setRegion(animation.getKeyFrame(stateTime, true));
         }
-        batch.begin();
         sprite.draw(batch);
-        batch.end();
     }
 
     public void update(float delta){

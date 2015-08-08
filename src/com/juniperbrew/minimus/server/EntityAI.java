@@ -3,7 +3,9 @@ package com.juniperbrew.minimus.server;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 
 import java.util.ArrayList;
@@ -13,6 +15,8 @@ import java.util.Iterator;
  * Created by Juniperbrew on 22/06/15.
  */
 public class EntityAI {
+
+    World world;
 
     public static final int MOVING = 0;
     public static final int MOVING_AND_SHOOTING = 1;
@@ -28,7 +32,6 @@ public class EntityAI {
     long lastAttackDone;
     final float MIN_ATTACK_DELAY = 1;
     final float MAX_ATTACK_DELAY = 6;
-    World world;
     int aiType;
     int weapon;
     float attackDelay;
@@ -122,9 +125,17 @@ public class EntityAI {
                 deltaY = Tools.clamp(deltaY, distanceY, 0);
             }
 
-            double newX = entity.getX()+deltaX;
-            double newY = entity.getY()+deltaY;
-            entity.moveTo((float)newX,(float)newY);
+            Rectangle bounds = entity.getGdxBounds();
+            bounds.setX((float) (bounds.getX()+deltaX));
+            if(SharedMethods.checkMapCollision(bounds)){
+                bounds.setX((float) (bounds.getX()-deltaX));
+                deltaX = 0;
+            }
+            bounds.setY((float) (bounds.getY()+deltaY));
+            if(SharedMethods.checkMapCollision(bounds)){
+                deltaY = 0;
+            }
+            entity.move(deltaX,deltaY);
         }
     }
 

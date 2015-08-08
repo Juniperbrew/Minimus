@@ -4,10 +4,8 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
@@ -19,7 +17,7 @@ import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.Entity;
+import com.juniperbrew.minimus.NetworkEntity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
@@ -113,7 +111,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         startSimulation();
         Gdx.input.setInputProcessor(this);
 
-        serverData.entitySize = measureObject(new Entity(-1, 1000000, 1000000,-1));
+        serverData.entitySize = measureObject(new NetworkEntity(-1, 1000000, 1000000,-1));
         showMessage("Kryo entity size:" + serverData.entitySize + "bytes");
         showMessage("0 entityComponents size:" + measureObject(createComponentList(0,true,true,true)) + "bytes");
         showMessage("pos entityComponents size:" + measureObject(createComponentList(1,true,false,false)) + "bytes");
@@ -373,7 +371,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             logIntervalElapsed();
         }
         serverStatusFrame.update();
-
         moveViewport(delta);
         shapeRenderer.setProjectionMatrix(camera.combined);
         batch.setProjectionMatrix(camera.combined);
@@ -497,9 +494,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     private int measureKryoEntitySize(){
 
         Kryo kryo = new Kryo();
-        kryo.register(Entity.class);
+        kryo.register(NetworkEntity.class);
         Output output = new Output(objectBuffer);
-        kryo.writeObject(output, new Entity(-1, 1000000, 1000000,-1));
+        kryo.writeObject(output, new NetworkEntity(-1, 1000000, 1000000,-1));
         int size = output.position();
         output.close();
         return size;
@@ -821,7 +818,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void entityAdded(Entity e){
+    public void entityAdded(NetworkEntity e){
         showMessage("Added entity ID: " + e.id);
         Network.AddEntity addEntity = new Network.AddEntity();
         addEntity.entity=e;
@@ -834,7 +831,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         showMessage("Player("+id+") lives is now: "+lives);
         Network.SetLives setLives = new Network.SetLives();
         setLives.lives = lives;
-        sendTCP(playerList.get(id),setLives);
+        sendTCP(playerList.get(id), setLives);
     }
 
     @Override

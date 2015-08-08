@@ -2,9 +2,7 @@ package com.juniperbrew.minimus.server;
 
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
-import com.juniperbrew.minimus.Tools;
-
-import java.awt.geom.Rectangle2D;
+import com.juniperbrew.minimus.NetworkEntity;
 
 /**
  * Created by Juniperbrew on 22/06/15.
@@ -20,8 +18,8 @@ public class ServerEntity extends Entity {
         this.listener = listener;
     }
 
-    public Entity getNetworkEntity(){
-        Entity e = new Entity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading(), getTeam());
+    public NetworkEntity getNetworkEntity(){
+        NetworkEntity e = new NetworkEntity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading(), getTeam());
         return e;
     }
 
@@ -45,8 +43,13 @@ public class ServerEntity extends Entity {
         listener.headingChanged(id);
         System.out.println(id+": heading updated");
     }
-    public void moveTo(float newX, float newY){
-        super.moveTo(newX, newY);
+    protected void move(double deltaX, double deltaY){
+        super.move(deltaX, deltaY);
+        listener.positionChanged(id);
+    }
+
+    public void moveTo(double x, double y){
+        super.moveTo(x, y);
         listener.positionChanged(id);
     }
 

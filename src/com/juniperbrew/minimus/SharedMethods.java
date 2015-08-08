@@ -1,22 +1,18 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Line2D;
-import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -60,17 +56,7 @@ public class SharedMethods {
             }
             projectile.hitscan = projectileDefinition.hitscan;
             projectiles.add(projectile);
-            /*
-            if(projectileDefinition.hitscan){
-                TimerTask task = new TimerTask() {
-                    @Override
-                    public void run() {
-                        System.out.println("Removing: "+projectile);
-                        projectiles.remove(projectile);
-                    }
-                };
-                timer.schedule(task,Tools.secondsToMilli(projectileDefinition.duration));
-            }*/
+
             if(weapon.projectileCount>1){
                 deg += weapon.spread/(weapon.projectileCount-1);
             }
@@ -78,7 +64,7 @@ public class SharedMethods {
         return projectiles;
     }
 
-    public static void applyInput(Entity e, Network.UserInput input, int mapWidth, int mapHeight){
+    public static void applyInput(Entity e, Network.UserInput input){
         float deltaX = 0;
         float deltaY = 0;
         float velocity = ConVars.getFloat("sv_player_velocity");
@@ -109,26 +95,72 @@ public class SharedMethods {
 
 
         if(ConVars.getBool("sv_check_map_collisions")) {
-            if (e.getX() + e.width + deltaX > mapWidth) {
-                deltaX = mapWidth - e.getX() - e.width;
+            if (e.getX() + e.width + deltaX > GlobalVars.mapWidth) {
+                deltaX = GlobalVars.mapWidth - e.getX() - e.width;
             }
             if (e.getX() + deltaX < 0) {
                 deltaX = 0 - e.getX();
             }
-            if (e.getY() + e.height + deltaY > mapHeight) {
-                deltaY = mapHeight - e.getY() - e.height;
+            if (e.getY() + e.height + deltaY > GlobalVars.mapHeight) {
+                deltaY = GlobalVars.mapHeight - e.getY() - e.height;
             }
             if (e.getY() + deltaY < 0) {
                 deltaY = 0 - e.getY();
             }
         }
-
-        float newX = e.getX()+deltaX;
-        float newY = e.getY()+deltaY;
-        e.moveTo(newX,newY);
+        Rectangle bounds = e.getGdxBounds();
+        bounds.setX(bounds.getX()+deltaX);
+        if(SharedMethods.checkMapCollision(bounds)){
+            bounds.setX(bounds.getX()-deltaX);
+            deltaX = 0;
+        }
+        bounds.setY(bounds.getY()+deltaY);
+        if(SharedMethods.checkMapCollision(bounds)){
+            deltaY = 0;
+        }
+        e.move(deltaX,deltaY);
     }
 
-    public static void setRotation(Entity e, Network.UserInput input){
+
+    public static boolean checkMapCollision(Rectangle bounds){
+
+        if(bounds.x<0||(bounds.x+bounds.width)>=GlobalVars.mapWidth||bounds.y<0|bounds.y+bounds.height>=GlobalVars.mapHeight){
+            return false;
+        }
+
+        int minX = (int) Math.floor(bounds.x / GlobalVars.tileWidth);
+        int maxX = (int) Math.floor((bounds.x + bounds.width) / GlobalVars.tileWidth);
+        int minY = (int) Math.floor(bounds.y / GlobalVars.tileHeight);
+        int maxY = (int) Math.floor((bounds.y+bounds.height) / GlobalVars.tileHeight);
+
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                if(GlobalVars.collisionMap[x][y])return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean[][] createCollisionMap(TiledMap map, int mapWidth, int mapHeight){
+        boolean[][] collisions = new boolean[mapWidth][mapHeight];
+        for(TiledMapTileLayer layer :map.getLayers().getByType(TiledMapTileLayer.class)){
+            for (int x = 0; x < layer.getWidth(); x++) {
+                for (int y = 0; y < layer.getHeight(); y++) {
+                    TiledMapTileLayer.Cell cell = layer.getCell(x,y);
+                    if(cell!=null){
+                        if(cell.getTile().getProperties().containsKey("solid")) {
+                            collisions[x][y] = true;
+                            System.out.println("Collision at ("+x+","+y+")");
+                        }
+                    }
+                }
+            }
+        }
+        return collisions;
+    }
+
+    public static void setRotation(NetworkEntity e, Network.UserInput input){
         float mouseX = input.mouseX;
         float mouseY = input.mouseY;
         float playerX = e.getX() + e.width/2;
@@ -139,9 +171,28 @@ public class SharedMethods {
         e.setRotation(degrees);
     }
 
+    public static void renderAttackBoundingBox(ShapeRenderer renderer, ConcurrentLinkedQueue<Projectile> projectiles) {
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        for(Projectile projectile:projectiles){
+            Rectangle rect = projectile.getHitbox().getBoundingRectangle();
+            renderer.rect(rect.x,rect.y,rect.width,rect.height);
+        }
+        renderer.end();
+    }
+
+    public static void renderAttackPolygon(ShapeRenderer renderer, ConcurrentLinkedQueue<Projectile> projectiles) {
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        for(Projectile projectile:projectiles){
+            renderer.polygon(projectile.getHitbox().getTransformedVertices());
+        }
+        renderer.end();
+    }
+
     public static void renderAttack(float delta, SpriteBatch batch, ConcurrentLinkedQueue<Projectile> projectiles){
+        batch.begin();
         for(Projectile projectile:projectiles){
             projectile.render(batch, delta);
         }
+        batch.end();
     }
 }

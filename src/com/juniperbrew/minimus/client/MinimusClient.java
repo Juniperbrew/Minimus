@@ -15,10 +15,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -30,6 +32,7 @@ import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
+import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -354,7 +357,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //We need to move player here so we can spawn the potential projectiles at correct location
         Entity player = stateSnapshot.get(playerID);
         if(player != null){
-            sharedMethods.applyInput(player,input, mapWidth, mapHeight);
+            sharedMethods.applyInput(player,input);
         }
 
         EnumSet<Enums.Buttons> buttons = input.buttons;
@@ -444,7 +447,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void playerAttack(Entity player, int weaponSlot){
+    private void playerAttack(NetworkEntity player, int weaponSlot){
+        if(weaponList.get(weaponSlot)==null){
+            return;
+        }
         if(cooldowns.get(0)==null){
             for(int weaponslot: weaponList.keySet()){
                 cooldowns.put(weaponslot,-1d);
@@ -487,17 +493,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            sharedMethods.applyInput(state.get(playerID),input,mapWidth,mapHeight);
-        }
-    }
-
-    private void printStateHistory(){
-        showMessage("#State History:");
-        int index = 0;
-        Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
-        for(Network.FullEntityUpdate state :stateHistoryCopy){
-            showMessage(index + "> Time:" + state.serverTime + " InputID:" + state.lastProcessedInputID + " EntityCount:" + state.entities.size());
-            index++;
+            sharedMethods.applyInput(state.get(playerID),input);
         }
     }
 
@@ -506,26 +502,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //printStateHistory();
         //If interp delay is 0 we simply copy the latest authorative state and run clientside prediction on that
         if(ConVars.getDouble("cl_interp") <= 0){
-            HashMap<Integer, Entity> authoritativeStateCopy = new HashMap<Integer, Entity>();
+            HashMap<Integer, Entity> authoritativeStateEntities = new HashMap<>();
             for(int id : authoritativeState.entities.keySet()){
-                Entity e = authoritativeState.entities.get(id);
+                NetworkEntity e = authoritativeState.entities.get(id);
                 Entity entityCopy = new Entity(e);
-                authoritativeStateCopy.put(id,entityCopy);
+                authoritativeStateEntities.put(id,entityCopy);
             }
-            runClientSidePrediction(authoritativeStateCopy);
-            stateSnapshot = authoritativeStateCopy;
+            runClientSidePrediction(authoritativeStateEntities);
+            stateSnapshot = authoritativeStateEntities;
             return;
         }
 
         double renderTime = clientTime-ConVars.getDouble("cl_interp");
 
-        //Copy this because it's modified from network thread
-        Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
-
         //Find between which two states renderTime is
         ArrayList<Network.FullEntityUpdate> oldStates = new ArrayList<Network.FullEntityUpdate>();
         //The list is sorted starting with the oldest states, the first state we find that is newer than renderTime is thus our interpolation target
-        for(Network.FullEntityUpdate state:stateHistoryCopy){ //FIXME Concurrent modification
+        for(Network.FullEntityUpdate state:stateHistory){
             if(state.serverTime>renderTime){
                 interpTo = state;
                 break;
@@ -536,9 +529,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
         //Look through states in reverse, the first state we find that is older than renderTime is our interpolation start point
-        for (int i = stateHistoryCopy.length-1; i >= 0; i--) {
-            if(stateHistoryCopy[i].serverTime<renderTime){
-                interpFrom = stateHistoryCopy[i];
+        for (int i = stateHistory.size()-1; i >= 0; i--) {
+            if(stateHistory.get(i).serverTime<renderTime){
+                interpFrom = stateHistory.get(i);
                 break;
             }
         }
@@ -562,25 +555,24 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             //System.out.println("Interp alpha:"+interpAlpha);
 
             HashMap<Integer, Entity> interpEntities = interpolateStates(interpFrom, interpTo, interpAlpha);
-
             runClientSidePrediction(interpEntities);
             stateSnapshot = interpEntities;
         }
     }
 
     private HashMap<Integer, Entity> interpolateStates(Network.FullEntityUpdate from, Network.FullEntityUpdate to, double alpha){
-        HashMap<Integer, Entity> interpEntities = new HashMap<Integer, Entity>();
+        HashMap<Integer, Entity> interpEntities = new HashMap<>();
         //FIXME if interpolation destination is missing entity we need to remove it from result
         for(int id: from.entities.keySet()){
             if(id != playerID) {
-                Entity fromPos = from.entities.get(id);
-                Entity toPos = to.entities.get(id);
+                NetworkEntity fromPos = from.entities.get(id);
+                NetworkEntity toPos = to.entities.get(id);
                 Network.Position interpPos = interpolate(fromPos, toPos, alpha);
                 //System.out.println("Interpolating from ("+fromPos.x+","+fromPos.y+") to ("+toPos.x+","+toPos.y+") Result ("+interpPos.x+","+interpPos.y+")");
                 if (interpPos != null){
                     Entity interpEntity = new Entity(fromPos);
                     interpEntity.moveTo(interpPos.x,interpPos.y);
-                    Entity authorativeEntity = authoritativeState.entities.get(id);
+                    NetworkEntity authorativeEntity = authoritativeState.entities.get(id);
                     if(authorativeEntity != null){
                         interpEntity.setHealth(authorativeEntity.getHealth());
                     }
@@ -589,7 +581,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }else{
                 //For player position we use latest server position and apply clientside prediction on it later
                 //FIXME copy this value or else you'll be modifying the authoritative state
-                Entity player = authoritativeState.entities.get(playerID);
+                NetworkEntity player = authoritativeState.entities.get(playerID);
                 Entity playerCopy = new Entity(player);
                 interpEntities.put(id, playerCopy);
             }
@@ -597,7 +589,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return interpEntities;
     }
 
-    private Network.Position interpolate(Entity from, Entity to, double alpha){
+    private Network.Position interpolate(NetworkEntity from, NetworkEntity to, double alpha){
         if(to == null){
             //If entity has dissapeared in next state we simply remove it without interpolation
             return null;
@@ -657,22 +649,26 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.update(delta);
-            for(int id:stateSnapshot.keySet()){
-                if(id==projectile.ownerID){
-                    continue;
-                }
-                if(!projectile.hitscan){
-                    Entity target = stateSnapshot.get(id);
-                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
-                        if(id == playerID){
+            if(!projectile.hitscan) {
+                for (int id : stateSnapshot.keySet()) {
+                    if (id == projectile.ownerID) {
+                        continue;
+                    }
+                    NetworkEntity target = stateSnapshot.get(id);
+                    if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
+                        if (id == playerID) {
                             sounds.get("hurt.ogg").play(soundVolume);
-                        }else{
+                        } else {
                             sounds.get("hit.ogg").play(soundVolume);
                         }
                         projectile.destroyed = true;
                     }
                 }
+                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                    projectile.destroyed = true;
+                }
             }
+
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
             }
@@ -709,23 +705,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
-                for (Entity e : interpFrom.entities.values()) {
+                for (NetworkEntity e : interpFrom.entities.values()) {
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                 }
                 shapeRenderer.setColor(0, 1, 0, 1); //green
-                for (Entity e : interpTo.entities.values()) {
+                for (NetworkEntity e : interpTo.entities.values()) {
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                 }
                 shapeRenderer.setColor(0, 0, 1, 1); //blue
-                for (Entity e : authoritativeState.entities.values()) {
+                for (NetworkEntity e : authoritativeState.entities.values()) {
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
+                }
+                shapeRenderer.setColor(1, 1, 1, 1); //white
+                for (NetworkEntity e : authoritativeState.entities.values()) {
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
                 }
                 shapeRenderer.end();
             }
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             //Render entities
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
-                Entity e = stateSnapshot.get(id);
+                NetworkEntity e = stateSnapshot.get(id);
                 float health = 1-((float)e.getHealth()/e.maxHealth);
                 if(playerList.contains(e.id)){
                     //Cast player position to int because we are centering the camera using casted values too
@@ -760,6 +760,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             shapeRenderer.end();
             SharedMethods.renderAttack(delta, batch, projectiles);
+            if(ConVars.getBool("cl_show_debug")) {
+                shapeRenderer.setColor(1,1,1,1);
+                SharedMethods.renderAttackBoundingBox(shapeRenderer,projectiles);
+                shapeRenderer.setColor(1,1,0,1);
+                SharedMethods.renderAttackPolygon(shapeRenderer,projectiles);
+            }
         }
 
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
@@ -783,13 +789,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
         HashMap<Integer, Network.Position> changedEntityPositions = update.changedEntityPositions;
-        HashMap<Integer,Entity> newEntityList = new HashMap<>();
-        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
+        HashMap<Integer,NetworkEntity> newEntityList = new HashMap<>();
+        HashMap<Integer,NetworkEntity> oldEntityList = authoritativeState.entities;
         for(int id: oldEntityList.keySet()){
-            Entity e = oldEntityList.get(id);
+            NetworkEntity e = oldEntityList.get(id);
             if(changedEntityPositions.containsKey(id)){
                 Network.Position pos = changedEntityPositions.get(id);
-                Entity movedEntity = new Entity(e);
+                NetworkEntity movedEntity = new NetworkEntity(e);
                 movedEntity.moveTo(pos.x,pos.y);
                 newEntityList.put(id,movedEntity);
             }else{
@@ -805,13 +811,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private Network.FullEntityUpdate applyEntityComponentUpdate(Network.EntityComponentsUpdate update){
         HashMap<Integer, ArrayList<Component>> changedEntityComponents = update.changedEntityComponents;
-        HashMap<Integer,Entity> newEntityList = new HashMap<>();
-        HashMap<Integer,Entity> oldEntityList = authoritativeState.entities;
+        HashMap<Integer,NetworkEntity> newEntityList = new HashMap<>();
+        HashMap<Integer,NetworkEntity> oldEntityList = authoritativeState.entities;
         for(int id: oldEntityList.keySet()) {
-            Entity e = oldEntityList.get(id);
+            NetworkEntity e = oldEntityList.get(id);
             if (changedEntityComponents.containsKey(id)) {
                 ArrayList<Component> components = changedEntityComponents.get(id);
-                Entity changedEntity = new Entity(e);
+                NetworkEntity changedEntity = new NetworkEntity(e);
                 for(Component component:components){
                     if(component instanceof Position){
                         Position pos = (Position) component;
@@ -931,7 +937,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(character == 'q'){
             KryoSerialization s = (KryoSerialization) client.getSerialization();
-            Entity e = new Entity(-1,50,50,-1);
+            NetworkEntity e = new NetworkEntity(-1,50,50,-1);
             s.write(client, buffer ,e);
             showMessage("Entity size is " + buffer.position() + " bytes");
             buffer.clear();
@@ -992,7 +998,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             ConVars.toggleVar("cl_compress_input");
             showMessage("CompressInput:" + ConVars.getBool("cl_compress_input"));
         }
-        if(character == '0'){
+        if(character == 'p'){
             ConVars.toggleVar("cl_show_debug");
             showMessage("Show debug:" + ConVars.getBool("cl_show_debug"));
         }
@@ -1055,7 +1061,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void centerCameraOnPlayer(){
-        Entity player = null;
+        NetworkEntity player = null;
         if(stateSnapshot!=null){
             player = stateSnapshot.get(playerID);
         }
@@ -1118,6 +1124,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void sendTCP(Object o){
         int bytesSent = client.sendTCP(o);
         statusData.addBytesSent(bytesSent);
+    }
+
+
+    private void printStateHistory(){
+        showMessage("#State History:");
+        int index = 0;
+        Network.FullEntityUpdate[] stateHistoryCopy = stateHistory.toArray(new Network.FullEntityUpdate[stateHistory.size()]);
+        for(Network.FullEntityUpdate state :stateHistoryCopy){
+            showMessage(index + "> Time:" + state.serverTime + " InputID:" + state.lastProcessedInputID + " EntityCount:" + state.entities.size());
+            index++;
+        }
     }
 
     public void showConsoleWindow(){
@@ -1185,9 +1202,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void loadMap(String mapName, float mapScale){
         map = new TmxMapLoader().load("resources"+File.separator+mapName);
+        MapProperties properties = map.getProperties();
+        GlobalVars.tileWidth = (Integer)properties.get("tilewidth");
+        GlobalVars.tileHeight = (Integer)properties.get("tileheight");
+        GlobalVars.mapWidthTiles = (Integer)properties.get("width");
+        GlobalVars.mapHeightTiles = (Integer)properties.get("height");
+
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")*mapScale);
-        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")*mapScale);
+        mapHeight = (int) (GlobalVars.mapHeightTiles*GlobalVars.tileHeight*mapScale);
+        mapWidth = (int) (GlobalVars.mapWidthTiles*GlobalVars.tileWidth*mapScale);
+
+        GlobalVars.mapWidth = mapHeight;
+        GlobalVars.mapHeight = mapWidth;
+
+        GlobalVars.collisionMap = SharedMethods.createCollisionMap(map,GlobalVars.mapWidthTiles,GlobalVars.mapHeightTiles);
+
     }
 
     private void removeEntity(int id){

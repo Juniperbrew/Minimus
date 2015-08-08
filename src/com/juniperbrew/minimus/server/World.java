@@ -2,10 +2,12 @@ package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.*;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
@@ -77,7 +79,6 @@ public class World implements EntityChangeListener{
 
     Timer timer = new Timer();
 
-    //HashMap<String,Texture> textures;
     TextureAtlas atlas;
 
     public World(WorldChangeListener listener, TiledMap map){
@@ -88,8 +89,18 @@ public class World implements EntityChangeListener{
         loadImages();
 
         this.map = map;
-        mapHeight = (int) ((Integer) map.getProperties().get("height")*(Integer) map.getProperties().get("tileheight")* ConVars.getDouble("sv_map_scale"));
-        mapWidth = (int) ((Integer) map.getProperties().get("width")*(Integer) map.getProperties().get("tilewidth")* ConVars.getDouble("sv_map_scale"));
+
+        GlobalVars.mapWidthTiles = (Integer) map.getProperties().get("width");
+        GlobalVars.mapHeightTiles = (Integer) map.getProperties().get("height");
+        GlobalVars.tileWidth = (Integer) map.getProperties().get("tilewidth");
+        GlobalVars.tileHeight = (Integer) map.getProperties().get("tileheight");
+
+        mapHeight = (int) (GlobalVars.mapHeightTiles * GlobalVars.tileHeight * ConVars.getDouble("sv_map_scale"));
+        mapWidth = (int) (GlobalVars.mapWidthTiles * GlobalVars.tileWidth * ConVars.getDouble("sv_map_scale"));
+        GlobalVars.mapWidth = mapHeight;
+        GlobalVars.mapHeight = mapWidth;
+
+        GlobalVars.collisionMap = SharedMethods.createCollisionMap(map, GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles);
     }
 
     public void updateWorld(float delta){
@@ -129,6 +140,18 @@ public class World implements EntityChangeListener{
         }
     }
 
+/*
+    public boolean checkMapCollision(Rectangle bounds){
+        return SharedMethods.checkMapCollision(collisionMap,bounds);
+        if(checkTileCollision(bounds.x,bounds.y))return true;
+        if(checkTileCollision(bounds.x+bounds.width,bounds.y))return true;
+        if(checkTileCollision(bounds.x,bounds.y+bounds.height))return true;
+        if(checkTileCollision(bounds.x+bounds.width,bounds.y+bounds.height))return true;
+
+        return false;
+    }
+*/
+
     private void updateEntityAI(float delta){
         for(EntityAI ai:entityAIs.values()){
             ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
@@ -139,9 +162,8 @@ public class World implements EntityChangeListener{
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.update(delta);
-
-            //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
-            if(!projectile.hitscan){
+            if(!projectile.hitscan) {
+                //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
                 for(int id:entities.keySet()){
                     if(projectile.ownerID==id){
                         continue;
@@ -153,6 +175,10 @@ public class World implements EntityChangeListener{
                             target.reduceHealth(projectile.damage,projectile.ownerID);
                         }
                     }
+                }
+
+                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                    projectile.destroyed = true;
                 }
             }
 
@@ -202,7 +228,7 @@ public class World implements EntityChangeListener{
         if(e.invulnerable&&input.buttons.size()>0){
             e.invulnerable = false;
         }
-        SharedMethods.applyInput(e, input, mapWidth, mapHeight);
+        SharedMethods.applyInput(e, input);
         if(input.buttons.contains(Enums.Buttons.NUM1)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.slot2Weapon = 0;
@@ -292,6 +318,9 @@ public class World implements EntityChangeListener{
     }
 
     private void attackWithPlayer(int id, int weaponSlot){
+        if(weaponList.get(weaponSlot)==null){
+            return;
+        }
         if(attackCooldown.get(id)==null){
             attackCooldown.put(id,new HashMap<Integer, Double>());
             for(int weaponslot: weaponList.keySet()){
@@ -419,7 +448,7 @@ public class World implements EntityChangeListener{
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponlist.txt");
         }
-        System.out.println("Loading weapons from file:"+file);
+        System.out.println("Loading weapons from file:" + file);
         HashMap<Integer,Weapon> weapons = new HashMap<>();
         Weapon weapon = null;
         int weaponSlot = 0;
@@ -551,7 +580,7 @@ public class World implements EntityChangeListener{
     }
 
     public void addRandomNPC(){
-        addNPC(MathUtils.random(0,3),MathUtils.random(0,2));
+        addNPC(MathUtils.random(0, 3), MathUtils.random(0, 2));
     }
 
     private boolean isInvulnerable(ServerEntity e){
@@ -576,7 +605,7 @@ public class World implements EntityChangeListener{
             }
         };
         timer.schedule(task,Tools.secondsToMilli(duration));
-        listener.powerupAdded(id,powerup);
+        listener.powerupAdded(id, powerup);
     }
 
     private void despawnPowerup(int id){
@@ -694,8 +723,8 @@ public class World implements EntityChangeListener{
         return changedComponents;
     }
 
-    public HashMap<Integer,Entity> getNetworkedEntityList(){
-        HashMap<Integer,Entity> networkedEntities = new HashMap<>();
+    public HashMap<Integer,NetworkEntity> getNetworkedEntityList(){
+        HashMap<Integer,NetworkEntity> networkedEntities = new HashMap<>();
         for(int id:entities.keySet()){
             networkedEntities.put(id, entities.get(id).getNetworkEntity());
         }
@@ -832,7 +861,7 @@ public class World implements EntityChangeListener{
 
     @Override
     public void entityDied(int id, int sourceID) {
-        listener.entityKilled(id,sourceID);
+        listener.entityKilled(id, sourceID);
         if (playerList.contains(id)) {
             Tools.addToMap(playerLives, id, -1);
             listener.playerLivesChanged(id, playerLives.get(id));
@@ -857,7 +886,7 @@ public class World implements EntityChangeListener{
         public void playerRemoved(int id);
         public void entityRemoved(int id);
         public void entityKilled(int victimID, int killerID);
-        public void entityAdded(Entity e);
+        public void entityAdded(NetworkEntity e);
         public void powerupAdded(int id, Powerup powerup);
         public void powerupRemoved(int id);
         public void waveChanged(int wave);
