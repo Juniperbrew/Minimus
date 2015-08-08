@@ -215,8 +215,10 @@ public class World implements EntityChangeListener{
                 Powerup p = powerups.get(powerupID);
                 if(player.getJavaBounds().contains(p.x,p.y)){
                     if(p.type == Powerup.HEALTH){
-                        player.addHealth(p.value);
-                        despawnPowerup(powerupID);
+                        if(player.getHealth()<player.maxHealth){
+                            player.addHealth(p.value);
+                            despawnPowerup(powerupID);
+                        }
                     }
                 }
             }

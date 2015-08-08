@@ -723,6 +723,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 shapeRenderer.end();
             }
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+            batch.begin();
+            for(Powerup p : powerups.values()){
+                TextureRegion t = atlas.findRegion("health");
+                batch.draw(t,p.x-t.getRegionWidth()/2,p.y-t.getRegionHeight()/2);
+            }
+            batch.end();
+
             //Render entities
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
                 NetworkEntity e = stateSnapshot.get(id);
@@ -751,14 +759,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, healthWidth, e.height, 1, 1, e.getRotation());
                 }
             }
-
-            Powerup[] powerupsCopy = powerups.values().toArray(new Powerup[powerups.values().size()]);
-            for(Powerup p : powerupsCopy){
-                shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
-                shapeRenderer.circle(p.x,p.y,5);
-            }
-
             shapeRenderer.end();
+
             SharedMethods.renderAttack(delta, batch, projectiles);
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.setColor(1,1,1,1);
