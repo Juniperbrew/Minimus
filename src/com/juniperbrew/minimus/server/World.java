@@ -239,7 +239,7 @@ public class World implements EntityChangeListener{
             if (spawnedEnemiesCounter < waveEnemyCount) {
                 if (System.nanoTime() - lastEnemySpawned > Tools.secondsToNano(ENEMY_SPAWN_DELAY)) {
                     lastEnemySpawned = System.nanoTime();
-                    if (waveDefinition != null) {
+                    if (!ConVars.getBool("sv_custom_waves")||waveDefinition != null) {
                         spawnEnemy(waveDefinition.enemies.get(spawnedEnemiesCounter));
                     } else {
                         addRandomNPC();
@@ -803,7 +803,7 @@ public class World implements EntityChangeListener{
                 x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth+SPAWN_AREA_WIDTH);
             }
         }
-        addNPC(new Rectangle(x,y,width,height),aiType,weapon);
+        addNPC(new Rectangle(x, y, width, height), aiType, weapon);
     }
 
     public void addRandomNPC(){
@@ -881,7 +881,7 @@ public class World implements EntityChangeListener{
         if(!file.exists()){
             file = new File("resources"+ File.separator+"defaultwavelist.txt");
         }
-        System.out.println("Loading custom wave from file:"+file);
+        System.out.println("Loading custom wave from file:" + file);
         HashMap<Integer,WaveDefinition> waves = new HashMap<>();
         int waveNumber = 0;
         String aiType;
