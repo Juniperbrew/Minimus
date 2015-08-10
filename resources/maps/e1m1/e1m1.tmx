@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="47">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="53">
  <tileset firstgid="1" name="Walls" tilewidth="20" tileheight="20">
   <image source="walls1.bmp" width="320" height="600"/>
   <tile id="0">
@@ -2600,5 +2600,8 @@
     <property name="weapon" value="1"/>
    </properties>
   </object>
+  <object id="48" type="enemySpawn" x="640" y="160" width="60" height="60"/>
+  <object id="50" type="enemySpawn" x="560" y="740" width="80" height="60"/>
+  <object id="52" type="enemySpawn" x="60" y="620" width="60" height="60"/>
  </objectgroup>
 </map>
