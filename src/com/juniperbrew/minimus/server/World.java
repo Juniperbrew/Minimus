@@ -218,7 +218,7 @@ public class World implements EntityChangeListener{
                 setWave(wave + 1);
                 waveDefinition = waveList.get(wave);
 
-                if (waveDefinition == null) {
+                if (!ConVars.getBool("sv_custom_waves")&&waveDefinition == null) {
                     waveEnemyCount = 3 + 2 * wave;
                     waveHealthPackCount = (int) Math.sqrt(wave);
                 } else {
