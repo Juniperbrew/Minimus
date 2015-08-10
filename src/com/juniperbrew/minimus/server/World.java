@@ -239,10 +239,10 @@ public class World implements EntityChangeListener{
             if (spawnedEnemiesCounter < waveEnemyCount) {
                 if (System.nanoTime() - lastEnemySpawned > Tools.secondsToNano(ENEMY_SPAWN_DELAY)) {
                     lastEnemySpawned = System.nanoTime();
-                    if (!ConVars.getBool("sv_custom_waves")||waveDefinition != null) {
-                        spawnEnemy(waveDefinition.enemies.get(spawnedEnemiesCounter));
-                    } else {
+                    if (!ConVars.getBool("sv_custom_waves")||waveDefinition == null) {
                         addRandomNPC();
+                    } else {
+                        spawnEnemy(waveDefinition.enemies.get(spawnedEnemiesCounter));
                     }
                     spawnedEnemiesCounter++;
                 }

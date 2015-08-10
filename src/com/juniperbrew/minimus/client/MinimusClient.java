@@ -380,7 +380,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 || buttons.contains(Enums.Buttons.W))){
             playerAnimationState = animationFrameTime*3;
         }
-        if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY){
+        if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
             int inputRequestID = getNextInputRequestID();
             Network.UserInput input = new Network.UserInput();
             input.msec = delta;
