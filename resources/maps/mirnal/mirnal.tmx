@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" nextobjectid="3">
+ <tileset firstgid="1" name="image" tilewidth="32" tileheight="32">
+  <image source="tileset.png" width="512" height="512"/>
+  <tile id="237">
+   <properties>
+    <property name="solid" value=""/>
+   </properties>
+  </tile>
+  <tile id="253">
+   <properties>
+    <property name="solid" value=""/>
+   </properties>
+  </tile>
+ </tileset>
+ <layer name="Tile Layer 1" width="50" height="50">
+  <data encoding="base64" compression="zlib">
+   eJzVmN1x00AUhbcA4gZw3EBMqIAOCE4DYBUAk7wCAfSaAAUAHUAFoQLTFauZveOTw9k/ey2ZhzMrKbJyvr137/6snHOXXqsgu37kdeV16vXc6yLoRXiGWsDvpmr5mV3PwWeKo/c69+q81hO2zGHPSzkWE8chFo8uqIZjyjhwPEy7cGA+Th0PY1gFvqXXpwKOa6/ZkcQjJmP5X+pVTFZ7SziONR4184fl1rHFAxlKOLD+osaMx+D5hIQMpRzX4juzEePBnpUUx1uvd0HvM2xj1LNnBXpKHAPDT6+7oF/E85h0iPFjeWTfvajUwHELDCjjMSbFUtPPmPMzur+C75405lBMyIN5lutn9Gq/xXvWy0q98vrm9R30O8PDsVk4XV/Ye41yY7xExhXjYZZc307FUcKj4nJMHL3XE7ddU6Z4uA689nrTSPv6H/aCvD5mHsX02evGaxN0H7QBffD6E9qcajyjzH/ntvVmSe9wjJDFONj7Jng3jlLV9LlaM3XimbXGZTxYrweOL15fhe7Jo3qHlfNve6wYR8n8azmHefbDxcfsDTB8TLyH4nxB/9bf5mddGAfVGksf2pSnXTh4b4t7XM5/9le7LlqGPsJ8OxQH3iu/dl0bD9XOD8ihzrSYsdW6dbknR++2Y4H7OBYbG+PI2WLfoHIsx2H+8RwzxsEtjvFD7Ocwx1IcvdvWodj+PLWHV3W25X6uhMMYYuclfG7C/hUH598Y8Uidk7FXHvPMwe+NGY/UOVmqVrH3zv3bFy3iYedMKY6zgnjEahXyYl5dunbxMIazAg7b46fi0Ylr9I7rkVbxQAaT4sC/G4v6nnmPrQlVTNQ3as9BmMGU4ojFBdeDmCe8JuzoXtVuXqOp/k/5L+WIxYXzR+UT1y+uafgec5f6r+E4dQ/PYlMcsdziMa4YsJ/mhf5rOFjMYf5RKp+4Vql7XNeOycHeebyr+saMfK9qUu6chPfeJecl2IfoOzaXq/mlcw/HPI4LNSawv1tJjQ3V/2rOjOVjLp8OwcHrELWO4vqp1vDIXctRch6Sk/JonmLxYA58XstROo5zSnF04u9qDm/N0bvtHrElB8/ZPE44TvtwDAzDXilWI3IcOCeYvzWJmdQ8gzVsFw6bo3MMFjM8Z+C1RGoO5LmFefE9O3trMT7Yt50xmFJzuKrDsfvYM8VSyoHezxP/b2j/Alu8Alw=
+  </data>
+ </layer>
+ <layer name="Tile Layer 2" width="50" height="50">
+  <data encoding="base64" compression="zlib">
+   eJztmI1twjAQhb112aBdAOgCbcoCMAWrMEIEljjp5MaOfT/xC+STTkJREvzu2edzQthA49R4/9VlFOvnu/I+nu8/o3e+EzdloDAqQ4r1etfkFM2PWtIcjpnrPUDxQ7tPzPlRqo2a9WENih9aNDnt7Qefi5sf/f3gbH5sfqRo9g56dm1+5PazW/J7iX7X44xHOb2GZftda5BqjgaknBJz5+Ep1uRH7nwQryP6IcHDjx7fnF7ND7RvSbVnZYv9XItl7tZUrziHJEb2++jwf9JvKfvwf6wUH4/4LcRgNAYLfkJ5rC06tLTOf543JB1S4pxK587XI87P+Ax5DfG+i9O4WvulKS+G53umNC6hQcKUjl0or3E0DZGatcHnWQwvDZoea06HJPc9er6SDsT5w+E1uqRjyDyDSK0OBEq9QosOyRnYE95PlfonND8IqiO1tZbWOOraqNFh5YVnDW7Rweegx1lDAo1p7kyR601Q1oumP19ah7TGoukg7k2zGcQ=
+  </data>
+ </layer>
+ <objectgroup name="Object Layer 1">
+  <object id="1" name="spawn" type="spawn" x="864" y="288" width="288" height="256"/>
+ </objectgroup>
+</map>
