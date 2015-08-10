@@ -4,6 +4,13 @@ size: 256,64
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
+ammo
+  rotate: false
+  xy: 228, 35
+  size: 9, 11
+  orig: 9, 11
+  offset: 0, 0
+  index: -1
 civ
   rotate: false
   xy: 2, 2
@@ -13,127 +20,777 @@ civ
   index: 4
 civ
   rotate: false
-  xy: 33, 3
+  xy: 17, 2
   size: 12, 10
   orig: 12, 10
   offset: 0, 0
   index: 2
 civ
   rotate: false
-  xy: 204, 52
+  xy: 214, 37
   size: 12, 9
   orig: 12, 9
   offset: 0, 0
   index: 1
 civ
   rotate: false
-  xy: 204, 52
+  xy: 214, 37
   size: 12, 9
   orig: 12, 9
   offset: 0, 0
   index: 3
 fire
   rotate: false
-  xy: 176, 47
-  size: 10, 14
-  orig: 10, 14
-  offset: 0, 0
-  index: 4
-fire
-  rotate: false
-  xy: 188, 52
+  xy: 31, 3
   size: 14, 9
   orig: 14, 9
   offset: 0, 0
   index: 1
 fire
   rotate: false
-  xy: 17, 3
+  xy: 190, 33
+  size: 10, 13
+  orig: 10, 13
+  offset: 0, 0
+  index: 2
+fire
+  rotate: false
+  xy: 176, 22
   size: 14, 9
   orig: 14, 9
   offset: 0, 0
   index: 3
 fire
   rotate: false
-  xy: 218, 48
-  size: 10, 13
-  orig: 10, 13
+  xy: 202, 32
+  size: 10, 14
+  orig: 10, 14
   offset: 0, 0
-  index: 2
+  index: 4
 flame
   rotate: false
-  xy: 33, 15
+  xy: 176, 33
   size: 12, 13
   orig: 12, 13
   offset: 0, 0
   index: -1
 health
   rotate: false
-  xy: 2, 30
+  xy: 2, 31
   size: 46, 31
   orig: 46, 31
   offset: 0, 0
   index: -1
+laser
+  rotate: false
+  xy: 50, 46
+  size: 54, 16
+  orig: 54, 16
+  offset: 0, 0
+  index: -1
 link
   rotate: false
-  xy: 50, 37
+  xy: 50, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 1
 link
   rotate: false
-  xy: 68, 37
+  xy: 68, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 2
 link
   rotate: false
-  xy: 86, 37
+  xy: 86, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 3
 link
   rotate: false
-  xy: 104, 37
+  xy: 104, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 4
 link
   rotate: false
-  xy: 122, 37
+  xy: 122, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 5
 link
   rotate: false
-  xy: 140, 37
+  xy: 140, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 6
 link
   rotate: false
-  xy: 158, 37
+  xy: 158, 20
   size: 16, 24
   orig: 16, 24
   offset: 0, 0
   index: 7
 pistol
   rotate: false
-  xy: 2, 14
+  xy: 218, 48
   size: 29, 14
   orig: 29, 14
   offset: 0, 0
   index: -1
+rifle
+  rotate: false
+  xy: 2, 14
+  size: 44, 15
+  orig: 44, 15
+  offset: 0, 0
+  index: -1
+shotgun
+  rotate: false
+  xy: 162, 48
+  size: 54, 14
+  orig: 54, 14
+  offset: 0, 0
+  index: -1
+uzi
+  rotate: false
+  xy: 106, 46
+  size: 54, 16
+  orig: 54, 16
+  offset: 0, 0
+  index: -1
 white
   rotate: false
-  xy: 50, 34
+  xy: 249, 61
   size: 1, 1
   orig: 1, 1
+  offset: 0, 0
+  index: -1
+
+sprites2.png
+size: 1024,64
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+New folder/AMMOA0
+  rotate: false
+  xy: 775, 10
+  size: 28, 16
+  orig: 28, 16
+  offset: 0, 0
+  index: -1
+New folder/ARM1A0
+  rotate: false
+  xy: 709, 5
+  size: 31, 17
+  orig: 31, 17
+  offset: 0, 0
+  index: -1
+New folder/ARM1B0
+  rotate: false
+  xy: 723, 45
+  size: 31, 17
+  orig: 31, 17
+  offset: 0, 0
+  index: -1
+New folder/ARM2A0
+  rotate: false
+  xy: 723, 26
+  size: 31, 17
+  orig: 31, 17
+  offset: 0, 0
+  index: -1
+New folder/ARM2B0
+  rotate: false
+  xy: 742, 7
+  size: 31, 17
+  orig: 31, 17
+  offset: 0, 0
+  index: -1
+New folder/ARM3A0
+  rotate: false
+  xy: 676, 3
+  size: 31, 18
+  orig: 31, 18
+  offset: 0, 0
+  index: -1
+New folder/ARM3B0
+  rotate: false
+  xy: 658, 44
+  size: 31, 18
+  orig: 31, 18
+  offset: 0, 0
+  index: -1
+New folder/BFUGA0
+  rotate: false
+  xy: 39, 26
+  size: 61, 36
+  orig: 61, 36
+  offset: 0, 0
+  index: -1
+New folder/BKEYA0
+  rotate: false
+  xy: 812, 46
+  size: 14, 16
+  orig: 14, 16
+  offset: 0, 0
+  index: -1
+New folder/BKEYB0
+  rotate: false
+  xy: 812, 28
+  size: 14, 16
+  orig: 14, 16
+  offset: 0, 0
+  index: -1
+New folder/BON1A0
+  rotate: false
+  xy: 691, 44
+  size: 14, 18
+  orig: 14, 18
+  offset: 0, 0
+  index: -1
+New folder/BON1B0
+  rotate: false
+  xy: 691, 24
+  size: 14, 18
+  orig: 14, 18
+  offset: 0, 0
+  index: -1
+New folder/BON1C0
+  rotate: false
+  xy: 707, 44
+  size: 14, 18
+  orig: 14, 18
+  offset: 0, 0
+  index: -1
+New folder/BON1D0
+  rotate: false
+  xy: 707, 24
+  size: 14, 18
+  orig: 14, 18
+  offset: 0, 0
+  index: -1
+New folder/BON2A0
+  rotate: false
+  xy: 874, 30
+  size: 16, 15
+  orig: 16, 15
+  offset: 0, 0
+  index: -1
+New folder/BON2B0
+  rotate: false
+  xy: 886, 13
+  size: 16, 15
+  orig: 16, 15
+  offset: 0, 0
+  index: -1
+New folder/BON2C0
+  rotate: false
+  xy: 892, 30
+  size: 16, 15
+  orig: 16, 15
+  offset: 0, 0
+  index: -1
+New folder/BON2D0
+  rotate: false
+  xy: 904, 13
+  size: 16, 15
+  orig: 16, 15
+  offset: 0, 0
+  index: -1
+New folder/BON3A0
+  rotate: false
+  xy: 129, 2
+  size: 19, 29
+  orig: 19, 29
+  offset: 0, 0
+  index: -1
+New folder/BON3B0
+  rotate: false
+  xy: 141, 33
+  size: 19, 29
+  orig: 19, 29
+  offset: 0, 0
+  index: -1
+New folder/BON3C0
+  rotate: false
+  xy: 150, 2
+  size: 19, 29
+  orig: 19, 29
+  offset: 0, 0
+  index: -1
+New folder/BON3D0
+  rotate: false
+  xy: 162, 33
+  size: 19, 29
+  orig: 19, 29
+  offset: 0, 0
+  index: -1
+New folder/BON4A0
+  rotate: false
+  xy: 552, 17
+  size: 34, 20
+  orig: 34, 20
+  offset: 0, 0
+  index: -1
+New folder/BON4B0
+  rotate: false
+  xy: 556, 42
+  size: 34, 20
+  orig: 34, 20
+  offset: 0, 0
+  index: -1
+New folder/BON4C0
+  rotate: false
+  xy: 588, 20
+  size: 34, 20
+  orig: 34, 20
+  offset: 0, 0
+  index: -1
+New folder/BON4D0
+  rotate: false
+  xy: 592, 42
+  size: 34, 20
+  orig: 34, 20
+  offset: 0, 0
+  index: -1
+New folder/BPAKA0
+  rotate: false
+  xy: 117, 33
+  size: 22, 29
+  orig: 22, 29
+  offset: 0, 0
+  index: -1
+New folder/BROKA0
+  rotate: false
+  xy: 39, 3
+  size: 54, 21
+  orig: 54, 21
+  offset: 0, 0
+  index: -1
+New folder/BSKUA0
+  rotate: false
+  xy: 844, 46
+  size: 13, 16
+  orig: 13, 16
+  offset: 0, 0
+  index: -1
+New folder/BSKUB0
+  rotate: false
+  xy: 844, 28
+  size: 13, 16
+  orig: 13, 16
+  offset: 0, 0
+  index: -1
+New folder/CELLA0
+  rotate: false
+  xy: 955, 4
+  size: 17, 12
+  orig: 17, 12
+  offset: 0, 0
+  index: -1
+New folder/CELPA0
+  rotate: false
+  xy: 95, 3
+  size: 32, 21
+  orig: 32, 21
+  offset: 0, 0
+  index: -1
+New folder/CLIPA0
+  rotate: false
+  xy: 19, 2
+  size: 9, 11
+  orig: 9, 11
+  offset: 0, 0
+  index: -1
+New folder/CSAWA0
+  rotate: false
+  xy: 459, 38
+  size: 62, 24
+  orig: 62, 24
+  offset: 0, 0
+  index: -1
+New folder/LAUNA0
+  rotate: false
+  xy: 612, 2
+  size: 62, 16
+  orig: 62, 16
+  offset: 0, 0
+  index: -1
+New folder/MEDIA0
+  rotate: false
+  xy: 624, 21
+  size: 28, 19
+  orig: 28, 19
+  offset: 0, 0
+  index: -1
+New folder/MEGAA0
+  rotate: false
+  xy: 243, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/MEGAB0
+  rotate: false
+  xy: 245, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/MEGAC0
+  rotate: false
+  xy: 270, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/MEGAD0
+  rotate: false
+  xy: 272, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/MGUNA0
+  rotate: false
+  xy: 756, 46
+  size: 54, 16
+  orig: 54, 16
+  offset: 0, 0
+  index: -1
+New folder/PFIRA0
+  rotate: false
+  xy: 1007, 48
+  size: 14, 14
+  orig: 14, 14
+  offset: 0, 0
+  index: -1
+New folder/PINSA0
+  rotate: false
+  xy: 297, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINSB0
+  rotate: false
+  xy: 299, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINSC0
+  rotate: false
+  xy: 324, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINSD0
+  rotate: false
+  xy: 326, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINVA0
+  rotate: false
+  xy: 351, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINVB0
+  rotate: false
+  xy: 353, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINVC0
+  rotate: false
+  xy: 378, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PINVD0
+  rotate: false
+  xy: 380, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/PISTA0
+  rotate: false
+  xy: 976, 48
+  size: 29, 14
+  orig: 29, 14
+  offset: 0, 0
+  index: -1
+New folder/PLASA0
+  rotate: false
+  xy: 756, 28
+  size: 54, 16
+  orig: 54, 16
+  offset: 0, 0
+  index: -1
+New folder/PMAPA0
+  rotate: false
+  xy: 171, 4
+  size: 28, 27
+  orig: 28, 27
+  offset: 0, 0
+  index: -1
+New folder/PMAPB0
+  rotate: false
+  xy: 183, 35
+  size: 28, 27
+  orig: 28, 27
+  offset: 0, 0
+  index: -1
+New folder/PMAPC0
+  rotate: false
+  xy: 201, 6
+  size: 28, 27
+  orig: 28, 27
+  offset: 0, 0
+  index: -1
+New folder/PMAPD0
+  rotate: false
+  xy: 213, 35
+  size: 28, 27
+  orig: 28, 27
+  offset: 0, 0
+  index: -1
+New folder/PSTRA0
+  rotate: false
+  xy: 628, 43
+  size: 28, 19
+  orig: 28, 19
+  offset: 0, 0
+  index: -1
+New folder/PVISA0
+  rotate: false
+  xy: 552, 2
+  size: 28, 13
+  orig: 28, 13
+  offset: 0, 0
+  index: -1
+New folder/PVISB0
+  rotate: false
+  xy: 582, 2
+  size: 28, 13
+  orig: 28, 13
+  offset: 0, 0
+  index: -1
+New folder/RIFLA0
+  rotate: false
+  xy: 874, 47
+  size: 44, 15
+  orig: 44, 15
+  offset: 0, 0
+  index: -1
+New folder/RKEYA0
+  rotate: false
+  xy: 824, 10
+  size: 14, 16
+  orig: 14, 16
+  offset: 0, 0
+  index: -1
+New folder/RKEYB0
+  rotate: false
+  xy: 828, 46
+  size: 14, 16
+  orig: 14, 16
+  offset: 0, 0
+  index: -1
+New folder/ROCKA0
+  rotate: false
+  xy: 231, 6
+  size: 12, 27
+  orig: 12, 27
+  offset: 0, 0
+  index: -1
+New folder/RSKUA0
+  rotate: false
+  xy: 856, 10
+  size: 13, 16
+  orig: 13, 16
+  offset: 0, 0
+  index: -1
+New folder/RSKUB0
+  rotate: false
+  xy: 859, 46
+  size: 13, 16
+  orig: 13, 16
+  offset: 0, 0
+  index: -1
+New folder/SBOXA0
+  rotate: false
+  xy: 955, 18
+  size: 32, 12
+  orig: 32, 12
+  offset: 0, 0
+  index: -1
+New folder/SGN2A0
+  rotate: false
+  xy: 920, 48
+  size: 54, 14
+  orig: 54, 14
+  offset: 0, 0
+  index: -1
+New folder/SHELA0
+  rotate: false
+  xy: 2, 2
+  size: 15, 7
+  orig: 15, 7
+  offset: 0, 0
+  index: -1
+New folder/SHI1A0
+  rotate: false
+  xy: 922, 14
+  size: 31, 14
+  orig: 31, 14
+  offset: 0, 0
+  index: -1
+New folder/SHI1B0
+  rotate: false
+  xy: 926, 32
+  size: 31, 14
+  orig: 31, 14
+  offset: 0, 0
+  index: -1
+New folder/SHOTA0
+  rotate: false
+  xy: 959, 34
+  size: 63, 12
+  orig: 63, 12
+  offset: 0, 0
+  index: -1
+New folder/SOULA0
+  rotate: false
+  xy: 405, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/SOULB0
+  rotate: false
+  xy: 407, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/SOULC0
+  rotate: false
+  xy: 432, 37
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/SOULD0
+  rotate: false
+  xy: 434, 10
+  size: 25, 25
+  orig: 25, 25
+  offset: 0, 0
+  index: -1
+New folder/STIMA0
+  rotate: false
+  xy: 910, 30
+  size: 14, 15
+  orig: 14, 15
+  offset: 0, 0
+  index: -1
+New folder/SUITA0
+  rotate: false
+  xy: 13, 15
+  size: 24, 47
+  orig: 24, 47
+  offset: 0, 0
+  index: -1
+New folder/TRS1A0
+  rotate: false
+  xy: 805, 10
+  size: 17, 16
+  orig: 17, 16
+  offset: 0, 0
+  index: -1
+New folder/TRS2A0
+  rotate: false
+  xy: 102, 26
+  size: 13, 36
+  orig: 13, 36
+  offset: 0, 0
+  index: -1
+New folder/TRS3A0
+  rotate: false
+  xy: 654, 23
+  size: 35, 18
+  orig: 35, 18
+  offset: 0, 0
+  index: -1
+New folder/TRS4A0
+  rotate: false
+  xy: 523, 39
+  size: 31, 23
+  orig: 31, 23
+  offset: 0, 0
+  index: -1
+New folder/TRS5A0
+  rotate: false
+  xy: 2, 11
+  size: 9, 51
+  orig: 9, 51
+  offset: 0, 0
+  index: -1
+New folder/TRS6A0
+  rotate: false
+  xy: 461, 12
+  size: 44, 24
+  orig: 44, 24
+  offset: 0, 0
+  index: -1
+New folder/TRS7A0
+  rotate: false
+  xy: 507, 12
+  size: 43, 24
+  orig: 43, 24
+  offset: 0, 0
+  index: -1
+New folder/YKEYA0
+  rotate: false
+  xy: 828, 28
+  size: 14, 16
+  orig: 14, 16
+  offset: 0, 0
+  index: -1
+New folder/YKEYB0
+  rotate: false
+  xy: 840, 10
+  size: 14, 16
+  orig: 14, 16
+  offset: 0, 0
+  index: -1
+New folder/YSKUA0
+  rotate: false
+  xy: 859, 28
+  size: 13, 16
+  orig: 13, 16
+  offset: 0, 0
+  index: -1
+New folder/YSKUB0
+  rotate: false
+  xy: 871, 10
+  size: 13, 16
+  orig: 13, 16
   offset: 0, 0
   index: -1

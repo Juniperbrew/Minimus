@@ -788,8 +788,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     batch.setColor(1,1,1,1);
                     batch.draw(atlas.findRegion("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }else if(p.type==Powerup.AMMO){
-                    batch.setColor(1,0,0,1);
-                    batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    batch.setColor(1,1,1,1);
+                    batch.draw(atlas.findRegion("ammo"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }else if(p.type==Powerup.WEAPON){
                     //TODO clean up these nullchecks
                     if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){

@@ -17,7 +17,7 @@ spread=0
 projectileCount=1
 sound=projectile.ogg
 cooldown=0.5
-image=pistol
+image=rifle
 }
  
 #Shotgun
@@ -27,7 +27,7 @@ projectile=Shotgun_Bullet
 spread=40
 projectileCount=5
 cooldown=0.5
-image=rifle
+image=shotgun
 }
 
 #Uzi
@@ -37,7 +37,7 @@ projectile=Uzi_Bullet
 spread=0
 projectileCount=1
 cooldown=0.1
-image=rifle
+image=uzi
 }
 
 
