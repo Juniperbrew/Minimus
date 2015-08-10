@@ -6,6 +6,9 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.*;
@@ -140,17 +143,17 @@ public class World implements EntityChangeListener{
         }
     }
 
-/*
-    public boolean checkMapCollision(Rectangle bounds){
-        return SharedMethods.checkMapCollision(collisionMap,bounds);
-        if(checkTileCollision(bounds.x,bounds.y))return true;
-        if(checkTileCollision(bounds.x+bounds.width,bounds.y))return true;
-        if(checkTileCollision(bounds.x,bounds.y+bounds.height))return true;
-        if(checkTileCollision(bounds.x+bounds.width,bounds.y+bounds.height))return true;
-
-        return false;
+    private Rectangle getSpawnZone(TiledMap map){
+        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
+            for(MapObject o : layer.getObjects()){
+                if(o.getProperties().get("type",String.class).equals("spawn")){
+                    RectangleMapObject rect = (RectangleMapObject) o;
+                    return rect.getRectangle();
+                }
+            }
+        }
+        return null;
     }
-*/
 
     private void updateEntityAI(float delta){
         for(EntityAI ai:entityAIs.values()){
@@ -169,10 +172,12 @@ public class World implements EntityChangeListener{
                         continue;
                     }
                     ServerEntity target = entities.get(id);
-                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
-                        projectile.destroyed = true;
-                        if(target.getTeam() != projectile.team){
-                            target.reduceHealth(projectile.damage,projectile.ownerID);
+                    if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(), target.getGdxBounds())){
+                        if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
+                            projectile.destroyed = true;
+                            if(target.getTeam() != projectile.team){
+                                target.reduceHealth(projectile.damage,projectile.ownerID);
+                            }
                         }
                     }
                 }
@@ -521,10 +526,20 @@ public class World implements EntityChangeListener{
         playerList.add(networkID);
         int width = 50;
         int height = 50;
-        float x = MathUtils.random(mapWidth -width);
-        float y = MathUtils.random(mapHeight -height);
+        Rectangle spawnZone = getSpawnZone(map);
+        float x;
+        float y;
+        if(spawnZone!=null){
+            x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth());
+            y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight());
+        }else{
+            x = MathUtils.random(mapWidth-width);
+            y = MathUtils.random(mapHeight-height);
+        }
+
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
-        ServerEntity newPlayer = new ServerEntity(networkID,x,y,1,this);
+        ServerEntity newPlayer = new ServerEntity(networkID,x,y,ConVars.getInt("sv_player_default_team"),this);
+        newPlayer.maxHealth = ConVars.getInt("sv_player_max_health");
         newPlayer.invulnerable = true;
         newPlayer.width = width;
         newPlayer.height = height;
@@ -548,7 +563,7 @@ public class World implements EntityChangeListener{
         pendingEntityRemovals.add(id);
     }
 
-    private void addNPC(int aiType, int weapon){
+    public void addNPC(int aiType, int weapon){
         System.out.println("Adding npc "+aiType+","+weapon);
         int width = 50;
         int height = 50;

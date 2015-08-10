@@ -9,6 +9,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -33,6 +34,7 @@ import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.server.ServerEntity;
+import com.juniperbrew.minimus.server.World;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -92,6 +94,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int playerID = -1;
     int slot1Weapon = 0;
     int slot2Weapon = 1;
+    float playerAnimationState;
+    HashMap<Integer,Float> entityAnimationStateTimes = new HashMap<>();
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
     Map<Integer,Double> cooldowns = new HashMap<>();
@@ -118,7 +122,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     Texture spriteSheet;
 
-    TextureRegion down;
+    Animation playerAnimation;
+    float animationFrameTime = 0.15f;
     SpriteBatch batch;
 
     Score score;
@@ -181,10 +186,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         hudCamera.update();
 
         Gdx.input.setInputProcessor(this);
-        spriteSheet = new Texture(Gdx.files.internal("resources"+File.separator+"spritesheetAlpha.png"));
-        showMessage("Spritesheet width:" + spriteSheet.getWidth());
-        showMessage("Spritesheet height:" + spriteSheet.getHeight());
-        down = new TextureRegion(spriteSheet,171,129,16,22);
 
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
@@ -193,6 +194,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         loadSounds();
         loadImages();
+
+        playerAnimation = new Animation(animationFrameTime,atlas.findRegions("link"));
+        playerAnimation.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
 
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
@@ -286,6 +290,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
+    private float getAnimationState(int id){
+        if(entityAnimationStateTimes.containsKey(id)){
+            return entityAnimationStateTimes.get(id);
+        }else{
+            return animationFrameTime*3;
+        }
+    }
+
     private void doLogic(float delta){
 
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
@@ -301,6 +313,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             handlePacket(o);
         }
 
+        playerAnimationState += delta;
+        for(int id : entityAnimationStateTimes.keySet()){
+            entityAnimationStateTimes.put(id,entityAnimationStateTimes.get(id)+delta);
+        }
         sendInputPackets();
         updateProjectiles(delta);
 
@@ -329,6 +345,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(lastMouseX==-1&&lastMouseY==-1){
             lastMouseX = mouseX;
             lastMouseY = mouseY;
+        }
+        if(!(buttons.contains(Enums.Buttons.W)
+                || buttons.contains(Enums.Buttons.W)
+                || buttons.contains(Enums.Buttons.W)
+                || buttons.contains(Enums.Buttons.W))){
+            playerAnimationState = animationFrameTime*3;
         }
         if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY){
             int inputRequestID = getNextInputRequestID();
@@ -595,6 +617,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             return null;
         }
         Network.Position interpPos = new Network.Position();
+        if(from.getX()==to.getX()&&from.getY()==to.getY()){
+            entityAnimationStateTimes.put(to.id,animationFrameTime*3);
+        }
         interpPos.x = (float)(from.getX()+(to.getX()-from.getX())*alpha);
         interpPos.y = (float)(from.getY()+(to.getY()-from.getY())*alpha);
         return interpPos;
@@ -655,13 +680,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         continue;
                     }
                     NetworkEntity target = stateSnapshot.get(id);
-                    if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
-                        if (id == playerID) {
-                            sounds.get("hurt.ogg").play(soundVolume);
-                        } else {
-                            sounds.get("hit.ogg").play(soundVolume);
+                    if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(),target.getGdxBounds())){
+                        if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
+                            if (id == playerID) {
+                                sounds.get("hurt.ogg").play(soundVolume);
+                            } else {
+                                sounds.get("hit.ogg").play(soundVolume);
+                            }
+                            projectile.destroyed = true;
                         }
-                        projectile.destroyed = true;
                     }
                 }
                 if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
@@ -740,7 +767,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     int playerX = (int)e.getX();
                     int playerY = (int)e.getY();
                     batch.begin();
-                    batch.draw(down,playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    if(e.id==playerID){
+                        batch.draw(playerAnimation.getKeyFrame(playerAnimationState),playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    }else{
+                        batch.draw(playerAnimation.getKeyFrame(getAnimationState(e.id)),playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    }
                     batch.end();
                     int healthbarWidth = e.width+20;
                     int healthbarHeight = 10;
@@ -1203,7 +1234,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void loadMap(String mapName, float mapScale){
-        map = new TmxMapLoader().load("resources"+File.separator+mapName);
+        map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+ConVars.get("sv_map_name")+File.separator+ConVars.get("sv_map_name")+".tmx");
         MapProperties properties = map.getProperties();
         GlobalVars.tileWidth = (Integer)properties.get("tilewidth");
         GlobalVars.tileHeight = (Integer)properties.get("tileheight");

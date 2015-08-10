@@ -10,6 +10,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 
 import java.util.ArrayList;
 import java.util.Timer;
@@ -124,10 +125,6 @@ public class SharedMethods {
 
     public static boolean checkMapCollision(Rectangle bounds){
 
-        if(bounds.x<0||(bounds.x+bounds.width)>=GlobalVars.mapWidth||bounds.y<0|bounds.y+bounds.height>=GlobalVars.mapHeight){
-            return false;
-        }
-
         int minX = (int) Math.floor(bounds.x / GlobalVars.tileWidth);
         int maxX = (int) Math.floor((bounds.x + bounds.width) / GlobalVars.tileWidth);
         int minY = (int) Math.floor(bounds.y / GlobalVars.tileHeight);
@@ -136,10 +133,67 @@ public class SharedMethods {
 
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
-                if(GlobalVars.collisionMap[x][y])return true;
+                if(isTileSolid(x,y))return true;
             }
         }
         return false;
+    }
+
+    public static boolean isTileSolid(int x, int y){
+        if(x<0||x>=GlobalVars.mapWidthTiles||y<0||y>=GlobalVars.mapHeightTiles){
+            return false;
+        }
+        if(GlobalVars.collisionMap[x][y]){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    public static boolean isTileCollisionOnLine(float screenX0, float screenY0, float screenX1, float screenY1){
+        if(getFirstCollisionTileOnLine(screenX0, screenY0, screenX1, screenY1) !=null){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+
+    public static Vector2 getFirstCollisionTileOnLine(float screenX0, float screenY0, float screenX1, float screenY1) {
+        int x0 = (int) (screenX0 / GlobalVars.tileWidth);
+        int y0 = (int) (screenY0 / GlobalVars.tileHeight);
+        int x1 = (int) (screenX1 / GlobalVars.tileWidth);
+        int y1 = (int) (screenY1 / GlobalVars.tileHeight);
+
+        int dx = Math.abs(x1 - x0);
+        int dy = Math.abs(y1 - y0);
+        int x = x0;
+        int y = y0;
+        int n = 1 + dx + dy;
+        int x_inc = (x1 > x0) ? 1 : -1;
+        int y_inc = (y1 > y0) ? 1 : -1;
+        int error = dx - dy;
+        dx *= 2;
+        dy *= 2;
+
+
+        for (; n > 0; --n)
+        {
+            if(isTileSolid(x,y)){
+                return new Vector2(x,y);
+            }
+            if (error > 0)
+            {
+                x += x_inc;
+                error -= dy;
+            }
+            else
+            {
+                y += y_inc;
+                error += dx;
+            }
+        }
+        return null;
     }
 
     public static boolean[][] createCollisionMap(TiledMap map, int mapWidth, int mapHeight){

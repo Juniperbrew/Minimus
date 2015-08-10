@@ -1,11 +1,15 @@
 package com.juniperbrew.minimus;
 
+import java.io.File;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * Created by Juniperbrew on 8.8.2015.
  */
 public class GlobalVars {
+
+
+    public static final String mapFolder = "resources"+ File.separator+ "maps";
 
     public static int tileWidth;
     public static int tileHeight;

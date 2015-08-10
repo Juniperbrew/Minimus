@@ -17,12 +17,6 @@ public class Entity extends NetworkEntity {
         super(e);
     }
 
-    /*public void applyMovement(){
-        move(deltaX,deltaY);
-        deltaX = 0;
-        deltaY = 0;
-    }*/
-
     public void moveTo(double x, double y){
         deltaX = 0;
         deltaY = 0;

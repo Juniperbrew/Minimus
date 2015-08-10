@@ -17,6 +17,8 @@ import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.Entity;
+import com.juniperbrew.minimus.GlobalVars;
 import com.juniperbrew.minimus.NetworkEntity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
@@ -83,6 +85,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
 
     int pendingRandomNpcAdds = 0;
+    int pendingFollowingNpcAdds = 0;
     int pendingRandomNpcRemovals = 0;
 
     private ConcurrentLinkedQueue<Packet> pendingPackets = new ConcurrentLinkedQueue<>();
@@ -98,7 +101,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         consoleFrame = new ConsoleFrame(this);
         shapeRenderer = new ShapeRenderer();
         batch = new SpriteBatch();
-        world = new World(this, new TmxMapLoader().load("resources"+ File.separator+ ConVars.get("sv_map_name")));
+        world = new World(this, new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+ConVars.get("sv_map_name")+File.separator+ConVars.get("sv_map_name")+".tmx"));
 
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
@@ -322,6 +325,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             world.addRandomNPC();
         }
         pendingRandomNpcAdds = 0;
+        for (int i = 0; i < pendingFollowingNpcAdds; i++) {
+            world.addNPC(EntityAI.FOLLOWING,1);
+        }
+        pendingFollowingNpcAdds = 0;
         for (int i = 0; i < pendingRandomNpcRemovals; i++) {
             world.removeRandomNPC();
         }
@@ -630,6 +637,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if (character == 'w') {
             pendingRandomNpcAdds++;
         }
+        if (character == 't') {
+            pendingFollowingNpcAdds += 10;
+        }
         if (character == 'c') {
             Network.GameClockCompare gameClockCompare = new Network.GameClockCompare();
             gameClockCompare.serverTime = getServerTime();
@@ -650,6 +660,20 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if (character == 'r') {
             camera.zoom = 1;
             camera.update();
+        }
+        if (character == 'y') {
+            showMessage("Printing list of stuck npcs");
+            for(int id:world.entityAIs.keySet()){
+                EntityAI ai = world.entityAIs.get(id);
+                if(ai.destinationTimer>10){
+                    showMessage("ID:" + id);
+                    showMessage("DestinationX:" + ai.destinationX);
+                    showMessage("DestinationY:" + ai.destinationY);
+                    showMessage("CenterX:" + ai.entity.getCenterX());
+                    showMessage("CenterY:" + ai.entity.getCenterY());
+                    showMessage("Last target location:" + ai.targetLocation);
+                }
+            }
         }
         if(character == 'i'){
             serverData.writeLog(true);

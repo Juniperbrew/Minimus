@@ -1,51 +1,100 @@
 
 sprites.png
-size: 64,64
+size: 128,64
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
 fire
   rotate: false
-  xy: 2, 5
+  xy: 56, 7
   size: 10, 14
   orig: 10, 14
   offset: 0, 0
   index: 4
 fire
   rotate: false
-  xy: 14, 10
+  xy: 70, 27
   size: 14, 9
   orig: 14, 9
   offset: 0, 0
   index: 1
 fire
   rotate: false
-  xy: 50, 24
-  size: 10, 13
-  orig: 10, 13
-  offset: 0, 0
-  index: 2
-fire
-  rotate: false
-  xy: 30, 10
+  xy: 86, 27
   size: 14, 9
   orig: 14, 9
   offset: 0, 0
   index: 3
+fire
+  rotate: false
+  xy: 102, 23
+  size: 10, 13
+  orig: 10, 13
+  offset: 0, 0
+  index: 2
 flame
   rotate: false
-  xy: 50, 39
+  xy: 56, 23
   size: 12, 13
   orig: 12, 13
   offset: 0, 0
   index: -1
 health
   rotate: false
-  xy: 2, 21
+  xy: 2, 31
   size: 46, 31
   orig: 46, 31
   offset: 0, 0
   index: -1
+link
+  rotate: false
+  xy: 2, 5
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 1
+link
+  rotate: false
+  xy: 50, 38
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 2
+link
+  rotate: false
+  xy: 20, 5
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 3
+link
+  rotate: false
+  xy: 68, 38
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 4
+link
+  rotate: false
+  xy: 86, 38
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 5
+link
+  rotate: false
+  xy: 104, 38
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 6
+link
+  rotate: false
+  xy: 38, 5
+  size: 16, 24
+  orig: 16, 24
+  offset: 0, 0
+  index: 7
 white
   rotate: false
   xy: 2, 2
