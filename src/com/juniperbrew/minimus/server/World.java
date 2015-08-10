@@ -1,6 +1,8 @@
 package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -108,7 +110,7 @@ public class World implements EntityChangeListener{
         this.mapLoader = mapLoader;
         this.batch = batch;
         waveList = readWaveList();
-        mapList = loadMaps(waveList.values());
+        mapList = loadMaps();
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
         loadImages();
@@ -282,15 +284,19 @@ public class World implements EntityChangeListener{
         }
     }*/
 
-    private void movePlayersToSpawn(){
+    private void movePlayerToSpawn(int id){
         Rectangle spawnZone = getSpawnZone(map);
+        ServerEntity e = entities.get(id);
+        if(spawnZone!=null){
+            e.moveTo(MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-e.width),MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-e.height));
+        }else{
+            e.moveTo(MathUtils.random(mapWidth-e.width),MathUtils.random(mapHeight-e.height));
+        }
+    }
+
+    private void movePlayersToSpawn(){
         for(int id:playerList){
-            ServerEntity e = entities.get(id);
-            if(spawnZone!=null){
-                e.moveTo(MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()),MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()));
-            }else{
-                e.moveTo(MathUtils.random(mapWidth-e.width),MathUtils.random(mapHeight-e.height));
-            }
+            movePlayerToSpawn(id);
         }
     }
 
@@ -667,6 +673,9 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("cooldown")){
                     weapon.cooldown = Float.parseFloat(splits[1]);
                 }
+                if(splits[0].equals("image")){
+                    weapon.image = splits[1];
+                }
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -698,8 +707,8 @@ public class World implements EntityChangeListener{
 
         int networkID = getNextNetworkID();
         playerList.add(networkID);
-        int width = 50;
-        int height = 50;
+        int width = ConVars.getInt("sv_npc_default_size");
+        int height = ConVars.getInt("sv_npc_default_size");
         Rectangle spawnZone = getSpawnZone(map);
         float x;
         float y;
@@ -768,15 +777,15 @@ public class World implements EntityChangeListener{
     }
 
     public void addNPC(int aiType, int weapon){
-        int width = 50;
-        int height = 50;
+        int width = ConVars.getInt("sv_npc_default_size");
+        int height = ConVars.getInt("sv_npc_default_size");
         float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH * -1, SPAWN_AREA_WIDTH);
         float x;
         float y;
         if(!enemySpawnZones.isEmpty()){
             Rectangle spawnZone = enemySpawnZones.get(MathUtils.random(0,enemySpawnZones.size()-1));
-            x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth());
-            y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight());
+            x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-width);
+            y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-height);
         }else{
             if(MathUtils.randomBoolean()){
                 if(spawnPosition >= 0){
@@ -853,11 +862,15 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private HashMap<String,TiledMap> loadMaps(Collection<WaveDefinition> waves){
+    private HashMap<String,TiledMap> loadMaps(){
         HashMap<String,TiledMap> maps = new HashMap<>();
-        for(WaveDefinition w : waves){
-            if(w.map!=null && !maps.containsKey(w.map)){
-                maps.put(w.map,loadMap(w.map));
+
+        File mapFolder = new File("resources"+File.separator+"maps");
+        listener.message("Loading maps from: " + mapFolder);
+        for (final File file : mapFolder.listFiles()) {
+            if (file.isDirectory()) {
+                maps.put(file.getName(), loadMap(file.getName()));
+                listener.message("Loaded: " + file.getName());
             }
         }
         return maps;
@@ -1092,9 +1105,7 @@ public class World implements EntityChangeListener{
                 //Respawn player if lives left
                 ServerEntity deadPlayer = entities.get(id);
                 deadPlayer.restoreMaxHealth();
-                float x = MathUtils.random(mapWidth - deadPlayer.width);
-                float y = MathUtils.random(mapHeight - deadPlayer.height);
-                deadPlayer.moveTo(x, y);
+                movePlayerToSpawn(id);
             }else{
                 pendingEntityRemovals.add(id);
             }

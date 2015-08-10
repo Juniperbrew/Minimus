@@ -126,6 +126,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Texture spriteSheet;
 
     Animation playerAnimation;
+    Animation enemyAnimation;
     float animationFrameTime = 0.15f;
     SpriteBatch batch;
 
@@ -186,6 +187,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         showMessage("Window size: " + windowWidth + "x" + windowHeight);
         camera = new OrthographicCamera(windowWidth,windowHeight);
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
+        camera.zoom = ConVars.getFloat("cl_zoom");
         hudCamera.position.set(windowWidth/2,windowHeight/2,0);
         hudCamera.update();
 
@@ -201,6 +203,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         playerAnimation = new Animation(animationFrameTime,atlas.findRegions("link"));
         playerAnimation.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
+
+        enemyAnimation = new Animation(animationFrameTime,atlas.findRegions("civ"));
+        enemyAnimation.setPlayMode(Animation.PlayMode.LOOP);
 
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
@@ -740,8 +745,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glLineWidth(3);
-        Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
-        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+        //Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
+        //Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 
         if(stateSnapshot !=null){
 
@@ -786,8 +791,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     batch.setColor(1,0,0,1);
                     batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }else if(p.type==Powerup.WEAPON){
-                    batch.setColor(0,0,1,1);
-                    batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    //TODO clean up these nullchecks
+                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
+                            TextureAtlas.AtlasRegion texture = atlas.findRegion(weaponList.get(p.typeModifier).image);
+                            if(texture!=null){
+                                batch.setColor(1,1,1,1);
+                                batch.draw(atlas.findRegion(weaponList.get(p.typeModifier).image),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                                continue;
+                            }
+                    }
+
+                    batch.setColor(0, 0, 1, 1);
+                    batch.draw(atlas.findRegion("white"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }
             }
             batch.end();
@@ -818,11 +833,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     float healthWidth = healthbarWidth*health;
                     shapeRenderer.rect(playerX+healthbarXOffset, playerY+healthbarYOffset, healthWidth,healthbarHeight);
                 }else{
+                    batch.begin();
+                    batch.draw(enemyAnimation.getKeyFrame(getAnimationState(e.id)),e.getX(), e.getY(),e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    batch.end();
+                    /*
                     shapeRenderer.setColor(1,1,1,1);
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
                     float healthWidth = e.width*health;
                     shapeRenderer.setColor(1,0,0,1); //red
                     shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, healthWidth, e.height, 1, 1, e.getRotation());
+                */
                 }
             }
             shapeRenderer.end();
@@ -836,7 +856,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
 
-        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+        //Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 
         //Draw HUD
         batch.begin();

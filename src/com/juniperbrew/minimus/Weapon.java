@@ -10,6 +10,7 @@ public class Weapon {
     public String sound;
     public ProjectileDefinition projectile;
     public double cooldown;
+    public String image;
 
     @Override
     public String toString() {
@@ -19,6 +20,7 @@ public class Weapon {
         b.append(" Spread: "+spread);
         b.append(" ProjectileCount: "+projectileCount);
         b.append(" Sound: "+sound);
+        b.append(" Image: "+image);
         return b.toString();
     }
 }
