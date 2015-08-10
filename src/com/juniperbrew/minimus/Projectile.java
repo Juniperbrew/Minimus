@@ -68,7 +68,7 @@ public class Projectile{
     private void createSprite(TextureRegion texture, Rectangle rectangle){
         sprite = new Sprite(texture);
         sprite.setPosition(rectangle.x,rectangle.y);
-        sprite.setOrigin(-25,texture.getRegionHeight()/2);
+        sprite.setOrigin(-1*ConVars.getFloat("sv_npc_default_size")/2,texture.getRegionHeight()/2);
         sprite.setSize(rectangle.width,rectangle.height);
         sprite.setRotation(rotation);
     }

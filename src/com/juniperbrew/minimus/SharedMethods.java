@@ -28,7 +28,7 @@ public class SharedMethods {
         final ArrayList<Projectile> projectiles = new ArrayList<>();
         int length = projectileDefinition.length;
         int width = projectileDefinition.width;
-        int startDistanceX = 25;
+        int startDistanceX = ConVars.getInt("sv_npc_default_size")/2;
 
         deg -= weapon.spread/2f;
         for (int i = 0; i < weapon.projectileCount; i++) {
