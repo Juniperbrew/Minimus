@@ -9,6 +9,7 @@
  
 #Wave 1
 {
+changeMap=minimus
 +=10
 a1=3
 c1=1
@@ -19,6 +20,7 @@ b2=1
  
 #Wave 2
 {
+changeMap=mirnal
 a1=3
 c1=2
 c2=1
@@ -28,6 +30,7 @@ d1=2
  
 #Wave 3
 {
+changeMap=minimus
 a1=1
 b1=2
 c2=3

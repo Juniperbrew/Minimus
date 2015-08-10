@@ -1,6 +1,7 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
@@ -68,6 +69,24 @@ public class Network {
         kryo.register(TeamChangeRequest.class);
         kryo.register(GameClockCompare.class);
         kryo.register(Color.class);
+        kryo.register(MapChange.class);
+        kryo.register(AddAmmo.class);
+        kryo.register(WeaponAdded.class);
+        kryo.register(Rectangle.class);
+    }
+
+    public static class WeaponAdded{
+        public int weapon;
+    }
+
+    public static class AddAmmo{
+        public int weapon;
+        public int amount;
+    }
+
+    public static class MapChange{
+        public String mapName;
+        public HashMap<Integer,Powerup> powerups;
     }
 
     public static class Message{
@@ -163,6 +182,8 @@ public class Network {
         public ArrayList<Integer> playerList;
         public HashMap<Integer,Powerup> powerups;
         public HashMap<Integer,Weapon> weaponList;
+        public HashMap<Integer,Integer> ammo;
+        public HashMap<Integer,Boolean> weapons;
     }
 
     public static class AddEntity{

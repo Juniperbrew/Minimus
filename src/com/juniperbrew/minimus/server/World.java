@@ -8,9 +8,11 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.*;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
@@ -27,6 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -44,6 +47,8 @@ public class World implements EntityChangeListener{
 
     Set<Integer> playerList = new HashSet<>();
     Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
+    Map<Integer,HashMap<Integer,Integer>> playerAmmo = new HashMap<>();
+    Map<Integer,HashMap<Integer,Boolean>> playerWeapons = new HashMap<>();
     Map<Integer,Integer> playerLives = new HashMap<>();
 
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
@@ -66,10 +71,16 @@ public class World implements EntityChangeListener{
     int mapHeight;
 
     TiledMap map;
+    String mapName;
     private int wave;
     private int spawnedHealthPacksCounter;
+    private int spawnedEnemiesCounter;
+    private int waveEnemyCount;
+    private int waveHealthPackCount;
     private long lastHealthPackSpawned;
+    private long lastEnemySpawned;
     private final int HEALTHPACK_SPAWN_DELAY = 10;
+    private final int ENEMY_SPAWN_DELAY = 1;
 
     HashMap<Integer,WaveDefinition> waveList;
     HashMap<Integer,Weapon> weaponList;
@@ -83,15 +94,36 @@ public class World implements EntityChangeListener{
     Timer timer = new Timer();
 
     TextureAtlas atlas;
+    TmxMapLoader mapLoader;
+    String pendingMap;
 
-    public World(WorldChangeListener listener, TiledMap map){
+    HashMap<String,TiledMap> mapList;
+    OrthogonalTiledMapRenderer mapRenderer;
+    SpriteBatch batch;
+
+    ArrayList<Rectangle> enemySpawnZones;
+
+   public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
+        this.mapLoader = mapLoader;
+        this.batch = batch;
         waveList = readWaveList();
+        mapList = loadMaps(waveList.values());
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
         loadImages();
 
-        this.map = map;
+        changeMap(ConVars.get("sv_map"));
+    }
+
+    private TiledMap loadMap(String mapName){
+        listener.message("Loading map: "+mapName);
+        return mapLoader.load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
+    }
+
+    public void changeMap(String mapName){
+        map = mapList.get(mapName);
+        this.mapName = mapName;
 
         GlobalVars.mapWidthTiles = (Integer) map.getProperties().get("width");
         GlobalVars.mapHeightTiles = (Integer) map.getProperties().get("height");
@@ -104,6 +136,61 @@ public class World implements EntityChangeListener{
         GlobalVars.mapHeight = mapWidth;
 
         GlobalVars.collisionMap = SharedMethods.createCollisionMap(map, GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles);
+        movePlayersToSpawn();
+
+        removeAllNpcs();
+        powerups.clear();
+        projectiles.clear();
+
+        enemySpawnZones = getEnemySpawnZones(map);
+        spawnMapPowerups(map);
+        spawnMapEnemies(map);
+
+        mapRenderer = new OrthogonalTiledMapRenderer(map,ConVars.getFloat("sv_map_scale"),batch);
+        listener.mapChanged(mapName);
+    }
+
+    private void spawnMapPowerups(TiledMap map){
+        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
+            for(MapObject o : layer.getObjects()){
+                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("powerup")){
+                    RectangleMapObject powerup = (RectangleMapObject) o;
+                    Rectangle r = powerup.getRectangle();
+                    MapProperties p = powerup.getProperties();
+                    if(p.containsKey("weapon")){
+                        int typeModifier = Integer.parseInt(p.get("weapon", String.class));
+                        spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, typeModifier, -1));
+                    }else if(p.containsKey("health")){
+                        int value = Integer.parseInt(p.get("value",String.class));
+                        spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.HEALTH, -1, value));
+                    }else if(p.containsKey("ammo")){
+                        int typeModifier = Integer.parseInt(p.get("ammo", String.class));
+                        int value = Integer.parseInt(p.get("value",String.class));
+                        spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, typeModifier, value));
+                    }
+                }
+            }
+        }
+    }
+
+    private void spawnMapEnemies(TiledMap map){
+        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
+            for(MapObject o : layer.getObjects()){
+                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
+                    Rectangle r = ((RectangleMapObject) o).getRectangle();
+                    MapProperties p = o.getProperties();
+                    int aiType = -1;
+                    int weapon = Integer.parseInt(p.get("weapon", String.class));
+                    switch (p.get("aiType",String.class)){
+                        case "moving":aiType=EntityAI.MOVING; break;
+                        case "following":aiType=EntityAI.FOLLOWING; break;
+                        case "movingAndShooting":aiType=EntityAI.MOVING_AND_SHOOTING; break;
+                        case "followingAndShooting":aiType=EntityAI.FOLLOWING_AND_SHOOTING; break;
+                    }
+                    addNPC(r, aiType, weapon);
+                }
+            }
+        }
     }
 
     public void updateWorld(float delta){
@@ -121,24 +208,88 @@ public class World implements EntityChangeListener{
     }
 
     private void updateWaves(){
-        if(spawnWaves){
-            if(entityAIs.isEmpty()){
-                spawnedHealthPacksCounter=0;
-                if(ConVars.getBool("sv_custom_waves")){
-                    spawnNextCustomWave();
-                }else{
-                    spawnNextWave();
-                }
-            }
+        if(spawnWaves) {
             WaveDefinition waveDefinition = waveList.get(wave);
-            if(waveDefinition!=null){
-                if(spawnedHealthPacksCounter < waveDefinition.healthPackCount){
-                    if(System.nanoTime()-lastHealthPackSpawned > Tools.secondsToNano(HEALTHPACK_SPAWN_DELAY)){
-                        lastHealthPackSpawned = System.nanoTime();
-                        spawnedHealthPacksCounter++;
-                        spawnPowerup(Powerup.HEALTH,30,30);
+            if (entityAIs.isEmpty() && (spawnedEnemiesCounter == waveEnemyCount)) {
+                spawnedHealthPacksCounter = 0;
+                spawnedEnemiesCounter = 0;
+                setWave(wave + 1);
+                waveDefinition = waveList.get(wave);
+
+                if (waveDefinition == null) {
+                    waveEnemyCount = 3 + 2 * wave;
+                    waveHealthPackCount = (int) Math.sqrt(wave);
+                } else {
+                    waveEnemyCount = waveDefinition.enemies.size();
+                    waveHealthPackCount = waveDefinition.healthPackCount;
+                    if (waveDefinition.map != null) {
+                        changeMap(waveDefinition.map);
                     }
                 }
+            }
+            if (spawnedHealthPacksCounter < waveHealthPackCount) {
+                if (System.nanoTime() - lastHealthPackSpawned > Tools.secondsToNano(HEALTHPACK_SPAWN_DELAY)) {
+                    lastHealthPackSpawned = System.nanoTime();
+                    spawnedHealthPacksCounter++;
+                    spawnPowerup(Powerup.HEALTH, 30, 30);
+                }
+            }
+            if (spawnedEnemiesCounter < waveEnemyCount) {
+                if (System.nanoTime() - lastEnemySpawned > Tools.secondsToNano(ENEMY_SPAWN_DELAY)) {
+                    lastEnemySpawned = System.nanoTime();
+                    if (waveDefinition != null) {
+                        spawnEnemy(waveDefinition.enemies.get(spawnedEnemiesCounter));
+                    } else {
+                        addRandomNPC();
+                    }
+                    spawnedEnemiesCounter++;
+                }
+            }
+        }
+    }
+
+        /*
+    private void spawnNextCustomWave(){
+
+        WaveDefinition waveDef = waveList.get(wave+1);
+        if(waveDef!=null){
+            if(waveDef.map!=null){
+                changeMap(waveDef.map);
+            }
+            setWave(wave+1);
+
+            for(WaveDefinition.EnemyDefinition enemy:waveDef.enemies){
+                for (int i = 0; i < enemy.count; i++) {
+                    switch (enemy.aiType){
+                        case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
+                        case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
+                        case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
+                        case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
+                    }
+                }
+            }
+        }else{
+            spawnNextWave();
+        }
+
+    }
+*/
+    /*
+    private void spawnNextWave(){
+        setWave(wave + 1);
+        for (int i = 0; i < (wave*2)+4; i++) {
+            addRandomNPC();
+        }
+    }*/
+
+    private void movePlayersToSpawn(){
+        Rectangle spawnZone = getSpawnZone(map);
+        for(int id:playerList){
+            ServerEntity e = entities.get(id);
+            if(spawnZone!=null){
+                e.moveTo(MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()),MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()));
+            }else{
+                e.moveTo(MathUtils.random(mapWidth-e.width),MathUtils.random(mapHeight-e.height));
             }
         }
     }
@@ -146,13 +297,26 @@ public class World implements EntityChangeListener{
     private Rectangle getSpawnZone(TiledMap map){
         for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
             for(MapObject o : layer.getObjects()){
-                if(o.getProperties().get("type",String.class).equals("spawn")){
+                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
                     RectangleMapObject rect = (RectangleMapObject) o;
                     return rect.getRectangle();
                 }
             }
         }
         return null;
+    }
+
+    private ArrayList<Rectangle> getEnemySpawnZones(TiledMap map){
+        ArrayList<Rectangle> zones = new ArrayList<>();
+        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
+            for(MapObject o : layer.getObjects()){
+                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemySpawn")){
+                    RectangleMapObject rect = (RectangleMapObject) o;
+                    zones.add(rect.getRectangle());
+                }
+            }
+        }
+        return zones;
     }
 
     private void updateEntityAI(float delta){
@@ -218,10 +382,25 @@ public class World implements EntityChangeListener{
             ServerEntity player = entities.get(playerID);
             for(int powerupID : powerups.keySet()){
                 Powerup p = powerups.get(powerupID);
-                if(player.getJavaBounds().contains(p.x,p.y)){
+                if(player.getGdxBounds().overlaps(p.bounds)){
                     if(p.type == Powerup.HEALTH){
                         if(player.getHealth()<player.maxHealth){
                             player.addHealth(p.value);
+                            despawnPowerup(powerupID);
+                        }
+                    }else if(p.type == Powerup.AMMO){
+                        if(playerAmmo.get(playerID).get(p.typeModifier)!=null){
+                            int ammo = playerAmmo.get(playerID).get(p.typeModifier);
+                            ammo += p.value;
+                            playerAmmo.get(playerID).put(p.typeModifier,ammo);
+                            listener.ammoAddedChanged(playerID, p.typeModifier, p.value);
+                            despawnPowerup(powerupID);
+                        }
+                    }else if(p.type == Powerup.WEAPON){
+                        int weapon = p.typeModifier;
+                        if(playerWeapons.get(playerID).get(weapon)!=null&&playerWeapons.get(playerID).get(weapon)==false){
+                            playerWeapons.get(playerID).put(weapon,true);
+                            listener.weaponAdded(playerID,weapon);
                             despawnPowerup(powerupID);
                         }
                     }
@@ -328,16 +507,11 @@ public class World implements EntityChangeListener{
         if(weaponList.get(weaponSlot)==null){
             return;
         }
-        if(attackCooldown.get(id)==null){
-            attackCooldown.put(id,new HashMap<Integer, Double>());
-            for(int weaponslot: weaponList.keySet()){
-                attackCooldown.get(id).put(weaponslot,-1d);
-            }
-        }
-        if(attackCooldown.get(id).get(weaponSlot) > 0){
+        if(attackCooldown.get(id).get(weaponSlot) > 0 || playerAmmo.get(id).get(weaponSlot) <= 0 || !playerWeapons.get(id).get(weaponSlot)){
             return;
         }else{
             attackCooldown.get(id).put(weaponSlot, weaponList.get(weaponSlot).cooldown);
+            playerAmmo.get(id).put(weaponSlot,playerAmmo.get(id).get(weaponSlot)-1);
             createAttack(id, weaponSlot);
         }
     }
@@ -537,6 +711,20 @@ public class World implements EntityChangeListener{
             y = MathUtils.random(mapHeight-height);
         }
 
+        attackCooldown.put(networkID,new HashMap<Integer, Double>());
+        playerAmmo.put(networkID,new HashMap<Integer, Integer>());
+        playerWeapons.put(networkID,new HashMap<Integer, Boolean>());
+
+        for(int weaponslot: weaponList.keySet()){
+            attackCooldown.get(networkID).put(weaponslot,-1d);
+            playerAmmo.get(networkID).put(weaponslot,0);
+            playerWeapons.get(networkID).put(weaponslot,false);
+
+        }
+        //Lots of ammo for primary weapon
+        playerWeapons.get(networkID).put(0,true);
+        playerAmmo.get(networkID).put(0,999999999);
+
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,ConVars.getInt("sv_player_default_team"),this);
         newPlayer.maxHealth = ConVars.getInt("sv_player_max_health");
@@ -549,12 +737,14 @@ public class World implements EntityChangeListener{
         assign.networkID = networkID;
         assign.lives = playerLives.get(networkID);
         assign.velocity = ConVars.getFloat("sv_player_velocity");
-        assign.mapName = ConVars.get("sv_map_name");
+        assign.mapName = mapName;
         assign.mapScale = ConVars.getFloat("sv_map_scale");
         assign.playerList = new ArrayList<>(playerList);
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
         assign.weaponList = new HashMap<>(weaponList);
+        assign.ammo = playerAmmo.get(networkID);
+        assign.weapons = playerWeapons.get(networkID);
 
         listener.playerAdded(c,assign);
     }
@@ -563,37 +753,48 @@ public class World implements EntityChangeListener{
         pendingEntityRemovals.add(id);
     }
 
-    public void addNPC(int aiType, int weapon){
+    public void addNPC(Rectangle bounds, int aiType, int weapon){
         System.out.println("Adding npc "+aiType+","+weapon);
-        int width = 50;
-        int height = 50;
-        float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH * -1, SPAWN_AREA_WIDTH);
-        float x;
-        float y;
-        if(MathUtils.randomBoolean()){
-            if(spawnPosition >= 0){
-                x = mapWidth+spawnPosition;
-            }else{
-                x = spawnPosition;
-            }
-            y = MathUtils.random(0-SPAWN_AREA_WIDTH,mapHeight+SPAWN_AREA_WIDTH);
-        }else{
-            if(spawnPosition >= 0){
-                y = mapHeight+spawnPosition;
-            }else{
-                y = spawnPosition;
-            }
-            x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth+SPAWN_AREA_WIDTH);
-        }
+
         int networkID = getNextNetworkID();
-        ServerEntity npc = new ServerEntity(networkID,x,y,-1,this);
-        npc.height = height;
-        npc.width = width;
+        ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,-1,this);
+        npc.height = bounds.height;
+        npc.width = bounds.width;
         npc.reduceHealth(10,-1);
         int randomHeading = MathUtils.random(Enums.Heading.values().length - 1);
         npc.setHeading(Enums.Heading.values()[randomHeading]);
         entityAIs.put(networkID,new EntityAI(npc,aiType,weapon,this));
         addEntity(npc);
+    }
+
+    public void addNPC(int aiType, int weapon){
+        int width = 50;
+        int height = 50;
+        float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH * -1, SPAWN_AREA_WIDTH);
+        float x;
+        float y;
+        if(!enemySpawnZones.isEmpty()){
+            Rectangle spawnZone = enemySpawnZones.get(MathUtils.random(0,enemySpawnZones.size()-1));
+            x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth());
+            y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight());
+        }else{
+            if(MathUtils.randomBoolean()){
+                if(spawnPosition >= 0){
+                    x = mapWidth+spawnPosition;
+                }else{
+                    x = spawnPosition;
+                }
+                y = MathUtils.random(0-SPAWN_AREA_WIDTH,mapHeight+SPAWN_AREA_WIDTH);
+            }else{
+                if(spawnPosition >= 0){
+                    y = mapHeight+spawnPosition;
+                }else{
+                    y = spawnPosition;
+                }
+                x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth+SPAWN_AREA_WIDTH);
+            }
+        }
+        addNPC(new Rectangle(x,y,width,height),aiType,weapon);
     }
 
     public void addRandomNPC(){
@@ -608,7 +809,14 @@ public class World implements EntityChangeListener{
         }
     }
 
+    public void spawnPowerup(Powerup p){
+        final int id = getNextNetworkID();
+        powerups.put(id,p);
+        listener.powerupAdded(id,p);
+    }
+
     public void spawnPowerup(int type, int value, int duration){
+
         int x = MathUtils.random(0,mapWidth);
         int y = MathUtils.random(0,mapHeight);
         final int id = getNextNetworkID();
@@ -621,7 +829,7 @@ public class World implements EntityChangeListener{
                 despawnPowerup(id);
             }
         };
-        timer.schedule(task,Tools.secondsToMilli(duration));
+        timer.schedule(task, Tools.secondsToMilli(duration));
         listener.powerupAdded(id, powerup);
     }
 
@@ -643,6 +851,16 @@ public class World implements EntityChangeListener{
                 removeEntity(networkID);
             }
         }
+    }
+
+    private HashMap<String,TiledMap> loadMaps(Collection<WaveDefinition> waves){
+        HashMap<String,TiledMap> maps = new HashMap<>();
+        for(WaveDefinition w : waves){
+            if(w.map!=null && !maps.containsKey(w.map)){
+                maps.put(w.map,loadMap(w.map));
+            }
+        }
+        return maps;
     }
 
     private HashMap<Integer,WaveDefinition> readWaveList(){
@@ -670,6 +888,11 @@ public class World implements EntityChangeListener{
                 if(line.charAt(0) == '}'){
                     waveNumber++;
                     waves.put(waveNumber,wave);
+                    continue;
+                }
+                String[] splits = line.split("=");
+                if(splits[0].equals("changeMap")){
+                    wave.map = splits[1];
                     continue;
                 }
                 if(line.charAt(0) == '+'){
@@ -757,47 +980,28 @@ public class World implements EntityChangeListener{
         listener.waveChanged(wave);
     }
 
-    private void spawnNextCustomWave(){
-
-        WaveDefinition waveDef = waveList.get(wave+1);
-        if(waveDef!=null){
-            setWave(wave+1);
-
-            for(WaveDefinition.EnemyDefinition enemy:waveDef.enemies){
-                for (int i = 0; i < enemy.count; i++) {
-                    switch (enemy.aiType){
-                        case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
-                        case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
-                        case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
-                        case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
-                    }
-                }
-            }
-        }else{
-            spawnNextWave();
-        }
-
-    }
-
-    private void spawnNextWave(){
-        setWave(wave + 1);
-        for (int i = 0; i < (wave*2)+4; i++) {
-            addRandomNPC();
+    private void spawnEnemy(WaveDefinition.EnemyDefinition enemy){
+        switch (enemy.aiType){
+            case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
+            case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
+            case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
+            case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
         }
     }
 
-    public void removeAllEntities(){
+    public void removeAllNpcs(){
         for(int id:entityAIs.keySet()) {
             pendingEntityRemovals.add(id);
         }
     }
 
-    public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch){
-        Gdx.gl.glLineWidth(3);
+    public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch, OrthographicCamera camera){
+
+        batch.setColor(1, 1, 1, 1);
+        mapRenderer.setView(camera);
+        mapRenderer.render();
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0,0,0,1);
-        shapeRenderer.rect(0, 0, mapWidth, mapHeight);
-        shapeRenderer.setColor(1,1,1,1);
 
         for(ServerEntity e : entities.values()) {
             if(playerList.contains(e.id)){
@@ -811,12 +1015,14 @@ public class World implements EntityChangeListener{
             shapeRenderer.setColor(1, 0, 0, 1); //red
             shapeRenderer.rect(e.getX(),e.getY(),e.width/2,e.height/2,healthWidth,e.height,1,1,e.getRotation());
         }
-        for(Powerup p : powerups.values()){
-            shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
-            shapeRenderer.circle(p.x,p.y,5);
-        }
-
         shapeRenderer.end();
+        batch.begin();
+        for(Powerup p : powerups.values()){
+            batch.setColor(1, 0.4f, 0, 1); //safety orange
+            batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+        }
+        batch.end();
+
         SharedMethods.renderAttack(delta, batch, projectiles);
     }
 
@@ -909,5 +1115,8 @@ public class World implements EntityChangeListener{
         public void waveChanged(int wave);
         public void attackCreated(Network.EntityAttacking entityAttacking);
         public void message(String message);
+        public void mapChanged(String mapName);
+        public void ammoAddedChanged(int id, int weapon, int value);
+        public void weaponAdded(int id, int weapon);
     }
 }

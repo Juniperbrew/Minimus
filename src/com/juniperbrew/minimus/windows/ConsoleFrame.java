@@ -232,6 +232,22 @@ public class ConsoleFrame extends JFrame {
             }
             return;
         }
+        if(splits[0].equals("ammo")){
+            if(minimusServer!=null){
+                minimusServer.addAmmo(Integer.parseInt(splits[1]),Integer.parseInt(splits[2]),Integer.parseInt(splits[3]));
+            }else{
+                addLine("The " + splits[0] + " command can only be used on server");
+            }
+            return;
+        }
+        if(splits[0].equals("idkfa")){
+            if(minimusServer!=null){
+                minimusServer.fillAmmo(Integer.parseInt(splits[1]));
+            }else{
+                addLine("The " + splits[0] + " command can only be used on server");
+            }
+            return;
+        }
         if(splits[0].equals("respawn")){
             if(minimusClient!=null){
                 minimusClient.requestRespawn();

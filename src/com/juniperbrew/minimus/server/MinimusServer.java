@@ -17,8 +17,7 @@ import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.Entity;
-import com.juniperbrew.minimus.GlobalVars;
+import com.juniperbrew.minimus.ConsoleReader;
 import com.juniperbrew.minimus.NetworkEntity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
@@ -77,6 +76,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     ConsoleFrame consoleFrame;
     StatusData serverData;
 
+    int windowWidth;
+    int windowHeight;
     float viewPortX;
     float viewPortY;
     float cameraVelocity = 300f; //pix/s
@@ -94,15 +95,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     World world;
 
+
     @Override
     public void create() {
         ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
+        new ConsoleReader(consoleFrame);
         shapeRenderer = new ShapeRenderer();
         batch = new SpriteBatch();
-        world = new World(this, new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+ConVars.get("sv_map_name")+File.separator+ConVars.get("sv_map_name")+".tmx"));
-
+        world = new World(this, new TmxMapLoader(), batch);
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
         resize(h,w);
@@ -386,7 +388,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        world.render(delta, shapeRenderer,batch);
+        world.render(delta, shapeRenderer,batch,camera);
 
     }
 
@@ -394,8 +396,28 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         world.spawnWaves = true;
     }
 
+    public void fillAmmo(int id){
+        for(int weapon:world.weaponList.keySet()){
+            addAmmo(id,weapon,999999);
+        }
+    }
+
+    public void addAmmo(int id, int weapon, int amount){
+        int ammo = world.playerAmmo.get(id).get(weapon);
+        ammo += amount;
+        world.playerAmmo.get(id).put(weapon,ammo);
+        Network.AddAmmo addAmmo = new Network.AddAmmo();
+        addAmmo.weapon = weapon;
+        addAmmo.amount = amount;
+        sendTCP(playerList.get(id),addAmmo);
+        Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
+        world.playerWeapons.get(id).put(weapon,true);
+        weaponAdded.weapon = weapon;
+        sendTCP(playerList.get(id),weaponAdded);
+    }
+
     public void resetWaves(){
-        world.removeAllEntities();
+        world.removeAllNpcs();
         world.spawnWaves = false;
         world.setWave(0);
     }
@@ -732,6 +754,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void resize(int w, int h) {
+        windowWidth = w;
+        windowHeight = h;
         int mapWidth = world.getMapWidth();
         int mapHeight = world.getMapHeight();
         if(h > ((float)w/ mapWidth)* mapHeight){
@@ -802,7 +826,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void conVarChanged(String varName, String varValue) {
-
+        if(varName.equals("sv_map")){
+            if(world!=null){
+                world.changeMap(varValue);
+            }
+        }
     }
 
     @Override
@@ -844,10 +872,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     @Override
     public void entityAdded(NetworkEntity e){
         showMessage("Added entity ID: " + e.id);
-        Network.AddEntity addEntity = new Network.AddEntity();
-        addEntity.entity=e;
-        addEntity.serverTime=getServerTime();
-        sendTCPtoAll(addEntity);
+        if(server!=null){
+            Network.AddEntity addEntity = new Network.AddEntity();
+            addEntity.entity=e;
+            addEntity.serverTime=getServerTime();
+            sendTCPtoAll(addEntity);
+        }
     }
 
     @Override
@@ -860,11 +890,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void powerupAdded(int id, Powerup powerup) {
-        showMessage("Powerup("+powerup.type+") added: "+id);
-        Network.AddPowerup addPowerup = new Network.AddPowerup();
-        addPowerup.networkID = id;
-        addPowerup.powerup = powerup;
-        sendTCPtoAll(addPowerup);
+        showMessage("Powerup("+powerup.type+") added at ("+powerup.bounds.x+","+powerup.bounds.y+"): "+id);
+        if(server!=null){
+            Network.AddPowerup addPowerup = new Network.AddPowerup();
+            addPowerup.networkID = id;
+            addPowerup.powerup = powerup;
+            sendTCPtoAll(addPowerup);
+        }
     }
 
     @Override
@@ -895,6 +927,32 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     @Override
     public void message(String message) {
         showMessage(message);
+    }
+
+    @Override
+    public void mapChanged(String mapName) {
+        if(server!=null){
+            Network.MapChange mapChange = new Network.MapChange();
+            mapChange.mapName=mapName;
+            mapChange.powerups = new HashMap<>(world.powerups);
+            sendTCPtoAll(mapChange);
+            resize(windowWidth, windowHeight);
+        }
+    }
+
+    @Override
+    public void ammoAddedChanged(int id, int weapon, int value) {
+        Network.AddAmmo addAmmo = new Network.AddAmmo();
+        addAmmo.weapon = weapon;
+        addAmmo.amount = value;
+        sendTCP(playerList.get(id),addAmmo);
+    }
+
+    @Override
+    public void weaponAdded(int id, int weapon) {
+        Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
+        weaponAdded.weapon = weapon;
+        sendTCP(playerList.get(id),weaponAdded);
     }
 
     @Override

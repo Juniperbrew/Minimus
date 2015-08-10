@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" nextobjectid="82">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="32" tileheight="32" nextobjectid="93">
  <properties>
   <property name="SubMaps" value="firstmap.tmx"/>
  </properties>
@@ -545,6 +545,53 @@
     <property name="AI" value="follow"/>
     <property name="health" value="101"/>
     <property name="target" value="Kukka"/>
+   </properties>
+  </object>
+  <object id="82" type="powerup" x="1600" y="1504" width="64" height="64">
+   <properties>
+    <property name="weapon" value="3"/>
+   </properties>
+  </object>
+  <object id="84" type="powerup" x="1532" y="1621" width="64" height="64">
+   <properties>
+    <property name="ammo" value="3"/>
+    <property name="value" value="200"/>
+   </properties>
+  </object>
+  <object id="85" type="powerup" x="1760" y="1600" width="64" height="64">
+   <properties>
+    <property name="health" value=""/>
+    <property name="value" value="30"/>
+   </properties>
+  </object>
+  <object id="86" type="powerup" x="1536" y="1792" width="64" height="64">
+   <properties>
+    <property name="ammo" value="2"/>
+    <property name="value" value="100"/>
+   </properties>
+  </object>
+  <object id="87" type="powerup" x="1792" y="1792" width="64" height="64">
+   <properties>
+    <property name="ammo" value="1"/>
+    <property name="value" value="100"/>
+   </properties>
+  </object>
+  <object id="89" type="enemy" x="2112" y="1952" width="32" height="32">
+   <properties>
+    <property name="aiType" value="moving"/>
+    <property name="weapon" value="4"/>
+   </properties>
+  </object>
+  <object id="90" type="enemy" x="2208" y="1728" width="64" height="64">
+   <properties>
+    <property name="aiType" value="followingAndShooting"/>
+    <property name="weapon" value="2"/>
+   </properties>
+  </object>
+  <object id="91" type="enemy" x="2144" y="1824" width="160" height="32">
+   <properties>
+    <property name="aiType" value="following"/>
+    <property name="weapon" value="4"/>
    </properties>
   </object>
  </objectgroup>

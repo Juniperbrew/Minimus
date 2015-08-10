@@ -9,6 +9,7 @@ public class WaveDefinition {
 
     ArrayList<EnemyDefinition> enemies = new ArrayList<>();
     public int healthPackCount;
+    String map;
 
     public void addEnemy(String aiType, int weapon, int count){
         enemies.add(new EnemyDefinition(aiType, weapon, count));

@@ -12,8 +12,8 @@ public class NetworkEntity {
     public int id;
     private float x;
     private float y;
-    public int width;
-    public int height;
+    public float width;
+    public float height;
     private int health;
     public int maxHealth;
     private int rotation;
@@ -39,7 +39,7 @@ public class NetworkEntity {
         team = e.team;
     }
 
-    public NetworkEntity(int id, float x, float y, int width, int height, int health, int maxHealth, Enums.Heading heading, int team){
+    public NetworkEntity(int id, float x, float y, float width, float height, int health, int maxHealth, Enums.Heading heading, int team){
         this.id = id;
         this.x = x;
         this.y = y;

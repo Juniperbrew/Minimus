@@ -22,6 +22,7 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -99,6 +100,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
     Map<Integer,Double> cooldowns = new HashMap<>();
+    Map<Integer,Integer> ammo;
+    Map<Integer,Boolean> weapons;
 
     long lastPingRequest;
     long renderStart;
@@ -162,6 +165,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         soundVolume = ConVars.getFloat("cl_volume_sound");
         musicVolume = ConVars.getFloat("cl_volume_music");
         consoleFrame = new ConsoleFrame(this);
+        new ConsoleReader(consoleFrame);
         clientStartTime = System.nanoTime();
         score = new Score(this);
         client = new Client(writeBuffer,objectBuffer);
@@ -261,6 +265,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             powerups = assign.powerups;
             currentWave = assign.wave;
             weaponList = assign.weaponList;
+            ammo = assign.ammo;
+            weapons = assign.weapons;
             for(int id : playerList){
                 showMessage("Adding id " + id + " to score");
                 score.addPlayer(id);
@@ -281,6 +287,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Network.GameClockCompare gameClockCompare = (Network.GameClockCompare) object;
             showMessage("Received gameClockCompare: "+gameClockCompare.serverTime + " Delta: "+(gameClockCompare.serverTime-getClientTime()));
             sendTCP(gameClockCompare);
+        }else if(object instanceof Network.MapChange){
+            Network.MapChange mapChange = (Network.MapChange) object;
+            changeMap(mapChange);
+        }else if(object instanceof Network.AddAmmo){
+            Network.AddAmmo addAmmo = (Network.AddAmmo) object;
+            int a = ammo.get(addAmmo.weapon);
+            a += addAmmo.amount;
+            ammo.put(addAmmo.weapon,a);
+        }else if(object instanceof Network.WeaponAdded){
+            Network.WeaponAdded weaponAdded = (Network.WeaponAdded) object;
+            weapons.put(weaponAdded.weapon,true);
         }
 
 
@@ -288,6 +305,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             String command = (String) object;
             consoleFrame.giveCommand(command);
         }
+    }
+
+    private void changeMap(Network.MapChange mapChange){
+        loadMap(mapChange.mapName, ConVars.getFloat("sv_map_scale"));
+        powerups = mapChange.powerups;
+        projectiles.clear();
     }
 
     private float getAnimationState(int id){
@@ -478,10 +501,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 cooldowns.put(weaponslot,-1d);
             }
         }
-        if(cooldowns.get(weaponSlot)>0){
+
+        if(cooldowns.get(weaponSlot)>0||ammo.get(weaponSlot)<=0||!weapons.get(weaponSlot)){
             return;
         }
         cooldowns.put(weaponSlot,weaponList.get(weaponSlot).cooldown);
+        ammo.put(weaponSlot,ammo.get(weaponSlot)-1);
         //TODO Ignoring projectile team for now
 
         Weapon weapon = weaponList.get(weaponSlot);
@@ -725,6 +750,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             batch.setProjectionMatrix(camera.combined);
 
             if(mapRenderer!=null){
+                batch.setColor(1,1,1,1);
                 mapRenderer.setView(camera);
                 mapRenderer.render();
             }
@@ -753,12 +779,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             batch.begin();
             for(Powerup p : powerups.values()){
-                TextureRegion t = atlas.findRegion("health");
-                batch.draw(t,p.x-t.getRegionWidth()/2,p.y-t.getRegionHeight()/2);
+                if(p.type==Powerup.HEALTH){
+                    batch.setColor(1,1,1,1);
+                    batch.draw(atlas.findRegion("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                }else if(p.type==Powerup.AMMO){
+                    batch.setColor(1,0,0,1);
+                    batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                }else if(p.type==Powerup.WEAPON){
+                    batch.setColor(0,0,1,1);
+                    batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                }
             }
             batch.end();
 
             //Render entities
+            batch.setColor(1,1,1,1);
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
                 NetworkEntity e = stateSnapshot.get(id);
                 float health = 1-((float)e.getHealth()/e.maxHealth);
@@ -773,10 +808,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         batch.draw(playerAnimation.getKeyFrame(getAnimationState(e.id)),playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
                     }
                     batch.end();
-                    int healthbarWidth = e.width+20;
+                    float healthbarWidth = e.width+20;
                     int healthbarHeight = 10;
                     int healthbarXOffset = -10;
-                    int healthbarYOffset = e.width+10;
+                    float healthbarYOffset = e.width+10;
                     shapeRenderer.setColor(0,1,0,1);
                     shapeRenderer.rect(playerX+healthbarXOffset, playerY+healthbarYOffset, healthbarWidth,healthbarHeight);
                     shapeRenderer.setColor(1,0,0,1);
@@ -811,13 +846,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id) + " Team: "+authoritativeState.entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
-        font.draw(batch, "Mouse 1: "+ (weaponList.get(slot1Weapon)!=null?weaponList.get(slot1Weapon).name:"N/A"), 5, 40);
-        font.draw(batch, "Mouse 2: "+ (weaponList.get(slot2Weapon)!=null?weaponList.get(slot2Weapon).name:"N/A"), 5, 20);
-        glyphLayout.setText(font, "Wave "+currentWave);
+        font.draw(batch, "Mouse 1: "+ getWeaponLine(slot1Weapon), 5, 40);
+        font.draw(batch, "Mouse 2: " + getWeaponLine(slot2Weapon), 5, 20);
+                glyphLayout.setText(font, "Wave " + currentWave);
         font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
         glyphLayout.setText(font, "Lives: "+lives);
         font.draw(batch, "Lives: "+lives,windowWidth-glyphLayout.width ,windowHeight-5);
         batch.end();
+    }
+
+    private String getWeaponLine(int weaponSlot){
+        if(weapons==null||weapons.get(weaponSlot)==null){
+            return "N/A";
+        }
+        StringBuilder b = new StringBuilder(weaponSlot+".");
+        if(weapons.get(weaponSlot)){
+            b.append(weaponList.get(weaponSlot).name);
+        }else{
+            b.append("Empty");
+        }
+        b.append(" ["+ ammo.get(weaponSlot)+"]");
+        return b.toString();
     }
 
     private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
@@ -1118,6 +1167,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
+    private TextureRegion getTexture(String name, float stateTime){
+        Array<TextureAtlas.AtlasRegion> regions = atlas.findRegions(name);
+        if(regions.size==1){
+            return regions.get(0);
+        }else{
+            return new Animation(animationFrameTime,regions).getKeyFrame(stateTime);
+        }
+    }
+
     private void loadImages(){
         showMessage("Loading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
@@ -1234,7 +1292,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void loadMap(String mapName, float mapScale){
-        map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+ConVars.get("sv_map_name")+File.separator+ConVars.get("sv_map_name")+".tmx");
+        map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
         MapProperties properties = map.getProperties();
         GlobalVars.tileWidth = (Integer)properties.get("tilewidth");
         GlobalVars.tileHeight = (Integer)properties.get("tileheight");
