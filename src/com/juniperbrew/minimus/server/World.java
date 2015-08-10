@@ -713,8 +713,8 @@ public class World implements EntityChangeListener{
         float x;
         float y;
         if(spawnZone!=null){
-            x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth());
-            y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight());
+            x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-width);
+            y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-height);
         }else{
             x = MathUtils.random(mapWidth-width);
             y = MathUtils.random(mapHeight-height);
