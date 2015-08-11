@@ -6,70 +6,77 @@ filter: Nearest,Nearest
 repeat: none
 ammo
   rotate: false
-  xy: 228, 35
+  xy: 133, 7
   size: 9, 11
   orig: 9, 11
   offset: 0, 0
   index: -1
-civ
+blank
   rotate: false
-  xy: 2, 2
+  xy: 249, 61
+  size: 1, 1
+  orig: 1, 1
+  offset: 0, 0
+  index: -1
+civilian
+  rotate: false
+  xy: 34, 2
   size: 13, 10
   orig: 13, 10
   offset: 0, 0
   index: 4
-civ
+civilian
   rotate: false
-  xy: 17, 2
+  xy: 93, 9
+  size: 12, 9
+  orig: 12, 9
+  offset: 0, 0
+  index: 1
+civilian
+  rotate: false
+  xy: 93, 9
+  size: 12, 9
+  orig: 12, 9
+  offset: 0, 0
+  index: 3
+civilian
+  rotate: false
+  xy: 107, 8
   size: 12, 10
   orig: 12, 10
   offset: 0, 0
   index: 2
-civ
-  rotate: false
-  xy: 214, 37
-  size: 12, 9
-  orig: 12, 9
-  offset: 0, 0
-  index: 1
-civ
-  rotate: false
-  xy: 214, 37
-  size: 12, 9
-  orig: 12, 9
-  offset: 0, 0
-  index: 3
 fire
   rotate: false
-  xy: 31, 3
-  size: 14, 9
-  orig: 14, 9
-  offset: 0, 0
-  index: 1
-fire
-  rotate: false
-  xy: 190, 33
-  size: 10, 13
-  orig: 10, 13
-  offset: 0, 0
-  index: 2
-fire
-  rotate: false
-  xy: 176, 22
-  size: 14, 9
-  orig: 14, 9
-  offset: 0, 0
-  index: 3
-fire
-  rotate: false
-  xy: 202, 32
+  xy: 49, 2
   size: 10, 14
   orig: 10, 14
   offset: 0, 0
   index: 4
+fire
+  rotate: false
+  xy: 61, 9
+  size: 14, 9
+  orig: 14, 9
+  offset: 0, 0
+  index: 1
+fire
+  rotate: false
+  xy: 77, 9
+  size: 14, 9
+  orig: 14, 9
+  offset: 0, 0
+  index: 3
+fire
+  rotate: false
+  xy: 121, 5
+  size: 10, 13
+  orig: 10, 13
+  offset: 0, 0
+  index: 2
 flame
   rotate: false
-  xy: 176, 33
+  xy: 192, 18
   size: 12, 13
   orig: 12, 13
   offset: 0, 0
@@ -144,6 +151,34 @@ pistol
   orig: 29, 14
   offset: 0, 0
   index: -1
+pistolBoy
+  rotate: false
+  xy: 2, 2
+  size: 14, 10
+  orig: 14, 10
+  offset: 0, 0
+  index: 2
+pistolBoy
+  rotate: false
+  xy: 208, 34
+  size: 14, 12
+  orig: 14, 12
+  offset: 0, 0
+  index: 4
+pistolBoy
+  rotate: false
+  xy: 240, 35
+  size: 14, 11
+  orig: 14, 11
+  offset: 0, 0
+  index: 1
+pistolBoy
+  rotate: false
+  xy: 240, 35
+  size: 14, 11
+  orig: 14, 11
+  offset: 0, 0
+  index: 3
 rifle
   rotate: false
   xy: 2, 14
@@ -158,6 +193,34 @@ shotgun
   orig: 54, 14
   offset: 0, 0
   index: -1
+shotgunManiac
+  rotate: false
+  xy: 176, 32
+  size: 14, 14
+  orig: 14, 14
+  offset: 0, 0
+  index: 2
+shotgunManiac
+  rotate: false
+  xy: 192, 33
+  size: 14, 13
+  orig: 14, 13
+  offset: 0, 0
+  index: 1
+shotgunManiac
+  rotate: false
+  xy: 192, 33
+  size: 14, 13
+  orig: 14, 13
+  offset: 0, 0
+  index: 3
+shotgunManiac
+  rotate: false
+  xy: 240, 22
+  size: 14, 11
+  orig: 14, 11
+  offset: 0, 0
+  index: 4
 uzi
   rotate: false
   xy: 106, 46
@@ -165,10 +228,31 @@ uzi
   orig: 54, 16
   offset: 0, 0
   index: -1
-white
+uziRebel
   rotate: false
-  xy: 249, 61
-  size: 1, 1
-  orig: 1, 1
+  xy: 18, 2
+  size: 14, 10
+  orig: 14, 10
   offset: 0, 0
-  index: -1
+  index: 2
+uziRebel
+  rotate: false
+  xy: 224, 34
+  size: 14, 12
+  orig: 14, 12
+  offset: 0, 0
+  index: 4
+uziRebel
+  rotate: false
+  xy: 176, 19
+  size: 14, 11
+  orig: 14, 11
+  offset: 0, 0
+  index: 1
+uziRebel
+  rotate: false
+  xy: 176, 19
+  size: 14, 11
+  orig: 14, 11
+  offset: 0, 0
+  index: 3

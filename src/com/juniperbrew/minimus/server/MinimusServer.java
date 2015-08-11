@@ -26,7 +26,6 @@ import com.juniperbrew.minimus.Powerup;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
@@ -59,6 +58,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     HashMap<Connection, ArrayList<Network.UserInput>> inputQueue = new HashMap<>();
     HashMap<Connection, StatusData> connectionStatus = new HashMap<>();
     long lastUpdateSent;
+    ConcurrentLinkedQueue<Connection> connections = new ConcurrentLinkedQueue<>();
 
     BidiMap<Integer, Connection> playerList = new DualHashBidiMap<>();
 
@@ -153,6 +153,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                 fullUpdate.entities = world.getNetworkedEntityList();
                 fullUpdate.serverTime = getServerTime();
                 connection.sendTCP(fullUpdate);
+                connections.add(connection);
             }
 
             @Override
@@ -217,6 +218,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             if(playerList.containsValue(connection)){
                 world.removePlayer(playerList.getKey(connection));
             }
+            connections.remove(connection);
         }else if(object instanceof Network.GameClockCompare){
             Network.GameClockCompare gameClockCompare = (Network.GameClockCompare) object;
             showMessage("Received gameClockCompare("+playerList.getKey(connection)+"): "+gameClockCompare.serverTime + " Delta: "+(gameClockCompare.serverTime-getServerTime()));
@@ -299,7 +301,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             Network.EntityComponentsUpdate update = new Network.EntityComponentsUpdate();
             update.serverTime = getServerTime();
             update.changedEntityComponents = world.getChangedEntityComponents();
-            for(Connection connection :server.getConnections()) {
+            for(Connection connection :connections) {
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
                     sendUDP(connection,update);
@@ -544,7 +546,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         for (int i = 0; i < entityCount; i++) {
             ArrayList<Component> components = new ArrayList<>();
             if(pos)components.add(new Position(50,50));
-            if(heading)components.add(new Heading(Enums.Heading.NORTH));
             if(health)components.add(new Health(100));
             changedComponents.put(i,components);
         }
@@ -684,6 +685,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             camera.update();
         }
         if (character == 'y') {
+            /*
             showMessage("Printing list of stuck npcs");
             for(int id:world.entityAIs.keySet()){
                 EntityAI ai = world.entityAIs.get(id);
@@ -695,6 +697,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                     showMessage("CenterY:" + ai.entity.getCenterY());
                     showMessage("Last target location:" + ai.targetLocation);
                 }
+            }
+            */
+            showMessage("Listing entities");
+            for(ServerEntity e:world.entities.values()){
+                showMessage(e.toString());
             }
         }
         if(character == 'i'){

@@ -16,7 +16,6 @@ import com.badlogic.gdx.math.*;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
@@ -55,7 +54,6 @@ public class World implements EntityChangeListener{
 
     Set<Integer> posChangedEntities = new HashSet<>();
     Set<Integer> healthChangedEntities = new HashSet<>();
-    Set<Integer> headingChangedEntities = new HashSet<>();
     Set<Integer> rotationChangedEntities = new HashSet<>();
     Set<Integer> teamChangedEntities = new HashSet<>();
 
@@ -172,17 +170,18 @@ public class World implements EntityChangeListener{
     private void spawnMapEnemies(TiledMap map){
         for(RectangleMapObject o : mapObjects.get(map)){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
-                Rectangle r = ((RectangleMapObject) o).getRectangle();
+                Rectangle r = o.getRectangle();
                 MapProperties p = o.getProperties();
                 int aiType = -1;
                 int weapon = Integer.parseInt(p.get("weapon", String.class));
+                String image = p.get("image", String.class);
                 switch (p.get("aiType",String.class)){
                     case "moving":aiType=EntityAI.MOVING; break;
                     case "following":aiType=EntityAI.FOLLOWING; break;
                     case "movingAndShooting":aiType=EntityAI.MOVING_AND_SHOOTING; break;
                     case "followingAndShooting":aiType=EntityAI.FOLLOWING_AND_SHOOTING; break;
                 }
-                addNPC(r, aiType, weapon);
+                addNPC(r, aiType, weapon, image);
             }
         }
     }
@@ -768,16 +767,15 @@ public class World implements EntityChangeListener{
         pendingEntityRemovals.add(id);
     }
 
-    public void addNPC(Rectangle bounds, int aiType, int weapon){
+    public void addNPC(Rectangle bounds, int aiType, int weapon, String image){
         System.out.println("Adding npc "+aiType+","+weapon);
 
         int networkID = getNextNetworkID();
         ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,-1,this);
         npc.height = bounds.height;
         npc.width = bounds.width;
+        npc.image = image;
         npc.reduceHealth(10,-1);
-        int randomHeading = MathUtils.random(Enums.Heading.values().length - 1);
-        npc.setHeading(Enums.Heading.values()[randomHeading]);
         entityAIs.put(networkID,new EntityAI(npc,aiType,weapon,this));
         addEntity(npc);
     }
@@ -809,7 +807,7 @@ public class World implements EntityChangeListener{
                 x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth + SPAWN_AREA_WIDTH);
             }
         }
-        addNPC(new Rectangle(x, y, width, height), aiType, weapon);
+        addNPC(new Rectangle(x, y, width, height), aiType, weapon, "civilian");
     }
 
     public void addRandomNPC(){
@@ -945,7 +943,6 @@ public class World implements EntityChangeListener{
         HashMap<Integer,ArrayList<Component>> changedComponents = new HashMap<>();
         Set<Integer> changedEntities = new HashSet<>();
         changedEntities.addAll(posChangedEntities);
-        changedEntities.addAll(headingChangedEntities);
         changedEntities.addAll(healthChangedEntities);
         changedEntities.addAll(rotationChangedEntities);
         changedEntities.addAll(teamChangedEntities);
@@ -956,10 +953,6 @@ public class World implements EntityChangeListener{
             if(posChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
                 components.add(new Position(e.getX(),e.getY()));
-            }
-            if(headingChangedEntities.contains(id)){
-                ServerEntity e = entities.get(id);
-                components.add(new Heading(e.getHeading()));
             }
             if(healthChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
@@ -975,7 +968,6 @@ public class World implements EntityChangeListener{
             }
         }
         posChangedEntities.clear();
-        headingChangedEntities.clear();
         healthChangedEntities.clear();
         rotationChangedEntities.clear();
         teamChangedEntities.clear();
@@ -1038,7 +1030,7 @@ public class World implements EntityChangeListener{
         batch.begin();
         for(Powerup p : powerups.values()){
             batch.setColor(1, 0.4f, 0, 1); //safety orange
-            batch.draw(atlas.findRegion("white"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+            batch.draw(atlas.findRegion("blank"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
         }
         batch.end();
 
@@ -1051,7 +1043,6 @@ public class World implements EntityChangeListener{
 
         healthChangedEntities.remove(networkID);
         posChangedEntities.remove(networkID);
-        headingChangedEntities.remove(networkID);
         teamChangedEntities.remove(networkID);
         rotationChangedEntities.remove(networkID);
 
@@ -1084,11 +1075,6 @@ public class World implements EntityChangeListener{
     @Override
     public void healthChanged(int id) {
         healthChangedEntities.add(id);
-    }
-
-    @Override
-    public void headingChanged(int id) {
-        headingChangedEntities.add(id);
     }
 
     @Override

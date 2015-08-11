@@ -19,7 +19,7 @@ public class ServerEntity extends Entity {
     }
 
     public NetworkEntity getNetworkEntity(){
-        NetworkEntity e = new NetworkEntity(id,getX(),getY(),width,height,getHealth(),maxHealth,getHeading(), getTeam());
+        NetworkEntity e = new NetworkEntity(id,getX(),getY(),width,height,getHealth(),maxHealth, getTeam(), image);
         return e;
     }
 
@@ -38,11 +38,6 @@ public class ServerEntity extends Entity {
         listener.rotationChanged(id);
     }
 
-    public void setHeading(Enums.Heading heading){
-        super.setHeading(heading);
-        listener.headingChanged(id);
-        System.out.println(id+": heading updated");
-    }
     protected void move(double deltaX, double deltaY){
         super.move(deltaX, deltaY);
         listener.positionChanged(id);

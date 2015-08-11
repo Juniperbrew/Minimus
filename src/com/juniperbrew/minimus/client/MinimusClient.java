@@ -21,7 +21,6 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
@@ -29,13 +28,10 @@ import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
-import com.juniperbrew.minimus.server.ServerEntity;
-import com.juniperbrew.minimus.server.World;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -135,6 +131,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     HashMap<String,Sound> sounds = new HashMap<>();
     //HashMap<String,Texture> textures = new HashMap<>();
     TextureAtlas atlas;
+    HashMap<String,TextureRegion> textures = new HashMap<>();
+    HashMap<String,Animation> animations = new HashMap<>();
 
     Music backgroundMusic;
 
@@ -199,7 +197,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         font.setColor(Color.RED);
 
         loadSounds();
-        loadImages();
+        loadTextures();
 
         playerAnimation = new Animation(animationFrameTime,atlas.findRegions("link"));
         playerAnimation.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
@@ -218,6 +216,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
             addServerState(fullUpdate);
             showMessage("Received full update");
+            for(NetworkEntity e:fullUpdate.entities.values()){
+                if(e.image!=null){
+                    showMessage("Image:"+e.image);
+                }
+            }
+
         }else if(object instanceof Network.EntityPositionUpdate){
             Network.EntityPositionUpdate update = (Network.EntityPositionUpdate) object;
             if(authoritativeState!=null) {
@@ -782,7 +786,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
                 shapeRenderer.end();
             }
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
             batch.begin();
             for(Powerup p : powerups.values()){
@@ -804,50 +807,38 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
 
                     batch.setColor(0, 0, 1, 1);
-                    batch.draw(atlas.findRegion("white"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    batch.draw(atlas.findRegion("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }
             }
             batch.end();
 
             //Render entities
-            batch.setColor(1,1,1,1);
+            batch.begin();
             for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
                 NetworkEntity e = stateSnapshot.get(id);
                 float health = 1-((float)e.getHealth()/e.maxHealth);
-                if(playerList.contains(e.id)){
+                float healthbarWidth = e.width+20;
+                float healthbarHeight = healthbarWidth/7;
+                float healthbarXOffset =- healthbarHeight;
+                float healthbarYOffset = e.width+10;
+                float x = e.getX();
+                float y = e.getY();
+                batch.setColor(1,1,1,1);
+                if(e.id==playerID){
                     //Cast player position to int because we are centering the camera using casted values too
-                    int playerX = (int)e.getX();
-                    int playerY = (int)e.getY();
-                    batch.begin();
-                    if(e.id==playerID){
-                        batch.draw(playerAnimation.getKeyFrame(playerAnimationState),playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
-                    }else{
-                        batch.draw(playerAnimation.getKeyFrame(getAnimationState(e.id)),playerX,playerY,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
-                    }
-                    batch.end();
-                    float healthbarWidth = e.width+20;
-                    int healthbarHeight = 10;
-                    int healthbarXOffset = -10;
-                    float healthbarYOffset = e.width+10;
-                    shapeRenderer.setColor(0,1,0,1);
-                    shapeRenderer.rect(playerX+healthbarXOffset, playerY+healthbarYOffset, healthbarWidth,healthbarHeight);
-                    shapeRenderer.setColor(1,0,0,1);
-                    float healthWidth = healthbarWidth*health;
-                    shapeRenderer.rect(playerX+healthbarXOffset, playerY+healthbarYOffset, healthWidth,healthbarHeight);
+                    x = (int)e.getX();
+                    y = (int)e.getY();
+                    batch.draw(playerAnimation.getKeyFrame(playerAnimationState),x,y,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
                 }else{
-                    batch.begin();
-                    batch.draw(enemyAnimation.getKeyFrame(getAnimationState(e.id)),e.getX(), e.getY(),e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
-                    batch.end();
-                    /*
-                    shapeRenderer.setColor(1,1,1,1);
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
-                    float healthWidth = e.width*health;
-                    shapeRenderer.setColor(1,0,0,1); //red
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, healthWidth, e.height, 1, 1, e.getRotation());
-                */
+                    batch.draw(getTexture(e.image,e.id),e.getX(), e.getY(),e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
                 }
+                batch.setColor(0,1,0,1);
+                batch.draw(getTexture("blank", e.id), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
+                batch.setColor(1,0,0,1);
+                float healthWidth = healthbarWidth*health;
+                batch.draw(getTexture("blank",e.id), x+healthbarXOffset,y+healthbarYOffset,healthWidth,healthbarHeight);
             }
-            shapeRenderer.end();
+            batch.end();
 
             SharedMethods.renderAttack(delta, batch, projectiles);
             if(ConVars.getBool("cl_show_debug")) {
@@ -926,10 +917,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if(component instanceof Position){
                         Position pos = (Position) component;
                         changedEntity.moveTo(pos.x,pos.y);
-                    }
-                    if(component instanceof Heading) {
-                        Heading heading = (Heading) component;
-                        changedEntity.setHeading(heading.heading);
                     }
                     if(component instanceof Health) {
                         Health health = (Health) component;
@@ -1047,11 +1034,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             buffer.clear();
 
             int totalEntitySize = 0;
-
-            s.write(client, buffer ,e.getHeading());
-            totalEntitySize += buffer.position();
-            showMessage("Heading size is " + buffer.position() + " bytes");
-            buffer.clear();
 
             s.write(client, buffer ,e.getHealth());
             totalEntitySize += buffer.position();
@@ -1189,19 +1171,39 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private TextureRegion getTexture(String name, float stateTime){
-        Array<TextureAtlas.AtlasRegion> regions = atlas.findRegions(name);
-        if(regions.size==1){
-            return regions.get(0);
-        }else{
-            return new Animation(animationFrameTime,regions).getKeyFrame(stateTime);
+    private void loadTextures(){
+        showMessage("Loading texture atlas");
+        atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
+        showMessage("Loading textures");
+        Array<TextureAtlas.AtlasRegion> regions = atlas.getRegions();
+
+        for(TextureAtlas.AtlasRegion region: regions){
+            if(textures.containsKey(region.name)||animations.containsKey(region.name)){
+                continue;
+            }
+            Array<TextureAtlas.AtlasRegion> regionArray = atlas.findRegions(region.name);
+            if(regionArray.size>1){
+                Animation animation = new Animation(animationFrameTime,regionArray, Animation.PlayMode.LOOP);
+                animations.put(region.name,animation);
+                showMessage("Loaded animation:"+region.name);
+            }else{
+                textures.put(region.name,regionArray.first());
+                showMessage("Loaded texture:"+region.name);
+            }
         }
     }
 
-    private void loadImages(){
-        showMessage("Loading texture atlas");
-        atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
+    private TextureRegion getTexture(String name, int id){
+        //showMessage("Getting texture for:"+name);
+        if(textures.containsKey(name)){
+            return textures.get(name);
+        }else if(animations.containsKey(name)){
+            return animations.get(name).getKeyFrame(getAnimationState(id));
+        }else{
+            return textures.get("blank");
+        }
     }
+
 
     private void setPlayerID(int id){
         playerID = id;

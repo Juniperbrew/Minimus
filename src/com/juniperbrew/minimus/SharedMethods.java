@@ -43,7 +43,7 @@ public class SharedMethods {
                 Animation animation = new Animation(projectileDefinition.frameDuration,atlas.findRegions(projectileDefinition.animation));
                 projectile = new Projectile(bounds,animation,deg,centerX,centerY,projectileDefinition.range,projectileDefinition.velocity,entityId,team,projectileDefinition.damage);
             }else{
-                    TextureRegion texture = atlas.findRegion("white");
+                    TextureRegion texture = atlas.findRegion("blank");
                     Color color;
                     if(projectileDefinition.color==null){
                         color = new Color(MathUtils.random(),MathUtils.random(),MathUtils.random(),1);

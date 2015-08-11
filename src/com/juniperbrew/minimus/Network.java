@@ -5,7 +5,6 @@ import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Heading;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
@@ -42,7 +41,6 @@ public class Network {
         kryo.register(Enums.Heading.class);
         kryo.register(EnumSet.class);
         kryo.register(com.juniperbrew.minimus.components.Position.class);
-        kryo.register(Heading.class);
         kryo.register(Health.class);
         kryo.register(EntityComponentsUpdate.class);
         kryo.register(PlayerList.class);

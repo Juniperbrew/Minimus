@@ -20,6 +20,7 @@ public class NetworkEntity {
     public int slot1Weapon = 0;
     public int slot2Weapon = 1;
     private int team;
+    public String image;
 
     public NetworkEntity(){
         this(-1,-1,-1,-1);
@@ -37,9 +38,10 @@ public class NetworkEntity {
         slot1Weapon = e.slot1Weapon;
         slot2Weapon = e.slot2Weapon;
         team = e.team;
+        image = e.image;
     }
 
-    public NetworkEntity(int id, float x, float y, float width, float height, int health, int maxHealth, Enums.Heading heading, int team){
+    public NetworkEntity(int id, float x, float y, float width, float height, int health, int maxHealth, int team, String image){
         this.id = id;
         this.x = x;
         this.y = y;
@@ -48,6 +50,7 @@ public class NetworkEntity {
         this.health = health;
         this.maxHealth = maxHealth;
         this.team = team;
+        this.image = image;
     }
 
     public NetworkEntity(int id, float x, float y, int team) {
@@ -62,6 +65,7 @@ public class NetworkEntity {
         this.team = team;
     }
 
+/*
     public Enums.Heading getHeading(){
         if(rotation>=-45 || rotation <45){
             return Enums.Heading.EAST;
@@ -73,7 +77,8 @@ public class NetworkEntity {
             return Enums.Heading.SOUTH;
         }
         return null;
-    }
+    }*/
+
     public void setRotation(int degrees){
         this.rotation = degrees;
     }
@@ -82,6 +87,7 @@ public class NetworkEntity {
         return rotation;
     }
 
+    /*
     public void setHeading(Enums.Heading heading){
         switch(heading){
             case EAST: rotation = 0; break;
@@ -89,7 +95,8 @@ public class NetworkEntity {
             case WEST: rotation = 180; break;
             case NORTH: rotation = 90; break;
         }
-    }
+    }*/
+
     public float getX(){
         return x;
     }
@@ -152,5 +159,9 @@ public class NetworkEntity {
         vertices[6] = x;
         vertices[7] = y+height;
         return new Polygon(vertices);
+    }
+
+    public String toString(){
+        return "ID:"+id+" X:"+x+" Y:"+y+" Width:"+width+" Height:"+height+" Health:"+health+"/"+maxHealth+" Image:"+image;
     }
 }

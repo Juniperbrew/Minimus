@@ -2516,87 +2516,101 @@
     <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="33" type="enemy" x="340" y="720">
+  <object id="33" type="enemy" x="340" y="720" width="20" height="20">
    <properties>
     <property name="aiType" value="moving"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="0"/>
    </properties>
   </object>
   <object id="34" type="enemy" x="300" y="640" width="20" height="20">
    <properties>
     <property name="aiType" value="moving"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="0"/>
    </properties>
   </object>
-  <object id="35" type="enemy" x="280" y="400">
+  <object id="35" type="enemy" x="280" y="400" width="20" height="20">
    <properties>
     <property name="aiType" value="moving"/>
+    <property name="image" value="uziRebel"/>
     <property name="weapon" value="0"/>
    </properties>
   </object>
-  <object id="36" type="enemy" x="400" y="480">
+  <object id="36" type="enemy" x="400" y="480" width="20" height="20">
    <properties>
     <property name="aiType" value="following"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="0"/>
    </properties>
   </object>
   <object id="37" type="enemy" x="60" y="800" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="2"/>
    </properties>
   </object>
   <object id="38" type="enemy" x="280" y="880" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="2"/>
    </properties>
   </object>
   <object id="39" type="enemy" x="800" y="900" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="3"/>
    </properties>
   </object>
   <object id="40" type="enemy" x="800" y="400" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="3"/>
    </properties>
   </object>
   <object id="41" type="enemy" x="420" y="80" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="shotgunManiac"/>
     <property name="weapon" value="3"/>
    </properties>
   </object>
   <object id="42" type="enemy" x="660" y="620" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="2"/>
    </properties>
   </object>
   <object id="43" type="enemy" x="920" y="700" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="1"/>
    </properties>
   </object>
   <object id="44" type="enemy" x="160" y="120" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="uziRebel"/>
     <property name="weapon" value="1"/>
    </properties>
   </object>
   <object id="45" type="enemy" x="60" y="120" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="civilian"/>
     <property name="weapon" value="1"/>
    </properties>
   </object>
   <object id="46" type="enemy" x="340" y="60" width="20" height="20">
    <properties>
     <property name="aiType" value="followingAndShooting"/>
+    <property name="image" value="pistolBoy"/>
     <property name="weapon" value="1"/>
    </properties>
   </object>
