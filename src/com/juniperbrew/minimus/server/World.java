@@ -1,8 +1,5 @@
 package com.juniperbrew.minimus.server;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -31,7 +28,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -99,7 +95,8 @@ public class World implements EntityChangeListener{
     TmxMapLoader mapLoader;
     String pendingMap;
 
-    HashMap<String,TiledMap> mapList;
+    HashMap<String,TiledMap> mapList = new HashMap<>();
+    HashMap<TiledMap,ArrayList<RectangleMapObject>> mapObjects = new HashMap<>();
     OrthogonalTiledMapRenderer mapRenderer;
     SpriteBatch batch;
 
@@ -110,7 +107,7 @@ public class World implements EntityChangeListener{
         this.mapLoader = mapLoader;
         this.batch = batch;
         waveList = readWaveList();
-        mapList = loadMaps();
+        loadMaps();
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
         loadImages();
@@ -127,13 +124,13 @@ public class World implements EntityChangeListener{
         map = mapList.get(mapName);
         this.mapName = mapName;
 
-        GlobalVars.mapWidthTiles = (Integer) map.getProperties().get("width");
-        GlobalVars.mapHeightTiles = (Integer) map.getProperties().get("height");
-        GlobalVars.tileWidth = (Integer) map.getProperties().get("tilewidth");
-        GlobalVars.tileHeight = (Integer) map.getProperties().get("tileheight");
+        GlobalVars.mapWidthTiles = map.getProperties().get("width",Integer.class);
+        GlobalVars.mapHeightTiles = map.getProperties().get("height",Integer.class);
+        GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* ConVars.getDouble("sv_map_scale"));
+        GlobalVars.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* ConVars.getDouble("sv_map_scale"));
 
-        mapHeight = (int) (GlobalVars.mapHeightTiles * GlobalVars.tileHeight * ConVars.getDouble("sv_map_scale"));
-        mapWidth = (int) (GlobalVars.mapWidthTiles * GlobalVars.tileWidth * ConVars.getDouble("sv_map_scale"));
+        mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
+        mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
         GlobalVars.mapWidth = mapHeight;
         GlobalVars.mapHeight = mapWidth;
 
@@ -153,46 +150,59 @@ public class World implements EntityChangeListener{
     }
 
     private void spawnMapPowerups(TiledMap map){
-        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
-            for(MapObject o : layer.getObjects()){
-                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("powerup")){
-                    RectangleMapObject powerup = (RectangleMapObject) o;
-                    Rectangle r = powerup.getRectangle();
-                    MapProperties p = powerup.getProperties();
-                    if(p.containsKey("weapon")){
-                        int typeModifier = Integer.parseInt(p.get("weapon", String.class));
-                        spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, typeModifier, -1));
-                    }else if(p.containsKey("health")){
-                        int value = Integer.parseInt(p.get("value",String.class));
-                        spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.HEALTH, -1, value));
-                    }else if(p.containsKey("ammo")){
-                        int typeModifier = Integer.parseInt(p.get("ammo", String.class));
-                        int value = Integer.parseInt(p.get("value",String.class));
-                        spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, typeModifier, value));
-                    }
+        for(RectangleMapObject o : mapObjects.get(map)){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("powerup")){
+                Rectangle r = o.getRectangle();
+                MapProperties p = o.getProperties();
+                if(p.containsKey("weapon")){
+                    int typeModifier = Integer.parseInt(p.get("weapon", String.class));
+                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, typeModifier, -1));
+                }else if(p.containsKey("health")){
+                    int value = Integer.parseInt(p.get("value",String.class));
+                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.HEALTH, -1, value));
+                }else if(p.containsKey("ammo")){
+                    int typeModifier = Integer.parseInt(p.get("ammo", String.class));
+                    int value = Integer.parseInt(p.get("value",String.class));
+                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, typeModifier, value));
                 }
             }
         }
     }
 
     private void spawnMapEnemies(TiledMap map){
+        for(RectangleMapObject o : mapObjects.get(map)){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
+                Rectangle r = ((RectangleMapObject) o).getRectangle();
+                MapProperties p = o.getProperties();
+                int aiType = -1;
+                int weapon = Integer.parseInt(p.get("weapon", String.class));
+                switch (p.get("aiType",String.class)){
+                    case "moving":aiType=EntityAI.MOVING; break;
+                    case "following":aiType=EntityAI.FOLLOWING; break;
+                    case "movingAndShooting":aiType=EntityAI.MOVING_AND_SHOOTING; break;
+                    case "followingAndShooting":aiType=EntityAI.FOLLOWING_AND_SHOOTING; break;
+                }
+                addNPC(r, aiType, weapon);
+            }
+        }
+    }
+
+    private ArrayList<RectangleMapObject> getScaledMapobjects(TiledMap map){
+        float s = ConVars.getFloat("sv_map_scale");
+        ArrayList<RectangleMapObject> mapObjects = new ArrayList<>();
         for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
             for(MapObject o : layer.getObjects()){
-                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
-                    Rectangle r = ((RectangleMapObject) o).getRectangle();
-                    MapProperties p = o.getProperties();
-                    int aiType = -1;
-                    int weapon = Integer.parseInt(p.get("weapon", String.class));
-                    switch (p.get("aiType",String.class)){
-                        case "moving":aiType=EntityAI.MOVING; break;
-                        case "following":aiType=EntityAI.FOLLOWING; break;
-                        case "movingAndShooting":aiType=EntityAI.MOVING_AND_SHOOTING; break;
-                        case "followingAndShooting":aiType=EntityAI.FOLLOWING_AND_SHOOTING; break;
-                    }
-                    addNPC(r, aiType, weapon);
+                if(o instanceof RectangleMapObject){
+                    RectangleMapObject rectObject = (RectangleMapObject) o;
+                    Rectangle bounds = rectObject.getRectangle();
+                    listener.message("Converting:"+bounds);
+                    rectObject.getRectangle().set(bounds.x*s,bounds.y*s,bounds.width*s,bounds.height*s);
+                    listener.message("To:"+bounds);
+                    mapObjects.add(rectObject);
                 }
             }
         }
+        return mapObjects;
     }
 
     public void updateWorld(float delta){
@@ -301,12 +311,10 @@ public class World implements EntityChangeListener{
     }
 
     private Rectangle getSpawnZone(TiledMap map){
-        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
-            for(MapObject o : layer.getObjects()){
-                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
-                    RectangleMapObject rect = (RectangleMapObject) o;
-                    return rect.getRectangle();
-                }
+        for(RectangleMapObject o : mapObjects.get(map)){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
+                listener.message("Spawn at:"+o.getRectangle());
+                return o.getRectangle();
             }
         }
         return null;
@@ -314,12 +322,10 @@ public class World implements EntityChangeListener{
 
     private ArrayList<Rectangle> getEnemySpawnZones(TiledMap map){
         ArrayList<Rectangle> zones = new ArrayList<>();
-        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
-            for(MapObject o : layer.getObjects()){
-                if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemySpawn")){
-                    RectangleMapObject rect = (RectangleMapObject) o;
-                    zones.add(rect.getRectangle());
-                }
+        for(RectangleMapObject o : mapObjects.get(map)){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemySpawn")){
+                RectangleMapObject rect = (RectangleMapObject) o;
+                zones.add(rect.getRectangle());
             }
         }
         return zones;
@@ -800,7 +806,7 @@ public class World implements EntityChangeListener{
                 }else{
                     y = spawnPosition;
                 }
-                x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth+SPAWN_AREA_WIDTH);
+                x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth + SPAWN_AREA_WIDTH);
             }
         }
         addNPC(new Rectangle(x, y, width, height), aiType, weapon);
@@ -820,13 +826,13 @@ public class World implements EntityChangeListener{
 
     public void spawnPowerup(Powerup p){
         final int id = getNextNetworkID();
-        powerups.put(id,p);
-        listener.powerupAdded(id,p);
+        powerups.put(id, p);
+        listener.powerupAdded(id, p);
     }
 
     public void spawnPowerup(int type, int value, int duration){
 
-        int x = MathUtils.random(0,mapWidth);
+        int x = MathUtils.random(0, mapWidth);
         int y = MathUtils.random(0,mapHeight);
         final int id = getNextNetworkID();
         Powerup powerup = new Powerup(x,y,type,value);
@@ -862,18 +868,18 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private HashMap<String,TiledMap> loadMaps(){
-        HashMap<String,TiledMap> maps = new HashMap<>();
+    private void loadMaps(){
 
-        File mapFolder = new File("resources"+File.separator+"maps");
+        File mapFolder = new File("resources" + File.separator + "maps");
         listener.message("Loading maps from: " + mapFolder);
         for (final File file : mapFolder.listFiles()) {
             if (file.isDirectory()) {
-                maps.put(file.getName(), loadMap(file.getName()));
+                TiledMap map = loadMap(file.getName());
+                mapList.put(file.getName(), map);
+                mapObjects.put(map, getScaledMapobjects(map));
                 listener.message("Loaded: " + file.getName());
             }
         }
-        return maps;
     }
 
     private HashMap<Integer,WaveDefinition> readWaveList(){

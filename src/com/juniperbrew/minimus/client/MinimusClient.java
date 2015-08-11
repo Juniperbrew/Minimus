@@ -254,9 +254,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showMessage("Adding entity " + addEntity.entity.id);
             //Entities added to latest state despite their add time
             authoritativeState.entities.put(addEntity.entity.id, addEntity.entity);
+            entityAnimationStateTimes.put(addEntity.entity.id,0f);
         }else if(object instanceof Network.RemoveEntity){
             Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
             removeEntity(removeEntity.networkID);
+            entityAnimationStateTimes.remove(removeEntity.networkID);
         }else if(object instanceof Network.AssignEntity){
             showMessage("Assigning entity");
             Network.AssignEntity assign = (Network.AssignEntity) object;
@@ -745,8 +747,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glLineWidth(3);
-        //Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
-        //Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+        Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
+        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 
         if(stateSnapshot !=null){
 
@@ -856,7 +858,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
 
-        //Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 
         //Draw HUD
         batch.begin();
@@ -1314,14 +1316,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void loadMap(String mapName, float mapScale){
         map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
         MapProperties properties = map.getProperties();
-        GlobalVars.tileWidth = (Integer)properties.get("tilewidth");
-        GlobalVars.tileHeight = (Integer)properties.get("tileheight");
-        GlobalVars.mapWidthTiles = (Integer)properties.get("width");
-        GlobalVars.mapHeightTiles = (Integer)properties.get("height");
+        GlobalVars.mapWidthTiles = map.getProperties().get("width",Integer.class);
+        GlobalVars.mapHeightTiles = map.getProperties().get("height",Integer.class);
+        GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
+        GlobalVars.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* mapScale);
+
+        mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
+        mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
+        GlobalVars.mapWidth = mapHeight;
+        GlobalVars.mapHeight = mapWidth;
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-        mapHeight = (int) (GlobalVars.mapHeightTiles*GlobalVars.tileHeight*mapScale);
-        mapWidth = (int) (GlobalVars.mapWidthTiles*GlobalVars.tileWidth*mapScale);
 
         GlobalVars.mapWidth = mapHeight;
         GlobalVars.mapHeight = mapWidth;
