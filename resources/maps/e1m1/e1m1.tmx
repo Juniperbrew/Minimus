@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="56">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="57">
  <properties>
   <property name="mapScale" value="4"/>
   <property name="nextLevel" value="mirnal"/>
@@ -2418,7 +2418,7 @@
  <objectgroup name="Object Layer 1">
   <object id="1" type="spawn" x="100" y="500" width="60" height="60"/>
   <object id="6" type="enemySpawn" x="420" y="520" width="40" height="40"/>
-  <object id="15" type="powerup" x="40" y="480" width="15" height="7">
+  <object id="15" type="powerup" x="40" y="480" width="7.5" height="3.5">
    <properties>
     <property name="ammo" value="2"/>
     <property name="value" value="40"/>
@@ -2619,6 +2619,12 @@
   <object id="55" type="powerup" x="40" y="520" width="26" height="7">
    <properties>
     <property name="weapon" value="2"/>
+   </properties>
+  </object>
+  <object id="56" type="powerup" x="57.0528" y="479.903" width="7.5" height="3.5">
+   <properties>
+    <property name="ammo" value="2"/>
+    <property name="value" value="40"/>
    </properties>
   </object>
  </objectgroup>
