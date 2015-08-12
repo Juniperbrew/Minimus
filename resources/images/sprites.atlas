@@ -20,7 +20,7 @@ blank
   index: -1
 blueSkull
   rotate: false
-  xy: 341, 28
+  xy: 269, 14
   size: 13, 16
   orig: 13, 16
   offset: 0, 0
@@ -41,63 +41,63 @@ chainsaw
   index: -1
 civilian
   rotate: false
-  xy: 74, 9
+  xy: 283, 2
   size: 13, 10
   orig: 13, 10
   offset: 0, 0
   index: 4
 civilian
   rotate: false
-  xy: 402, 24
-  size: 12, 10
-  orig: 12, 10
-  offset: 0, 0
-  index: 2
-civilian
-  rotate: false
-  xy: 371, 19
+  xy: 337, 17
   size: 12, 9
   orig: 12, 9
   offset: 0, 0
   index: 1
 civilian
   rotate: false
-  xy: 371, 19
+  xy: 337, 17
   size: 12, 9
   orig: 12, 9
   offset: 0, 0
   index: 3
+civilian
+  rotate: false
+  xy: 358, 9
+  size: 12, 10
+  orig: 12, 10
+  offset: 0, 0
+  index: 2
 fire
   rotate: false
-  xy: 251, 2
+  xy: 284, 14
   size: 10, 14
   orig: 10, 14
   offset: 0, 0
   index: 4
 fire
   rotate: false
-  xy: 89, 10
+  xy: 351, 21
   size: 14, 9
   orig: 14, 9
   offset: 0, 0
   index: 1
 fire
   rotate: false
-  xy: 386, 23
-  size: 14, 9
-  orig: 14, 9
-  offset: 0, 0
-  index: 3
-fire
-  rotate: false
-  xy: 293, 3
+  xy: 314, 2
   size: 10, 13
   orig: 10, 13
   offset: 0, 0
   index: 2
+fire
+  rotate: false
+  xy: 321, 17
+  size: 14, 9
+  orig: 14, 9
+  offset: 0, 0
+  index: 3
 flame
   rotate: false
-  xy: 263, 3
+  xy: 296, 15
   size: 12, 13
   orig: 12, 13
   offset: 0, 0
@@ -209,32 +209,32 @@ pistol
   index: -1
 pistolBoy
   rotate: false
-  xy: 386, 34
+  xy: 251, 2
+  size: 14, 10
+  orig: 14, 10
+  offset: 0, 0
+  index: 2
+pistolBoy
+  rotate: false
+  xy: 273, 32
   size: 14, 12
   orig: 14, 12
   offset: 0, 0
   index: 4
 pistolBoy
   rotate: false
-  xy: 267, 18
+  xy: 298, 2
   size: 14, 11
   orig: 14, 11
   offset: 0, 0
   index: 1
 pistolBoy
   rotate: false
-  xy: 267, 18
+  xy: 298, 2
   size: 14, 11
   orig: 14, 11
   offset: 0, 0
   index: 3
-pistolBoy
-  rotate: false
-  xy: 299, 19
-  size: 14, 10
-  orig: 14, 10
-  offset: 0, 0
-  index: 2
 plasmaGun
   rotate: false
   xy: 314, 46
@@ -244,35 +244,35 @@ plasmaGun
   index: -1
 player
   rotate: false
-  xy: 273, 31
-  size: 16, 13
-  orig: 16, 13
-  offset: 0, 0
-  index: 2
-player
-  rotate: false
-  xy: 291, 31
-  size: 16, 13
-  orig: 16, 13
-  offset: 0, 0
-  index: 4
-player
-  rotate: false
-  xy: 402, 36
-  size: 16, 10
-  orig: 16, 10
+  xy: 58, 3
+  size: 16, 16
+  orig: 16, 16
   offset: 0, 0
   index: 1
 player
   rotate: false
-  xy: 402, 36
-  size: 16, 10
-  orig: 16, 10
+  xy: 58, 3
+  size: 16, 16
+  orig: 16, 16
   offset: 0, 0
   index: 3
+player
+  rotate: false
+  xy: 76, 3
+  size: 16, 16
+  orig: 16, 16
+  offset: 0, 0
+  index: 2
+player
+  rotate: false
+  xy: 251, 14
+  size: 16, 16
+  orig: 16, 16
+  offset: 0, 0
+  index: 4
 redSkull
   rotate: false
-  xy: 356, 28
+  xy: 321, 28
   size: 13, 16
   orig: 13, 16
   offset: 0, 0
@@ -300,35 +300,35 @@ shotgun
   index: -1
 shotgunManiac
   rotate: false
-  xy: 309, 31
+  xy: 289, 31
   size: 14, 13
   orig: 14, 13
   offset: 0, 0
   index: 1
 shotgunManiac
   rotate: false
-  xy: 309, 31
+  xy: 289, 31
   size: 14, 13
   orig: 14, 13
   offset: 0, 0
   index: 3
 shotgunManiac
   rotate: false
-  xy: 325, 30
+  xy: 305, 30
   size: 14, 14
   orig: 14, 14
   offset: 0, 0
   index: 2
 shotgunManiac
   rotate: false
-  xy: 283, 18
+  xy: 326, 4
   size: 14, 11
   orig: 14, 11
   offset: 0, 0
   index: 4
 smallAmmo
   rotate: false
-  xy: 305, 6
+  xy: 310, 17
   size: 9, 11
   orig: 9, 11
   offset: 0, 0
@@ -349,7 +349,7 @@ smallRocket
   index: -1
 smallShell
   rotate: false
-  xy: 385, 14
+  xy: 94, 12
   size: 15, 7
   orig: 15, 7
   offset: 0, 0
@@ -363,35 +363,35 @@ superShotgun
   index: -1
 uziRebel
   rotate: false
-  xy: 251, 18
+  xy: 267, 2
+  size: 14, 10
+  orig: 14, 10
+  offset: 0, 0
+  index: 2
+uziRebel
+  rotate: false
+  xy: 351, 32
   size: 14, 12
   orig: 14, 12
   offset: 0, 0
   index: 4
 uziRebel
   rotate: false
-  xy: 277, 5
+  xy: 342, 4
   size: 14, 11
   orig: 14, 11
   offset: 0, 0
   index: 1
 uziRebel
   rotate: false
-  xy: 277, 5
+  xy: 342, 4
   size: 14, 11
   orig: 14, 11
   offset: 0, 0
   index: 3
-uziRebel
-  rotate: false
-  xy: 58, 9
-  size: 14, 10
-  orig: 14, 10
-  offset: 0, 0
-  index: 2
 yellowSkull
   rotate: false
-  xy: 371, 30
+  xy: 336, 28
   size: 13, 16
   orig: 13, 16
   offset: 0, 0
