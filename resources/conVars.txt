@@ -22,7 +22,6 @@ sv_ping_update_delay 1
 cl_ping_update_delay 1
 cl_auto_send_errorlogs 1
 sv_map minimus
-sv_map_scale 1
 sv_npc_velocity 75
 sv_npc_target_search_radius 300
 sv_npc_destination_time_limit 5
@@ -30,7 +29,6 @@ sv_npc_default_size 16
 cl_zoom 1
 sv_contact_damage 5
 sv_invulnerability_timer 0.5
-sv_custom_waves 1
 sv_start_lives 0
 sv_player_max_health 100
 sv_player_default_team 1

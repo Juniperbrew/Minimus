@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="53">
+ <properties>
+  <property name="mapScale" value="4"/>
+  <property name="nextLevel" value="mirnal"/>
+ </properties>
  <tileset firstgid="1" name="Walls" tilewidth="20" tileheight="20">
   <image source="walls1.bmp" width="320" height="600"/>
   <tile id="0">

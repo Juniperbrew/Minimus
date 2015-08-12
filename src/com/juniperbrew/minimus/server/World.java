@@ -121,11 +121,12 @@ public class World implements EntityChangeListener{
     public void changeMap(String mapName){
         map = mapList.get(mapName);
         this.mapName = mapName;
+        float mapScale = SharedMethods.getMapScale(map);
 
         GlobalVars.mapWidthTiles = map.getProperties().get("width",Integer.class);
         GlobalVars.mapHeightTiles = map.getProperties().get("height",Integer.class);
-        GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* ConVars.getDouble("sv_map_scale"));
-        GlobalVars.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* ConVars.getDouble("sv_map_scale"));
+        GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
+        GlobalVars.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* mapScale);
 
         mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
         mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
@@ -143,7 +144,7 @@ public class World implements EntityChangeListener{
         spawnMapPowerups(map);
         spawnMapEnemies(map);
 
-        mapRenderer = new OrthogonalTiledMapRenderer(map,ConVars.getFloat("sv_map_scale"),batch);
+        mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
         listener.mapChanged(mapName);
     }
 
@@ -187,16 +188,14 @@ public class World implements EntityChangeListener{
     }
 
     private ArrayList<RectangleMapObject> getScaledMapobjects(TiledMap map){
-        float s = ConVars.getFloat("sv_map_scale");
+        float s = SharedMethods.getMapScale(map);
         ArrayList<RectangleMapObject> mapObjects = new ArrayList<>();
         for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
             for(MapObject o : layer.getObjects()){
                 if(o instanceof RectangleMapObject){
                     RectangleMapObject rectObject = (RectangleMapObject) o;
                     Rectangle bounds = rectObject.getRectangle();
-                    listener.message("Converting:"+bounds);
                     rectObject.getRectangle().set(bounds.x*s,bounds.y*s,bounds.width*s,bounds.height*s);
-                    listener.message("To:"+bounds);
                     mapObjects.add(rectObject);
                 }
             }
@@ -211,32 +210,21 @@ public class World implements EntityChangeListener{
         }
         pendingEntityRemovals.clear();
 
-        updateWaves();
+        updateGameState();
         updateEntityAI(delta);
         updateProjectiles(delta);
         checkPlayerEntityCollisions();
         checkPowerupCollisions();
     }
 
-    private void updateWaves(){
+    private void updateGameState(){
         if(spawnWaves) {
-            WaveDefinition waveDefinition = waveList.get(wave);
             if (entityAIs.isEmpty() && (spawnedEnemiesCounter == waveEnemyCount)) {
                 spawnedHealthPacksCounter = 0;
                 spawnedEnemiesCounter = 0;
                 setWave(wave + 1);
-                waveDefinition = waveList.get(wave);
-
-                if (!ConVars.getBool("sv_custom_waves")||waveDefinition == null) {
-                    waveEnemyCount = 3 + 2 * wave;
-                    waveHealthPackCount = (int) Math.sqrt(wave);
-                } else {
-                    waveEnemyCount = waveDefinition.enemies.size();
-                    waveHealthPackCount = waveDefinition.healthPackCount;
-                    if (waveDefinition.map != null) {
-                        changeMap(waveDefinition.map);
-                    }
-                }
+                waveEnemyCount = 3 + 2 * wave;
+                waveHealthPackCount = (int) Math.sqrt(wave);
             }
             if (spawnedHealthPacksCounter < waveHealthPackCount) {
                 if (System.nanoTime() - lastHealthPackSpawned > Tools.secondsToNano(HEALTHPACK_SPAWN_DELAY)) {
@@ -248,12 +236,15 @@ public class World implements EntityChangeListener{
             if (spawnedEnemiesCounter < waveEnemyCount) {
                 if (System.nanoTime() - lastEnemySpawned > Tools.secondsToNano(ENEMY_SPAWN_DELAY)) {
                     lastEnemySpawned = System.nanoTime();
-                    if (!ConVars.getBool("sv_custom_waves")||waveDefinition == null) {
-                        addRandomNPC();
-                    } else {
-                        spawnEnemy(waveDefinition.enemies.get(spawnedEnemiesCounter));
-                    }
                     spawnedEnemiesCounter++;
+                    addRandomNPC();
+                }
+            }
+        }else{
+            if (entityAIs.isEmpty()){
+                String nextMap = map.getProperties().get("nextLevel",String.class);
+                if(nextMap!=null){
+                    changeMap(nextMap);
                 }
             }
         }
@@ -752,7 +743,6 @@ public class World implements EntityChangeListener{
         assign.lives = playerLives.get(networkID);
         assign.velocity = ConVars.getFloat("sv_player_velocity");
         assign.mapName = mapName;
-        assign.mapScale = ConVars.getFloat("sv_map_scale");
         assign.playerList = new ArrayList<>(playerList);
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
@@ -776,7 +766,7 @@ public class World implements EntityChangeListener{
         npc.width = bounds.width;
         npc.image = image;
         npc.reduceHealth(10,-1);
-        entityAIs.put(networkID,new EntityAI(npc,aiType,weapon,this));
+        entityAIs.put(networkID,new EntityAI(npc,aiType, weapon,this));
         addEntity(npc);
     }
 
@@ -1037,7 +1027,7 @@ public class World implements EntityChangeListener{
         SharedMethods.renderAttack(delta, batch, projectiles);
     }
 
-    private void removeEntity(int networkID){
+    private void removeEntity(int networkID) {
         entityAIs.remove(networkID);
         entities.remove(networkID);
 

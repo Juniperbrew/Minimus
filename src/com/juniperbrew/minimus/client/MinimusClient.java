@@ -269,7 +269,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             setPlayerID(assign.networkID);
             ConVars.set("sv_player_velocity", assign.velocity);
 
-            loadMap(assign.mapName, assign.mapScale);
+            loadMap(assign.mapName);
             lives = assign.lives;
 
             playerList = assign.playerList;
@@ -319,7 +319,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void changeMap(Network.MapChange mapChange){
-        loadMap(mapChange.mapName, ConVars.getFloat("sv_map_scale"));
+        loadMap(mapChange.mapName);
         powerups = mapChange.powerups;
         projectiles.clear();
     }
@@ -1315,13 +1315,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         lastServerTime = authoritativeState.serverTime;
     }
 
-    private void loadMap(String mapName, float mapScale){
+    private void loadMap(String mapName){
         map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
-        MapProperties properties = map.getProperties();
-        GlobalVars.mapWidthTiles = map.getProperties().get("width",Integer.class);
-        GlobalVars.mapHeightTiles = map.getProperties().get("height",Integer.class);
-        GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
-        GlobalVars.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* mapScale);
+        float mapScale = SharedMethods.getMapScale(map);
+        MapProperties p = map.getProperties();
+        GlobalVars.mapWidthTiles = p.get("width", Integer.class);
+        GlobalVars.mapHeightTiles = p.get("height", Integer.class);
+        GlobalVars.tileWidth = (int) (p.get("tilewidth", Integer.class)* mapScale);
+        GlobalVars.tileHeight = (int) (p.get("tileheight",Integer.class)* mapScale);
 
         mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
         mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;

@@ -174,7 +174,6 @@ public class Network {
         public int networkID;
         public float velocity;
         public String mapName;
-        public float mapScale;
         public int lives;
         public int wave;
         public ArrayList<Integer> playerList;
