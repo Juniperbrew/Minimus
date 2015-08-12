@@ -22,6 +22,7 @@ public class Weapon {
         b.append(" ProjectileCount: "+projectileCount);
         b.append(" Sound: "+sound);
         b.append(" Image: "+image);
+        b.append(" AmmoImage: "+ammoImage);
         return b.toString();
     }
 }
