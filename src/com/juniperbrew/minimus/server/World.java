@@ -740,7 +740,7 @@ public class World implements EntityChangeListener{
         newPlayer.invulnerable = true;
         newPlayer.width = width;
         newPlayer.height = height;
-        newPlayer.image = "link";
+        newPlayer.image = "player";
         addEntity(newPlayer);
 
         Network.AssignEntity assign = new Network.AssignEntity();

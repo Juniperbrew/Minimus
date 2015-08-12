@@ -21,6 +21,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
@@ -122,7 +123,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Texture spriteSheet;
 
     Animation playerAnimation;
-    Animation enemyAnimation;
     float animationFrameTime = 0.15f;
     SpriteBatch batch;
 
@@ -199,11 +199,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         loadSounds();
         loadTextures();
 
-        playerAnimation = new Animation(animationFrameTime,atlas.findRegions("link"));
-        playerAnimation.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
-
-        enemyAnimation = new Animation(animationFrameTime,atlas.findRegions("civ"));
-        enemyAnimation.setPlayMode(Animation.PlayMode.LOOP);
+        playerAnimation = new Animation(animationFrameTime,atlas.findRegions("player"));
+        playerAnimation.setPlayMode(Animation.PlayMode.LOOP);
 
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
@@ -384,7 +381,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 || buttons.contains(Enums.Buttons.W)
                 || buttons.contains(Enums.Buttons.W)
                 || buttons.contains(Enums.Buttons.W))){
-            playerAnimationState = animationFrameTime*3;
+            playerAnimationState = 0;
         }
         if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
             int inputRequestID = getNextInputRequestID();
@@ -654,7 +651,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         Network.Position interpPos = new Network.Position();
         if(from.getX()==to.getX()&&from.getY()==to.getY()){
-            entityAnimationStateTimes.put(to.id,animationFrameTime*3);
+            entityAnimationStateTimes.put(to.id,0f);
         }
         interpPos.x = (float)(from.getX()+(to.getX()-from.getX())*alpha);
         interpPos.y = (float)(from.getY()+(to.getY()-from.getY())*alpha);
@@ -737,6 +734,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
         projectiles.removeAll(destroyedProjectiles);
+    }
+
+    private Rectangle getCenteredTextureSize(TextureRegion t, NetworkEntity e){
+        float aspectRatio = (float)t.getRegionWidth()/t.getRegionHeight();
+        if(aspectRatio>=1){
+            float scaledHeight = e.width/aspectRatio;
+            return new Rectangle(e.getX(),e.getY(),e.width,scaledHeight);
+        }else{
+            float scaledWidth = aspectRatio*e.height;
+            return new Rectangle(e.getX(),e.getY(),scaledWidth,e.height);
+        }
     }
 
     @Override
@@ -832,9 +840,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     //Cast player position to int because we are centering the camera using casted values too
                     x = (int)e.getX();
                     y = (int)e.getY();
-                    batch.draw(playerAnimation.getKeyFrame(playerAnimationState),x,y,e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    TextureRegion texture = playerAnimation.getKeyFrame(playerAnimationState);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,e);
+                    //TODO had to swap the width with height in draw call?????
+                    batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
                 }else{
-                    batch.draw(getTexture(e.image,e.id),e.getX(), e.getY(),e.width/2,e.height/2,e.width,e.height,1,1,e.getRotation()+180,true);
+                    TextureRegion texture = getTexture(e.image,e.id);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,e);
+                    //TODO had to swap the width with height in draw call?????
+                    batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
                 }
                 batch.setColor(0,1,0,1);
                 batch.draw(getTexture("blank", e.id), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
