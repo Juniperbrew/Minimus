@@ -791,23 +791,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             for(Powerup p : powerups.values()){
                 if(p.type==Powerup.HEALTH){
                     batch.setColor(1,1,1,1);
-                    batch.draw(atlas.findRegion("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    batch.draw(getTexture("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }else if(p.type==Powerup.AMMO){
-                    batch.setColor(1,1,1,1);
-                    batch.draw(atlas.findRegion("ammo"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    //TODO clean up these nullchecks
+                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
+                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
+                        batch.setColor(1, 1, 1, 1);
+                        batch.draw(texture,p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                        continue;
+                    }
+                    batch.setColor(1, 0, 0, 1);
+                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }else if(p.type==Powerup.WEAPON){
                     //TODO clean up these nullchecks
                     if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
-                            TextureAtlas.AtlasRegion texture = atlas.findRegion(weaponList.get(p.typeModifier).image);
-                            if(texture!=null){
-                                batch.setColor(1,1,1,1);
-                                batch.draw(atlas.findRegion(weaponList.get(p.typeModifier).image),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-                                continue;
-                            }
+                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
+                        batch.setColor(1,1,1,1);
+                        batch.draw(texture,p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                        continue;
                     }
-
                     batch.setColor(0, 0, 1, 1);
-                    batch.draw(atlas.findRegion("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }
             }
             batch.end();
@@ -1193,12 +1197,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
+    private TextureRegion getTexture(String name){
+        return getTexture(name, -1);
+    }
+
     private TextureRegion getTexture(String name, int id){
-        //showMessage("Getting texture for:"+name);
         if(textures.containsKey(name)){
             return textures.get(name);
         }else if(animations.containsKey(name)){
-            return animations.get(name).getKeyFrame(getAnimationState(id));
+            if(entityAnimationStateTimes.containsKey(id)){
+                return animations.get(name).getKeyFrame(getAnimationState(id));
+            }else{
+                return animations.get(name).getKeyFrame(getClientTime());
+            }
         }else{
             return textures.get("blank");
         }

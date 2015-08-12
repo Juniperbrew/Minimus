@@ -540,6 +540,7 @@ public class World implements EntityChangeListener{
             ServerEntity target = entities.get(targetId);
             for(Projectile projectile:newProjectiles){
                 if(projectile.hitscan){
+                    //TODO hitscan goes through walls
                     if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds()) && target.getTeam() != e.getTeam()){
                         target.reduceHealth(projectileDefinition.damage,e.id);
                     }
@@ -671,6 +672,9 @@ public class World implements EntityChangeListener{
                 }
                 if(splits[0].equals("image")){
                     weapon.image = splits[1];
+                }
+                if(splits[0].equals("ammoImage")){
+                    weapon.ammoImage = splits[1];
                 }
             }
         } catch (FileNotFoundException e) {

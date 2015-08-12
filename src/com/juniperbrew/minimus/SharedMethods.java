@@ -21,8 +21,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class SharedMethods {
 
-    static Timer timer = new Timer();
-
     public static ArrayList<Projectile> createProjectile(TextureAtlas atlas, Weapon weapon, float centerX, float centerY, int deg, int entityId, int team) {
         ProjectileDefinition projectileDefinition = weapon.projectile;
         final ArrayList<Projectile> projectiles = new ArrayList<>();

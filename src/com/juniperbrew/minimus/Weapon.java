@@ -11,6 +11,7 @@ public class Weapon {
     public ProjectileDefinition projectile;
     public double cooldown;
     public String image;
+    public String ammoImage;
 
     @Override
     public String toString() {
