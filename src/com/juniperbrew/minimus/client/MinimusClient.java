@@ -736,14 +736,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         projectiles.removeAll(destroyedProjectiles);
     }
 
-    private Rectangle getCenteredTextureSize(TextureRegion t, NetworkEntity e){
+    private Rectangle getCenteredTextureSize(TextureRegion t, Rectangle bounds){
         float aspectRatio = (float)t.getRegionWidth()/t.getRegionHeight();
         if(aspectRatio>=1){
-            float scaledHeight = e.width/aspectRatio;
-            return new Rectangle(e.getX(),e.getY(),e.width,scaledHeight);
+            float scaledHeight = bounds.width/aspectRatio;
+            return new Rectangle(bounds.x,bounds.y+(bounds.height-scaledHeight)/2,bounds.width,scaledHeight);
         }else{
-            float scaledWidth = aspectRatio*e.height;
-            return new Rectangle(e.getX(),e.getY(),scaledWidth,e.height);
+            float scaledWidth = aspectRatio*bounds.height;
+            return new Rectangle(bounds.x+(bounds.width-scaledWidth)/2,bounds.y,scaledWidth,bounds.height);
         }
     }
 
@@ -804,8 +804,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     //TODO clean up these nullchecks
                     if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
                         TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
+                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
                         batch.setColor(1, 1, 1, 1);
-                        batch.draw(texture,p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
                         continue;
                     }
                     batch.setColor(1, 0, 0, 1);
@@ -814,8 +815,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     //TODO clean up these nullchecks
                     if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
                         TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
+                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
                         batch.setColor(1,1,1,1);
-                        batch.draw(texture,p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
                         continue;
                     }
                     batch.setColor(0, 0, 1, 1);
@@ -841,12 +843,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     x = (int)e.getX();
                     y = (int)e.getY();
                     TextureRegion texture = playerAnimation.getKeyFrame(playerAnimationState);
-                    Rectangle textureBounds = getCenteredTextureSize(texture,e);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
                     //TODO had to swap the width with height in draw call?????
                     batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
                 }else{
                     TextureRegion texture = getTexture(e.image,e.id);
-                    Rectangle textureBounds = getCenteredTextureSize(texture,e);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
                     //TODO had to swap the width with height in draw call?????
                     batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
                 }

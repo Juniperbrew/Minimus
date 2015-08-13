@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="57">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="60">
  <properties>
   <property name="mapScale" value="4"/>
   <property name="nextLevel" value="e1m2"/>
@@ -2625,6 +2625,21 @@
    <properties>
     <property name="ammo" value="2"/>
     <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="57" type="powerup" x="80" y="420" width="20" height="40">
+   <properties>
+    <property name="weapon" value="2"/>
+   </properties>
+  </object>
+  <object id="58" type="powerup" x="140" y="400" width="100" height="20">
+   <properties>
+    <property name="weapon" value="2"/>
+   </properties>
+  </object>
+  <object id="59" type="powerup" x="240" y="460" width="20" height="80">
+   <properties>
+    <property name="weapon" value="2"/>
    </properties>
   </object>
  </objectgroup>
