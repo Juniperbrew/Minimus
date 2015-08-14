@@ -377,11 +377,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             lastMouseX = mouseX;
             lastMouseY = mouseY;
         }
-        if(!(buttons.contains(Enums.Buttons.W)
-                || !(buttons.contains(Enums.Buttons.A))
-                || !(buttons.contains(Enums.Buttons.S))
-                || !(buttons.contains(Enums.Buttons.D))
-                || !autoWalk)){
+        if(!buttons.contains(Enums.Buttons.W)
+                && !buttons.contains(Enums.Buttons.A)
+                && !buttons.contains(Enums.Buttons.S)
+                && !buttons.contains(Enums.Buttons.D)
+                && !autoWalk){
             playerAnimationState = 0;
         }
         if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
