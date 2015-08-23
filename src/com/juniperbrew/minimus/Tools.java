@@ -2,6 +2,7 @@ package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.math.*;
 
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -63,6 +64,18 @@ public class Tools {
         return (float) (Math.pow((x1-x2),2)+Math.pow((y1-y2),2));
     }
 
+    public static float getLength(Line2D.Float l){
+        return (float) Math.sqrt(Math.pow((l.x1-l.x2),2)+Math.pow((l.y1-l.y2),2));
+    }
+
+    public static float getAngle(Line2D.Float line){
+        return (MathUtils.atan2(line.y2 - line.y1, line.x2 - line.x1)*MathUtils.radiansToDegrees);
+    }
+
+    public static float getDistance ( float x1, float y1, float x2, float y2){
+        return (float) Math.sqrt(Math.pow((x1-x2),2)+Math.pow((y1-y2),2));
+    }
+
     public static void addToMap(Map<Integer,Integer> map, int key, int increment){
         int count = map.containsKey(key) ? map.get(key) : 0;
         map.put(key, count + increment);
@@ -101,7 +114,7 @@ public class Tools {
         }
     }*/
 
-    private static Point2D.Float rotatePoint(float x, float y, float originX, float originY,int rotation){
+    public static Point2D.Float rotatePoint(float x, float y, float originX, float originY,int rotation){
         float x1 = (x-originX) * MathUtils.cosDeg(rotation) - (y-originY) * MathUtils.sinDeg(rotation) + originX;
         float y1 = (y-originY) * MathUtils.cosDeg(rotation) + (x-originX) * MathUtils.sinDeg(rotation) + originY;
         return new Point2D.Float(x1,y1);

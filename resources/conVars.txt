@@ -34,3 +34,4 @@ sv_player_max_health 100
 sv_player_default_team 1
 cl_volume_sound 0.5
 cl_volume_music 0.5
+sv_idkfa 1

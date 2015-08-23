@@ -22,6 +22,7 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
@@ -37,6 +38,7 @@ import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 
+import java.awt.geom.Line2D;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -154,9 +156,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     float musicVolume;
 
     HashMap<Integer,Weapon> weaponList;
+    HashMap<String,ProjectileDefinition> projectileList;
 
     float lastMouseX = -1;
     float lastMouseY = -1;
+
+    Line2D.Float tracer;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -273,6 +278,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             powerups = assign.powerups;
             currentWave = assign.wave;
             weaponList = assign.weaponList;
+            projectileList = assign.projectileList;
             ammo = assign.ammo;
             weapons = assign.weapons;
             for(int id : playerList){
@@ -518,14 +524,43 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ammo.put(weaponSlot,ammo.get(weaponSlot)-1);
         //TODO Ignoring projectile team for now
 
-        Weapon weapon = weaponList.get(weaponSlot);
+        Network.EntityAttacking attack = new Network.EntityAttacking();
+        attack.deg = player.getRotation();
+        attack.id = player.id;
+        attack.x = player.getCenterX();
+        attack.y = player.getCenterY();
+        attack.weapon = weaponSlot;
+
+        addAttack(attack);
+
+        /*
         if(weapon!=null){
+            if(weapon.projectile.hitscan){
+                for(Line2D.Float hitscan :sharedMethods.createHitscan(weapon,player.getCenterX(),player.getCenterY(),player.getRotation(),player.id,-1)){
+                    Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
+                    if(intersection!=null){
+                        hitscan.x2 = intersection.x;
+                        hitscan.y2 = intersection.y;
+                    }
+                    if(weapon.projectile.onDestroy!=null){
+                        Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy), hitscan.x2, hitscan.y2, player.id, -1);
+                        p.ignoreMapCollision = true;
+                        projectiles.add(p);
+                    }
+                }
+            }else{
+                ArrayList<Projectile> newProjectiles = sharedMethods.createProjectile(atlas, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
+                projectiles.addAll(newProjectiles);
+            }
+
             ArrayList<Projectile> newProjectiles = sharedMethods.createProjectile(atlas, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
             projectiles.addAll(newProjectiles);
+
             if(weapon.sound!=null){
                 sounds.get(weapon.sound).play(soundVolume);
             }
         }
+            */
     }
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
@@ -725,7 +760,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         }
                     }
                 }
-                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                if (!projectile.ignoreMapCollision && SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
                     projectile.destroyed = true;
                 }
             }
@@ -846,7 +881,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     TextureRegion texture = playerAnimation.getKeyFrame(playerAnimationState);
                     Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
                     //TODO had to swap the width with height in draw call?????
-                    batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
+                    batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
                 }else{
                     TextureRegion texture = getTexture(e.image,e.id);
                     Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
@@ -869,6 +904,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 SharedMethods.renderAttackPolygon(shapeRenderer,projectiles);
             }
         }
+
+        drawTracer(shapeRenderer);
 
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 
@@ -901,6 +938,59 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         b.append(" ["+ ammo.get(weaponSlot)+"]");
         return b.toString();
+    }
+
+    private void createTracer(){
+        NetworkEntity e = authoritativeState.entities.get(playerID);
+        float x1 = e.getCenterX();
+        float y1 = e.getCenterY();
+        float x2 = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
+        float y2 = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
+
+        SharedMethods.debugRaytrace(x1,y1,x2,y2);
+
+        tracer = new Line2D.Float(x1,y1,x2,y2);
+    }
+
+    private void drawTracer(ShapeRenderer shapeRenderer){
+        if(tracer!=null){
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(1,0,0,1);
+            shapeRenderer.line(tracer.x1,tracer.y1,tracer.x2,tracer.y2);
+            shapeRenderer.end();
+
+            Vector2 tile = SharedMethods.raytrace(tracer.x1, tracer.y1, tracer.x2, tracer.y2);
+            if(tile!=null){
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                shapeRenderer.setColor(1,0,0,1);
+                shapeRenderer.rect(tile.x * GlobalVars.tileWidth, tile.y *GlobalVars.tileHeight, GlobalVars.tileWidth, GlobalVars.tileHeight);
+                shapeRenderer.end();
+            }
+
+            Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(tracer.x1,tracer.y1,tracer.x2,tracer.y2);
+            SharedMethods.debugDrawRaytrace(shapeRenderer,tracer.x1,tracer.y1,tracer.x2,tracer.y2);
+            if(intersection!=null){
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                shapeRenderer.setColor(1, 1, 0, 1);
+                shapeRenderer.circle(intersection.x,intersection.y,5);
+                shapeRenderer.end();
+            }
+
+            for(Entity e : stateSnapshot.values()){
+                Vector2 p = SharedMethods.getLineIntersectionWithRectangle(tracer,e.getGdxBounds());
+                if(p!=null){
+                    shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                    shapeRenderer.setColor(1,1,1,1);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                    shapeRenderer.end();
+
+                    shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                    shapeRenderer.setColor(1, 1, 0, 1);
+                    shapeRenderer.circle(p.x,p.y,5);
+                    shapeRenderer.end();
+                }
+            }
+        }
     }
 
     private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
@@ -1019,6 +1109,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public boolean keyTyped(char character) {
+        if(character == 't'){
+            createTracer();
+        }
         if(character == 'p'){
             sendTCP(new Network.TestPacket());
         }
@@ -1388,8 +1481,25 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
         if(weapon!=null){
-            ArrayList<Projectile> newProjectiles = (sharedMethods.createProjectile(atlas, weapon, attack.x, attack.y, attack.deg, attack.id, -1));
-            projectiles.addAll(newProjectiles);
+            if(weapon.projectile.hitscan){
+                for(Line2D.Float hitscan :sharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
+                    Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
+                    if(intersection!=null){
+                        hitscan.x2 = intersection.x;
+                        hitscan.y2 = intersection.y;
+                    }
+                    projectiles.add(SharedMethods.createProjectile(atlas, hitscan, attack.x, attack.y, weapon.projectile));
+
+                    if(weapon.projectile.onDestroy!=null){
+                        Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy),hitscan.x2,hitscan.y2,attack.id,-1);
+                        p.ignoreMapCollision = true;
+                        projectiles.add(p);
+                    }
+                }
+            }else{
+                projectiles.addAll(sharedMethods.createProjectile(atlas, weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+            }
+
             if(weapon.sound!=null){
                 sounds.get(weapon.sound).play(soundVolume);
             }

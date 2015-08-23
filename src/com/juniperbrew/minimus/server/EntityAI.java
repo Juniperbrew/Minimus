@@ -201,7 +201,7 @@ public class EntityAI {
             offsetY += GlobalVars.tileHeight +(entity.height/2)+ margin;
             destinationYTileCheck -= (entity.height/2);
         }
-        tile = SharedMethods.getFirstCollisionTileOnLine(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
+        tile = SharedMethods.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
         if(tile!=null) {
             setDestination(tile.x*GlobalVars.tileWidth+offsetX,tile.y*GlobalVars.tileHeight+offsetY);
         }else{

@@ -21,6 +21,7 @@ import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
 
+import java.awt.geom.Line2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -347,8 +348,7 @@ public class World implements EntityChangeListener{
                         }
                     }
                 }
-
-                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                if (!projectile.ignoreMapCollision && SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
                     projectile.destroyed = true;
                 }
             }
@@ -534,19 +534,28 @@ public class World implements EntityChangeListener{
         if(weapon==null){
             return;
         }
-        ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
-
-        for(int targetId:entities.keySet()){
-            ServerEntity target = entities.get(targetId);
-            for(Projectile projectile:newProjectiles){
-                if(projectile.hitscan){
-                    //TODO hitscan goes through walls
-                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds()) && target.getTeam() != e.getTeam()){
+        if(weapon.projectile.hitscan){
+            for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,e.getCenterX(),e.getCenterY(),e.getRotation())){
+                Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
+                if(intersection!=null){
+                    hitscan.x2 = intersection.x;
+                    hitscan.y2 = intersection.y;
+                }
+                if(weapon.projectile.onDestroy!=null){
+                    Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy),hitscan.x2,hitscan.y2,e.id,e.getTeam());
+                    p.ignoreMapCollision = true;
+                    projectiles.add(p);
+                }
+                for(int targetId:entities.keySet()) {
+                    ServerEntity target = entities.get(targetId);
+                    if(target.getJavaBounds().intersectsLine(hitscan) && target.getTeam() != e.getTeam()){
                         target.reduceHealth(projectileDefinition.damage,e.id);
                     }
                 }
             }
         }
+
+        ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
         projectiles.addAll(newProjectiles);
     }
 
@@ -617,6 +626,9 @@ public class World implements EntityChangeListener{
                 }
                 if(splits[0].equals("frameDuration")){
                     projectileDefinition.frameDuration = Float.parseFloat(splits[1]);
+                }
+                if(splits[0].equals("onDestroy")){
+                    projectileDefinition.onDestroy = splits[1];
                 }
             }
         } catch (FileNotFoundException e) {
@@ -733,6 +745,12 @@ public class World implements EntityChangeListener{
         //Lots of ammo for primary weapon
         playerWeapons.get(networkID).put(0,true);
         playerAmmo.get(networkID).put(0,999999999);
+        if(ConVars.getBool("sv_idkfa")){
+            for(int weaponID : weaponList.keySet()){
+                playerWeapons.get(networkID).put(weaponID,true);
+                playerAmmo.get(networkID).put(weaponID,999999999);
+            }
+        }
 
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,ConVars.getInt("sv_player_default_team"),this);
@@ -752,6 +770,7 @@ public class World implements EntityChangeListener{
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
         assign.weaponList = new HashMap<>(weaponList);
+        assign.projectileList = new HashMap<>(projectileList);
         assign.ammo = playerAmmo.get(networkID);
         assign.weapons = playerWeapons.get(networkID);
 

@@ -101,3 +101,14 @@ cooldown=0.2
 image=fire
 ammoImage=redSkull
 }
+
+#Hitscan Shotgun
+{
+name=Hitscan_Shotgun
+projectile=Hitscan_Bullet
+spread=40
+projectileCount=5
+cooldown=0.5
+image=superShotgun
+ammoImage=smallShell
+}

@@ -179,6 +179,7 @@ public class Network {
         public ArrayList<Integer> playerList;
         public HashMap<Integer,Powerup> powerups;
         public HashMap<Integer,Weapon> weaponList;
+        public HashMap<String,ProjectileDefinition> projectileList;
         public HashMap<Integer,Integer> ammo;
         public HashMap<Integer,Boolean> weapons;
     }

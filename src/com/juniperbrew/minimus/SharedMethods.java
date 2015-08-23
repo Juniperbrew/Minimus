@@ -8,10 +8,16 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
+import com.badlogic.gdx.math.collision.Ray;
 
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -21,11 +27,82 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class SharedMethods {
 
-    public static ArrayList<Projectile> createProjectile(TextureAtlas atlas, Weapon weapon, float centerX, float centerY, int deg, int entityId, int team) {
+    public static ArrayList<Line2D.Float> createHitscan(Weapon weapon, float centerX, float centerY, int deg){
         ProjectileDefinition projectileDefinition = weapon.projectile;
-        final ArrayList<Projectile> projectiles = new ArrayList<>();
+        final ArrayList<Line2D.Float> hitscans = new ArrayList<>();
+        int startDistance = ConVars.getInt("sv_npc_default_size") / 2;
         int length = projectileDefinition.length;
-        int width = projectileDefinition.width;
+
+        deg -= weapon.spread / 2f;
+        for (int i = 0; i < weapon.projectileCount; i++) {
+            float sina = MathUtils.sinDeg(deg);
+            float cosa = MathUtils.cosDeg(deg);
+
+            float startX = centerX+cosa*startDistance;
+            float startY = centerY+sina*startDistance;
+            float targetX = startX + cosa*length;
+            float targetY = startY + sina*length;
+            Line2D.Float line = new Line2D.Float(startX,startY,targetX,targetY);
+            hitscans.add(line);
+
+            if (weapon.projectileCount > 1) {
+                deg += weapon.spread / (weapon.projectileCount - 1);
+            }
+        }
+
+        return hitscans;
+    }
+
+    public static Projectile createProjectile(TextureAtlas atlas,Line2D.Float line, float originX, float originY, ProjectileDefinition def){
+        int rotation = (int)Tools.getAngle(line);
+        int length = (int) Tools.getLength(line);
+        Point2D.Float start = Tools.rotatePoint(line.x1,line.y1,originX,originY,rotation*-1);
+        Rectangle bounds = new Rectangle(start.x,start.y,length,def.width);
+        Projectile p = new Projectile(bounds,rotation,originX,originY,0,0,-1,-1,0);
+        setProjectileAttributes(atlas,p,def,bounds);
+        return p;
+    }
+
+    private static void setProjectileAttributes(TextureAtlas atlas,Projectile p, ProjectileDefinition def, Rectangle bounds){
+        if (def.image != null) {
+            TextureRegion texture = atlas.findRegion(def.image);
+            p.setTexture(texture,bounds);
+        } else if (def.animation != null) {
+            Animation animation = new Animation(def.frameDuration, atlas.findRegions(def.animation));
+            p.setAnimation(animation,bounds);
+        } else {
+            TextureRegion texture = atlas.findRegion("blank");
+            Color color;
+            if (def.color == null) {
+                color = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
+            } else {
+                color = def.color;
+            }
+            p.setTexture(texture,bounds,color);
+        }
+
+        if (def.duration > 0) {
+            p.setDuration(def.duration);
+        }
+
+        p.hitscan = def.hitscan;
+    }
+
+    public static Projectile createProjectile(TextureAtlas atlas, ProjectileDefinition def, float x, float y, int entityId, int team) {
+        Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
+
+        Projectile p = new Projectile(bounds, entityId, team, def.damage);
+
+        setProjectileAttributes(atlas,p,def,bounds);
+
+        return p;
+    }
+
+    public static ArrayList<Projectile> createProjectile(TextureAtlas atlas, Weapon weapon, float centerX, float centerY, int deg, int entityId, int team) {
+        ProjectileDefinition def = weapon.projectile;
+        final ArrayList<Projectile> projectiles = new ArrayList<>();
+        int length = def.length;
+        int width = def.width;
         int startDistanceX = ConVars.getInt("sv_npc_default_size") / 2;
 
         deg -= weapon.spread / 2f;
@@ -33,28 +110,10 @@ public class SharedMethods {
 
             Rectangle bounds = new Rectangle(centerX + startDistanceX, centerY - width / 2, length, width);
 
-            final Projectile projectile;
-            if (projectileDefinition.image != null) {
-                TextureRegion texture = atlas.findRegion(projectileDefinition.image);
-                projectile = new Projectile(bounds, texture, deg, centerX, centerY, projectileDefinition.range, projectileDefinition.velocity, entityId, team, projectileDefinition.damage);
-            } else if (projectileDefinition.animation != null) {
-                Animation animation = new Animation(projectileDefinition.frameDuration, atlas.findRegions(projectileDefinition.animation));
-                projectile = new Projectile(bounds, animation, deg, centerX, centerY, projectileDefinition.range, projectileDefinition.velocity, entityId, team, projectileDefinition.damage);
-            } else {
-                TextureRegion texture = atlas.findRegion("blank");
-                Color color;
-                if (projectileDefinition.color == null) {
-                    color = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
-                } else {
-                    color = projectileDefinition.color;
-                }
-                projectile = new Projectile(bounds, texture, deg, centerX, centerY, color, projectileDefinition.range, projectileDefinition.velocity, entityId, team, projectileDefinition.damage);
-            }
-            if (projectileDefinition.duration > 0) {
-                projectile.setDuration(projectileDefinition.duration);
-            }
-            projectile.hitscan = projectileDefinition.hitscan;
-            projectiles.add(projectile);
+            Projectile p = new Projectile(bounds, deg, centerX, centerY, def.range, def.velocity, entityId, team, def.damage);
+
+            setProjectileAttributes(atlas,p,def,bounds);
+            projectiles.add(p);
 
             if (weapon.projectileCount > 1) {
                 deg += weapon.spread / (weapon.projectileCount - 1);
@@ -149,15 +208,43 @@ public class SharedMethods {
     }
 
     public static boolean isTileCollisionOnLine(float screenX0, float screenY0, float screenX1, float screenY1) {
-        if (getFirstCollisionTileOnLine(screenX0, screenY0, screenX1, screenY1) != null) {
+        if (raytrace(screenX0, screenY0, screenX1, screenY1) != null) {
             return true;
         } else {
             return false;
         }
     }
 
+    public static Vector2 getLineIntersectionWithRectangle(Line2D.Float line, Rectangle bounds){
+        Vector2 intersection = new Vector2();
+        Vector2 l1 = new Vector2(line.x1,line.y1);
+        Vector2 l2 = new Vector2(line.x2,line.y2);
+        Vector2 sw = new Vector2(bounds.x,bounds.y);
+        Vector2 se = new Vector2(bounds.x+bounds.width,bounds.y);
+        Vector2 ne = new Vector2(bounds.x+bounds.width,bounds.y+bounds.height);
+        Vector2 nw = new Vector2(bounds.x,bounds.y+bounds.height);
 
-    public static Vector2 getFirstCollisionTileOnLine(float screenX0, float screenY0, float screenX1, float screenY1) {
+
+        if(l1.y<=sw.y&&Intersector.intersectSegments(l1, l2, sw, se, intersection))return intersection;
+        if(l1.x>=se.x&&Intersector.intersectSegments(l1, l2, se, ne, intersection))return intersection;
+        if(l1.y>ne.y&&Intersector.intersectSegments(l1,l2,ne,nw,intersection))return intersection;
+        if(l1.x<nw.x&&Intersector.intersectSegments(l1, l2, nw, sw, intersection))return intersection;
+
+        return null;
+    }
+
+    public static Vector2 findLineIntersectionPointWithTile(float screenX0, float screenY0, float screenX1, float screenY1){
+        Vector2 tile = raytrace(screenX0, screenY0, screenX1, screenY1);
+        if(tile==null){
+            return null;
+        }
+        Rectangle bounds = new Rectangle(tile.x*GlobalVars.tileWidth,tile.y*GlobalVars.tileHeight,GlobalVars.tileWidth,GlobalVars.tileHeight);
+        Line2D.Float line = new Line2D.Float(screenX0,screenY0,screenX1,screenY1);
+        return getLineIntersectionWithRectangle(line,bounds);
+    }
+
+
+    public static Vector2 raytraceInt(float screenX0, float screenY0, float screenX1, float screenY1) {
         int x0 = (int) (screenX0 / GlobalVars.tileWidth);
         int y0 = (int) (screenY0 / GlobalVars.tileHeight);
         int x1 = (int) (screenX1 / GlobalVars.tileWidth);
@@ -185,6 +272,248 @@ public class SharedMethods {
             } else {
                 y += y_inc;
                 error += dx;
+            }
+        }
+        return null;
+    }
+
+    public static void debugDrawRaytrace(ShapeRenderer renderer, float screenX0, float screenY0, float screenX1, float screenY1){
+
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        renderer.setColor(0,1,0,1);
+        double x0 = screenX0 / GlobalVars.tileWidth;
+        double y0 = screenY0 / GlobalVars.tileHeight;
+        double x1 = screenX1 / GlobalVars.tileWidth;
+        double y1 = screenY1 / GlobalVars.tileHeight;
+
+        double dx = Math.abs(x1 - x0);
+        double dy = Math.abs(y1 - y0);
+
+        int x = (int)(Math.floor(x0));
+        int y = (int)(Math.floor(y0));
+
+        int n = 1;
+        int x_inc, y_inc;
+        double error;
+
+        if (dx == 0)
+        {
+            x_inc = 0;
+            error = Double.POSITIVE_INFINITY;
+        }
+        else if (x1 > x0)
+        {
+            x_inc = 1;
+            n += (int)(Math.floor(x1)) - x;
+            error = (Math.floor(x0) + 1 - x0) * dy;
+        }
+        else
+        {
+            x_inc = -1;
+            n += x - (int)(Math.floor(x1));
+            error = (x0 - Math.floor(x0)) * dy;
+        }
+
+        if (dy == 0)
+        {
+            y_inc = 0;
+            error -= Double.POSITIVE_INFINITY;
+        }
+        else if (y1 > y0)
+        {
+            y_inc = 1;
+            n += (int)(Math.floor(y1)) - y;
+            error -= (Math.floor(y0) + 1 - y0) * dx;
+        }
+        else
+        {
+            y_inc = -1;
+            n += y - (int)(Math.floor(y1));
+            error -= (y0 - Math.floor(y0)) * dx;
+        }
+
+        for (; n > 0; --n)
+        {
+            renderer.rect(x*GlobalVars.tileWidth,y*GlobalVars.tileHeight,GlobalVars.tileWidth,GlobalVars.tileHeight);
+
+            if (error > 0)
+            {
+                y += y_inc;
+                error -= dx;
+            }
+            else
+            {
+                x += x_inc;
+                error += dy;
+            }
+        }
+        renderer.end();
+    }
+
+    public static Vector2 debugRaytrace(float screenX0, float screenY0, float screenX1, float screenY1)
+    {
+
+        System.out.println("sX0:"+screenX0);
+        System.out.println("sY0:"+screenY0);
+        System.out.println("sX1:"+screenX1);
+        System.out.println("sY1:"+screenY1);
+        double x0 = screenX0 / GlobalVars.tileWidth;
+        double y0 = screenY0 / GlobalVars.tileHeight;
+        double x1 = screenX1 / GlobalVars.tileWidth;
+        double y1 = screenY1 / GlobalVars.tileHeight;
+        System.out.println("X0:"+x0);
+        System.out.println("Y0:"+y0);
+        System.out.println("X1:"+x1);
+        System.out.println("Y1:"+y1);
+
+        double dx = Math.abs(x1 - x0);
+        double dy = Math.abs(y1 - y0);
+
+        System.out.println("dx:"+dx);
+        System.out.println("dy:"+dy);
+
+        int x = (int)(Math.floor(x0));
+        int y = (int)(Math.floor(y0));
+
+        int n = 1;
+        int x_inc, y_inc;
+        double error;
+
+        if (dx == 0)
+        {
+            x_inc = 0;
+            error = Double.POSITIVE_INFINITY;
+        }
+        else if (x1 > x0)
+        {
+            x_inc = 1;
+            n += (int)(Math.floor(x1)) - x;
+            error = (Math.floor(x0) + 1 - x0) * dy;
+        }
+        else
+        {
+            x_inc = -1;
+            n += x - (int)(Math.floor(x1));
+            error = (x0 - Math.floor(x0)) * dy;
+        }
+        System.out.println("error(afterX):"+error);
+
+        if (dy == 0)
+        {
+            y_inc = 0;
+            error -= Double.POSITIVE_INFINITY;
+        }
+        else if (y1 > y0)
+        {
+            y_inc = 1;
+            n += (int)(Math.floor(y1)) - y;
+            error -= (Math.floor(y0) + 1 - y0) * dx;
+        }
+        else
+        {
+            y_inc = -1;
+            n += y - (int)(Math.floor(y1));
+            error -= (y0 - Math.floor(y0)) * dx;
+        }
+
+        System.out.println("x_inc:"+x_inc);
+        System.out.println("x_inc:"+y_inc);
+
+        for (; n > 0; --n)
+        {
+            System.out.println("n:"+n);
+            System.out.println("x:"+x);
+            System.out.println("y:"+y);
+            System.out.println("error:"+error);
+            if (isTileSolid(x, y)) {
+                System.out.println("COLLISION");
+                return new Vector2(x, y);
+            }
+
+            if (error > 0)
+            {
+                y += y_inc;
+                error -= dx;
+            }
+            else
+            {
+                x += x_inc;
+                error += dy;
+            }
+        }
+        System.out.println("NO COLLISION");
+        return null;
+    }
+
+    public static Vector2 raytrace(float screenX0, float screenY0, float screenX1, float screenY1)
+    {
+
+        double x0 = screenX0 / GlobalVars.tileWidth;
+        double y0 = screenY0 / GlobalVars.tileHeight;
+        double x1 = screenX1 / GlobalVars.tileWidth;
+        double y1 = screenY1 / GlobalVars.tileHeight;
+
+        double dx = Math.abs(x1 - x0);
+        double dy = Math.abs(y1 - y0);
+
+        int x = (int)(Math.floor(x0));
+        int y = (int)(Math.floor(y0));
+
+        int n = 1;
+        int x_inc, y_inc;
+        double error;
+
+        if (dx == 0)
+        {
+            x_inc = 0;
+            error = Double.POSITIVE_INFINITY;
+        }
+        else if (x1 > x0)
+        {
+            x_inc = 1;
+            n += (int)(Math.floor(x1)) - x;
+            error = (Math.floor(x0) + 1 - x0) * dy;
+        }
+        else
+        {
+            x_inc = -1;
+            n += x - (int)(Math.floor(x1));
+            error = (x0 - Math.floor(x0)) * dy;
+        }
+
+        if (dy == 0)
+        {
+            y_inc = 0;
+            error -= Double.POSITIVE_INFINITY;
+        }
+        else if (y1 > y0)
+        {
+            y_inc = 1;
+            n += (int)(Math.floor(y1)) - y;
+            error -= (Math.floor(y0) + 1 - y0) * dx;
+        }
+        else
+        {
+            y_inc = -1;
+            n += y - (int)(Math.floor(y1));
+            error -= (y0 - Math.floor(y0)) * dx;
+        }
+
+        for (; n > 0; --n)
+        {
+            if (isTileSolid(x, y)) {
+                return new Vector2(x, y);
+            }
+
+            if (error > 0)
+            {
+                y += y_inc;
+                error -= dx;
+            }
+            else
+            {
+                x += x_inc;
+                error += dy;
             }
         }
         return null;

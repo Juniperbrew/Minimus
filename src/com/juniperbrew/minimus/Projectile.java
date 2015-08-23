@@ -11,6 +11,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
+import java.awt.geom.Line2D;
+
 
 /**
  * Created by Juniperbrew on 28.6.2015.
@@ -36,7 +38,23 @@ public class Projectile{
 
     float duration;
     long spawnTime;
+    public boolean ignoreMapCollision;
 
+    public Projectile(Rectangle bounds, int ownerID, int team, int damage) {
+        init(bounds, 0, bounds.x+bounds.width/2, bounds.y+bounds.height/2, 0,0,ownerID,team,damage);
+    }
+    public Projectile(Rectangle bounds, int rotation, float originX, float originY, float range, float velocity, int ownerID, int team, int damage) {
+        init(bounds, rotation, originX, originY, range,velocity,ownerID,team,damage);
+    }
+
+    /*public Projectile(Line2D.Float line , float originX, float originY,int width) {
+        int rotation = (int) (MathUtils.atan2(line.x2 - line.x1, line.y2 - line.y1)*MathUtils.radiansToDegrees);
+        int length = (int) Tools.getLength(line);
+        Rectangle bounds = new Rectangle(line.x1,line.y1,length,width);
+        init(bounds, rotation, originX, originY, 0, 0, -1, -1, 0);
+    }*/
+
+/*
     public Projectile(Rectangle bounds, TextureRegion texture, int rotation, float originX, float originY, Color color, float range, float velocity, int ownerID, int team, int damage) {
         init(bounds, rotation, originX, originY, range,velocity,ownerID,team,damage);
         createSprite(texture,bounds);
@@ -50,6 +68,18 @@ public class Projectile{
 
     public Projectile(Rectangle bounds, Animation animation, int rotation, float originX, float originY, float range, float velocity, int ownerID, int team, int damage) {
         init(bounds, rotation, originX, originY, range,velocity,ownerID,team,damage);
+        this.animation = animation;
+        createSprite(animation.getKeyFrame(0),bounds);
+    }*/
+
+    public void setTexture(TextureRegion texture,Rectangle bounds){
+        createSprite(texture,bounds);
+    }
+    public void setTexture(TextureRegion texture,Rectangle bounds,Color color){
+        createSprite(texture,bounds);
+        sprite.setColor(color);
+    }
+    public void setAnimation(Animation animation,Rectangle bounds){
         this.animation = animation;
         createSprite(animation.getKeyFrame(0),bounds);
     }
