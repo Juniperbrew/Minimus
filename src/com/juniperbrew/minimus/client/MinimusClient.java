@@ -959,14 +959,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             shapeRenderer.line(tracer.x1,tracer.y1,tracer.x2,tracer.y2);
             shapeRenderer.end();
 
-            Vector2 tile = SharedMethods.raytrace(tracer.x1, tracer.y1, tracer.x2, tracer.y2);
-            if(tile!=null){
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                shapeRenderer.setColor(1,0,0,1);
-                shapeRenderer.rect(tile.x * GlobalVars.tileWidth, tile.y *GlobalVars.tileHeight, GlobalVars.tileWidth, GlobalVars.tileHeight);
-                shapeRenderer.end();
-            }
-
             Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(tracer.x1,tracer.y1,tracer.x2,tracer.y2);
             SharedMethods.debugDrawRaytrace(shapeRenderer,tracer.x1,tracer.y1,tracer.x2,tracer.y2);
             if(intersection!=null){
@@ -989,6 +981,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     shapeRenderer.circle(p.x,p.y,5);
                     shapeRenderer.end();
                 }
+            }
+
+            Vector2 tile = SharedMethods.raytrace(tracer.x1, tracer.y1, tracer.x2, tracer.y2);
+            if(tile!=null){
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                shapeRenderer.setColor(1,0,0,1);
+                shapeRenderer.rect(tile.x * GlobalVars.tileWidth, tile.y *GlobalVars.tileHeight, GlobalVars.tileWidth, GlobalVars.tileHeight);
+                shapeRenderer.end();
             }
         }
     }
