@@ -10,6 +10,85 @@ image=plasmaGun
 ammoImage=smallCell
 }
 
+###################
+### NEW WEAPONS ###
+###################
+
+#Hitscan Pistol
+{
+name=Hitscan_Pistol
+projectile=Hitscan_Pistol_Bullet
+spread=0
+projectileCount=1
+cooldown=0.3
+image=pistol
+ammoImage=smallAmmo
+sound=pistol.wav
+}
+
+#Hitscan Shotgun
+{
+name=Hitscan_Shotgun
+projectile=Hitscan_Shotgun_Bullet
+spread=30
+projectileCount=5
+cooldown=0.5
+image=superShotgun
+ammoImage=smallShell
+sound=shotgun.wav
+}
+
+#Hitscan Uzi
+{
+name=Hitscan_Uzi
+projectile=Hitscan_Uzi_Bullet
+spread=0
+projectileCount=1
+cooldown=0.15
+image=uzi
+ammoImage=largeAmmo
+sound=uzi.wav
+}
+
+#Hitscan Rifle
+{
+name=Hitscan_Rifle
+projectile=Hitscan_Rifle_Bullet
+spread=0
+projectileCount=1
+cooldown=0.2
+image=rifle
+ammoImage=rifleAmmo
+sound=rifle.wav
+}
+
+#################
+## OLD WEAPONS ##
+#################
+
+#OP Laser
+{
+name=OP_Laser
+projectile=OP_Laser
+spread=20
+projectileCount=5
+sound=laser.ogg
+cooldown=1
+image=bfg
+ammoImage=largeCell
+}
+
+#Animated Flamer
+{
+name=Animated Flamer
+projectile=Animated_Flame
+spread=90
+projectileCount=15
+cooldown=0
+image=fire
+ammoImage=yellowSkull
+}
+
 #Rifle
 {
 name=Rifle
@@ -57,18 +136,6 @@ image=helmet
 ammoImage=goggles
 }
 
-#OP Laser
-{
-name=OP_Laser
-projectile=OP_Laser
-spread=20
-projectileCount=5
-sound=laser.ogg
-cooldown=1
-image=bfg
-ammoImage=largeCell
-}
-
 #Flamer
 {
 name=Flamer
@@ -78,17 +145,6 @@ projectileCount=3
 cooldown=0.1
 image=flame
 ammoImage=blueSkull
-}
-
-#Animated Flamer
-{
-name=Animated Flamer
-projectile=Animated_Flame
-spread=90
-projectileCount=15
-cooldown=0
-image=fire
-ammoImage=yellowSkull
 }
 
 #Flame
@@ -102,14 +158,4 @@ image=fire
 ammoImage=redSkull
 }
 
-#Hitscan Shotgun
-{
-name=Hitscan_Shotgun
-projectile=Hitscan_Bullet
-spread=40
-projectileCount=5
-cooldown=0.5
-image=superShotgun
-ammoImage=smallShell
-sound=shotgun.wav
-}
+

@@ -18,9 +18,9 @@ name=Laser
 type=hitscan
 color=[255,0,0]
 width=3
-length=200
+length=100
 duration=0.5
-damage=10
+damage=35
 }
 
 {
@@ -33,6 +33,7 @@ radius=5
 range=600
 velocity=600
 damage=35
+onDestroy=Big_bullet_puff
 }
  
 {
@@ -99,13 +100,9 @@ velocity=150
 damage=35
 }
 
-{
-name=Hitscan_Bullet
-type=hitscan
-length=400
-damage=5
-onDestroy=Bullet_puff
-}
+#####################
+## NEW PROJECTILES ##
+#####################
 
 {
 name=Bullet_puff
@@ -115,4 +112,46 @@ length=24
 duration=0.5
 animation=puff
 frameDuration=0.125
+}
+
+{
+name=Explosion
+type=projectile
+width=96
+length=96
+duration=0.5
+animation=puff
+frameDuration=0.125
+}
+
+{
+name=Hitscan_Pistol_Bullet
+type=hitscan
+length=400
+damage=20
+onDestroy=Bullet_puff
+}
+
+{
+name=Hitscan_Shotgun_Bullet
+type=hitscan
+length=350
+damage=15
+onDestroy=Bullet_puff
+}
+
+{
+name=Hitscan_Uzi_Bullet
+type=hitscan
+length=400
+damage=18
+onDestroy=Bullet_puff
+}
+
+{
+name=Hitscan_Rifle_Bullet
+type=hitscan
+length=450
+damage=25
+onDestroy=Bullet_puff
 }
