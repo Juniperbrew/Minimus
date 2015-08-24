@@ -752,9 +752,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(),target.getGdxBounds())){
                         if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
                             if (id == playerID) {
-                                sounds.get("hurt.ogg").play(soundVolume);
+                                playSoundInLocation(sounds.get("hurt.ogg"),target.getCenterX(),target.getCenterY());
                             } else {
-                                sounds.get("hit.ogg").play(soundVolume);
+                                playSoundInLocation(sounds.get("hit.ogg"),target.getCenterX(),target.getCenterY());
                             }
                             projectile.destroyed = true;
                         }
@@ -1501,8 +1501,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
 
             if(weapon.sound!=null){
-                sounds.get(weapon.sound).play(soundVolume);
+                playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
             }
+        }
+    }
+
+    private void playSoundInLocation(Sound sound, float x, float y){
+        Rectangle r = new Rectangle(camera.position.x-camera.viewportWidth/2f,camera.position.y-camera.viewportHeight/2f,camera.viewportWidth,camera.viewportHeight);
+        if(r.contains(x,y)){
+            sound.play(soundVolume);
         }
     }
 

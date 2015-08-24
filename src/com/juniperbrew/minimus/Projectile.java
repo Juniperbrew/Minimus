@@ -141,4 +141,26 @@ public class Projectile{
         bounds.translate(x,y);
         sprite.translate(x,y);
     }
+
+    @Override
+    public String toString() {
+        return "Projectile{" +
+                "hitscan=" + hitscan +
+                ", destroyed=" + destroyed +
+                ", ownerID=" + ownerID +
+                ", team=" + team +
+                ", damage=" + damage +
+                ", range=" + range +
+                ", velocity=" + velocity +
+                ", totalDistanceTraveled=" + totalDistanceTraveled +
+                ", rotation=" + rotation +
+                ", bounds=" + bounds +
+                ", sprite=" + sprite +
+                ", animation=" + animation +
+                ", stateTime=" + stateTime +
+                ", duration=" + duration +
+                ", spawnTime=" + spawnTime +
+                ", ignoreMapCollision=" + ignoreMapCollision +
+                '}';
+    }
 }

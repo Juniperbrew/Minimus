@@ -13,7 +13,7 @@ bfg
   index: -1
 blank
   rotate: false
-  xy: 162, 2
+  xy: 390, 31
   size: 1, 1
   orig: 1, 1
   offset: 0, 0
@@ -76,21 +76,21 @@ fire
   index: 1
 fire
   rotate: false
-  xy: 408, 33
+  xy: 390, 16
   size: 10, 13
   orig: 10, 13
   offset: 0, 0
   index: 2
 fire
   rotate: false
-  xy: 390, 17
+  xy: 402, 17
   size: 10, 14
   orig: 10, 14
   offset: 0, 0
   index: 4
 fire
   rotate: false
-  xy: 402, 22
+  xy: 425, 20
   size: 14, 9
   orig: 14, 9
   offset: 0, 0
@@ -270,6 +270,34 @@ player
   orig: 16, 16
   offset: 0, 0
   index: 4
+puff
+  rotate: false
+  xy: 375, 2
+  size: 12, 12
+  orig: 12, 12
+  offset: 0, 0
+  index: 1
+puff
+  rotate: false
+  xy: 389, 2
+  size: 12, 12
+  orig: 12, 12
+  offset: 0, 0
+  index: 2
+puff
+  rotate: false
+  xy: 408, 34
+  size: 12, 12
+  orig: 12, 12
+  offset: 0, 0
+  index: 3
+puff
+  rotate: false
+  xy: 403, 3
+  size: 12, 12
+  orig: 12, 12
+  offset: 0, 0
+  index: 4
 redSkull
   rotate: false
   xy: 360, 10
@@ -328,7 +356,7 @@ shotgunManiac
   index: 4
 smallAmmo
   rotate: false
-  xy: 392, 4
+  xy: 414, 21
   size: 9, 11
   orig: 9, 11
   offset: 0, 0
@@ -349,7 +377,7 @@ smallRocket
   index: -1
 smallShell
   rotate: false
-  xy: 375, 7
+  xy: 441, 22
   size: 15, 7
   orig: 15, 7
   offset: 0, 0

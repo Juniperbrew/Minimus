@@ -111,4 +111,5 @@ projectileCount=5
 cooldown=0.5
 image=superShotgun
 ammoImage=smallShell
+sound=shotgun.wav
 }
