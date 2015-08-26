@@ -12,6 +12,8 @@ public class Knockback {
     int id;
     Vector2 velocity;
     float duration;
+    Vector2 startVelocity;
+    int updateCounter;
 
     private final float mass = 100;
     private final float friction = 8f;
@@ -21,10 +23,15 @@ public class Knockback {
 
     public Knockback(int id, Vector2 velocity){
         this.velocity = velocity;
+        startVelocity = velocity.cpy();
         Vector2 frictionForce = new Vector2(-1*friction*mass*g,0);
         frictionForce.setAngle(velocity.angle()-180);
         frictionAcceleration = frictionForce.cpy().scl(1/mass);
         this.id = id;
+
+        System.out.println("####"+id+"####");
+        System.out.println("StartVelocity:"+startVelocity);
+        System.out.println("a:"+frictionAcceleration);
     }
 
     public Vector2 getMovement(float delta){
@@ -34,30 +41,21 @@ public class Knockback {
         float endAngle = velocity.angle();
         Vector2 movement = velocity.cpy().scl(delta);
         duration += delta;
-/*
-        System.out.println("####"+id+"####");
+        updateCounter++;
+
+        System.out.println("#:"+updateCounter);
         System.out.println("Delta:"+delta);
-        System.out.println("a:"+frictionAcceleration);
+        System.out.println("Velocity:"+velocity);
         System.out.println("Movement:"+movement);
-        System.out.println("Start angle:"+startAngle);
-        System.out.println("End angle:"+endAngle);*/
-        if(startAngle!=endAngle){
+        if(velocity.hasSameDirection(frictionAcceleration)){
             expired = true;
             System.out.println("Knockback duration:"+duration);
+            System.out.println("Angle:"+startAngle);
+            System.out.println("EndAngle:"+endAngle);
+            System.out.println("StartVelocity:"+startVelocity);
+            System.out.println("Updates:"+updateCounter);
         }
         return movement;
-
-        //Vector2 baseMovement = velocity.cpy().scl(delta);
-        // Vector2 frictionMovement = frictionAcceleration.cpy().scl(0.5f * (float) Math.pow(delta, 2));
-        /*System.out.println("Base movement:"+baseMovement);
-        System.out.println("Friction movement:"+frictionMovement);
-
-        if(frictionMovement.len()>baseMovement.len()){
-            expired = true;
-            return new Vector2(0,0);
-        }else{
-            return baseMovement.add(frictionMovement);
-        }*/
     }
 
     public boolean isExpired(){
