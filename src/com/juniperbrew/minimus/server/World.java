@@ -361,28 +361,50 @@ public class World implements EntityChangeListener{
                     if(projectile.ownerID==id){
                         continue;
                     }
+                    if(projectile.entitiesHit.contains(id)){
+                        continue;
+                    }
                     ServerEntity target = entities.get(id);
                     if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(), target.getGdxBounds())){
                         if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
-                            projectile.destroyed = true;
+                            if(!projectile.dontDestroyOnCollision){
+                                projectile.destroyed = true;
+                            }
                             if(target.getTeam() != projectile.team){
                                 if(projectile.knockback>0){
                                     Vector2 knockback = new Vector2(projectile.knockback,0);
-                                    knockback.setAngle(projectile.rotation);
+                                    if(projectile.explosionKnockback){
+                                        Vector2 projectileCenter = new Vector2();
+                                        projectile.getHitbox().getBoundingRectangle().getCenter(projectileCenter);
+                                        float angle = Tools.getAngle(projectileCenter.x,projectileCenter.y,target.getCenterX(),target.getCenterY());
+                                        knockback.setAngle(angle);
+                                    }else{
+                                        knockback.setAngle(projectile.rotation);
+                                    }
                                     knockbacks.add(new Knockback(target.id, knockback));
                                 }
                                 target.reduceHealth(projectile.damage,projectile.ownerID);
                             }
                         }
+                        projectile.entitiesHit.add(target.id);
                     }
                 }
-                if (!projectile.ignoreMapCollision && SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
-                    projectile.destroyed = true;
+                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                    if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
+                        projectile.destroyed = true;
+                    }
                 }
             }
 
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
+                if(projectile.onDestroy!=null){
+                    Vector2 center = new Vector2();
+                    projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                    Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(projectile.onDestroy),center.x,center.y,projectile.ownerID,projectile.team);
+                    projectiles.add(p);
+                    listener.networkedProjectileSpawned(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
+                }
             }
         }
         projectiles.removeAll(destroyedProjectiles);
@@ -710,6 +732,15 @@ public class World implements EntityChangeListener{
                 }
                 if(splits[0].equals("knockback")){
                     projectileDefinition.knockback = Float.parseFloat(splits[1]);
+                }
+                if(splits[0].equals("ignoreMapCollision")){
+                    projectileDefinition.ignoreMapCollision = true;
+                }
+                if (splits[0].equals("explosionKnockback")) {
+                    projectileDefinition.explosionKnockback = true;
+                }
+                if (splits[0].equals("dontDestroyOnCollision")) {
+                    projectileDefinition.dontDestroyOnCollision = true;
                 }
             }
         } catch (FileNotFoundException e) {
@@ -1215,5 +1246,6 @@ public class World implements EntityChangeListener{
         public void mapChanged(String mapName);
         public void ammoAddedChanged(int id, int weapon, int value);
         public void weaponAdded(int id, int weapon);
+        public void networkedProjectileSpawned(String projectileName, float x, float y, int ownerID, int team);
     }
 }

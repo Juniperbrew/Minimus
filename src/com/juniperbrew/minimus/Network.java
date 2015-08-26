@@ -71,6 +71,7 @@ public class Network {
         kryo.register(AddAmmo.class);
         kryo.register(WeaponAdded.class);
         kryo.register(Rectangle.class);
+        kryo.register(SpawnProjectile.class);
     }
 
     public static class WeaponAdded{
@@ -254,5 +255,13 @@ public class Network {
 
     public static class SetLives{
         public int lives;
+    }
+
+    public static class SpawnProjectile{
+        public String projectileName;
+        public float x;
+        public float y;
+        public int ownerID;
+        public int team;
     }
 }

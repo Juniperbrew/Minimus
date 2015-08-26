@@ -89,10 +89,10 @@ image=fire
 ammoImage=yellowSkull
 }
 
-#Rifle
+#Rocket launcher
 {
-name=Rifle
-projectile=Rifle_Bullet
+name=Rocket launcher
+projectile=Rocket
 spread=0
 projectileCount=1
 sound=projectile.ogg

@@ -21,7 +21,9 @@ public class ProjectileDefinition {
     public float frameDuration;
     public String onDestroy;
     public float knockback;
-
+    public boolean ignoreMapCollision;
+    public boolean explosionKnockback;
+    public boolean dontDestroyOnCollision;
 
     public ProjectileDefinition(){
 

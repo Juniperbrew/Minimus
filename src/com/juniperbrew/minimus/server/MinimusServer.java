@@ -963,6 +963,17 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
+    public void networkedProjectileSpawned(String projectileName, float x, float y, int ownerID, int team) {
+        Network.SpawnProjectile spawnProjectile = new Network.SpawnProjectile();
+        spawnProjectile.projectileName = projectileName;
+        spawnProjectile.x = x;
+        spawnProjectile.y = y;
+        spawnProjectile.ownerID = ownerID;
+        spawnProjectile.team = team;
+        sendTCPtoAll(spawnProjectile);
+    }
+
+    @Override
     public void entityKilled(int victimID, int killerID){
         showMessage("Entity " + victimID + " killed by "+killerID+".");
         if(playerList.keySet().contains(killerID)) {

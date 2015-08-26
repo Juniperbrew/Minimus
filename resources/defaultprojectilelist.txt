@@ -25,7 +25,7 @@ knockback=50
 }
 
 {
-name=Rifle_Bullet
+name=Rocket
 type=projectile
 color=[190,190,190]
 width=5
@@ -34,7 +34,7 @@ radius=5
 range=600
 velocity=600
 damage=35
-onDestroy=Bullet_puff
+onDestroy=Explosion
 knockback=200
 }
  
@@ -120,17 +120,22 @@ length=24
 duration=0.5
 animation=puff
 frameDuration=0.125
+ignoreMapCollision
 }
 
 {
 name=Explosion
 type=projectile
-width=96
-length=96
+damage=10
+width=192
+length=192
 duration=0.5
 animation=puff
 frameDuration=0.125
 knockback=200
+explosionKnockback
+ignoreMapCollision
+dontDestroyOnCollision
 }
 
 {

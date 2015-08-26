@@ -37,6 +37,7 @@ import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
+import sun.awt.ScrollPaneWheelScroller;
 
 import java.awt.geom.Line2D;
 import java.io.File;
@@ -312,6 +313,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.WeaponAdded){
             Network.WeaponAdded weaponAdded = (Network.WeaponAdded) object;
             weapons.put(weaponAdded.weapon,true);
+        }else if(object instanceof Network.SpawnProjectile){
+            Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
+            Projectile p = SharedMethods.createProjectile(atlas,projectileList.get(spawnProjectile.projectileName),spawnProjectile.x,spawnProjectile.y,spawnProjectile.ownerID,spawnProjectile.team);
+            projectiles.add(p);
         }
 
 
@@ -748,20 +753,28 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if (id == projectile.ownerID) {
                         continue;
                     }
+                    if(projectile.entitiesHit.contains(id)){
+                        continue;
+                    }
                     NetworkEntity target = stateSnapshot.get(id);
                     if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(),target.getGdxBounds())){
                         if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
+                            if(!projectile.dontDestroyOnCollision){
+                                projectile.destroyed = true;
+                            }
                             if (id == playerID) {
                                 playSoundInLocation(sounds.get("hurt.ogg"),target.getCenterX(),target.getCenterY());
                             } else {
                                 playSoundInLocation(sounds.get("hit.ogg"),target.getCenterX(),target.getCenterY());
                             }
-                            projectile.destroyed = true;
+                            projectile.entitiesHit.add(target.id);
                         }
                     }
                 }
-                if (!projectile.ignoreMapCollision && SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
-                    projectile.destroyed = true;
+                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                    if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
+                        projectile.destroyed = true;
+                    }
                 }
             }
 

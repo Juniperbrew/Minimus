@@ -87,6 +87,10 @@ public class SharedMethods {
 
         p.knockback = def.knockback;
         p.hitscan = def.hitscan;
+        p.onDestroy = def.onDestroy;
+        p.ignoreMapCollision = def.ignoreMapCollision;
+        p.explosionKnockback = def.explosionKnockback;
+        p.dontDestroyOnCollision = def.dontDestroyOnCollision;
     }
 
     public static Projectile createProjectile(TextureAtlas atlas, ProjectileDefinition def, float x, float y, int entityId, int team) {

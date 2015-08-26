@@ -12,6 +12,8 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
 import java.awt.geom.Line2D;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 
 /**
@@ -26,6 +28,7 @@ public class Projectile{
     public int damage;
 
     public float knockback;
+    public String onDestroy;
 
     float range;
     float velocity;
@@ -41,6 +44,10 @@ public class Projectile{
     float duration;
     long spawnTime;
     public boolean ignoreMapCollision;
+    public boolean explosionKnockback;
+    public boolean dontDestroyOnCollision;
+
+    public HashSet<Integer> entitiesHit = new HashSet<>();
 
     public Projectile(Rectangle bounds, int ownerID, int team, int damage) {
         init(bounds, 0, bounds.x+bounds.width/2, bounds.y+bounds.height/2, 0,0,ownerID,team,damage);
