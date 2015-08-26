@@ -3,7 +3,6 @@ package com.juniperbrew.minimus.server;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.GlobalVars;
@@ -125,6 +124,9 @@ public class EntityAI {
                 deltaY = Tools.clamp(deltaY, distanceY, 0);
             }
 
+            entity.addMovement(new Vector2((float) deltaX, (float) deltaY));
+
+            /*
             Rectangle bounds = entity.getGdxBounds();
             bounds.setX((float) (bounds.getX()+deltaX));
             if(SharedMethods.checkMapCollision(bounds)){
@@ -136,6 +138,7 @@ public class EntityAI {
                 deltaY = 0;
             }
             entity.move(deltaX,deltaY);
+            */
         }
     }
 

@@ -43,6 +43,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class World implements EntityChangeListener{
 
+    private final float KNOCKBACK_VELOCITY = 100;
+
     Set<Integer> playerList = new HashSet<>();
     Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
     Map<Integer,HashMap<Integer,Integer>> playerAmmo = new HashMap<>();
@@ -52,6 +54,7 @@ public class World implements EntityChangeListener{
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
+    ArrayList<Knockback> knockbacks = new ArrayList<>();
 
     Set<Integer> posChangedEntities = new HashSet<>();
     Set<Integer> healthChangedEntities = new HashSet<>();
@@ -212,7 +215,7 @@ public class World implements EntityChangeListener{
         pendingEntityRemovals.clear();
 
         updateGameState();
-        updateEntityAI(delta);
+        updateEntities(delta);
         updateProjectiles(delta);
         checkPlayerEntityCollisions();
         checkPowerupCollisions();
@@ -322,9 +325,28 @@ public class World implements EntityChangeListener{
         return zones;
     }
 
-    private void updateEntityAI(float delta){
+    private void updateEntities(float delta){
         for(EntityAI ai:entityAIs.values()){
             ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
+        }
+        Iterator<Knockback> iter = knockbacks.iterator();
+        while(iter.hasNext()){
+            Knockback k = iter.next();
+            //TODO Knockback
+            if(k.isExpired()){
+                iter.remove();
+            }else{
+                ServerEntity e = entities.get(k.id);
+                if(e==null){
+                    iter.remove();
+                }else{
+                    entities.get(k.id).addMovement(k.getMovement(delta));
+                }
+            }
+        }
+
+        for(ServerEntity e:entities.values()){
+            e.applyMovement();
         }
     }
 
@@ -368,12 +390,28 @@ public class World implements EntityChangeListener{
             while(iter.hasNext()){
                 ServerEntity e = iter.next();
                 if(e.getTeam()!=player.getTeam()){
-                    if(player.getJavaBounds().intersects(e.getJavaBounds())){
+                    Rectangle intersection = new Rectangle();
+                    if(Intersector.intersectRectangles(player.getGdxBounds(),e.getGdxBounds(),intersection)){
+                        float scale = intersection.area()/player.getGdxBounds().area();
+                        Vector2 i = new Vector2(player.getCenterX()-e.getCenterX(),player.getCenterY()-e.getCenterY());
+                        Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
+                        knockback.setAngle(i.angle());
+                        knockbacks.add(new Knockback(player.id, knockback));
                         if(!isInvulnerable(player)) {
                             player.lastContactDamageTaken = System.nanoTime();
                             player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
                         }
-                    }
+                    }/*
+                    if(player.getJavaBounds().intersects(e.getJavaBounds())){
+                        if(!isInvulnerable(player)) {
+                            Vector2 i = new Vector2(player.getCenterX()-e.getCenterX(),player.getCenterY()-e.getCenterY());
+                            Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY,0);
+                            knockback.setAngle(i.angle());
+                            knockbacks.add(new Knockback(player.id, knockback));
+                            player.lastContactDamageTaken = System.nanoTime();
+                            player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
+                        }
+                    }*/
                 }
             }
         }
@@ -549,12 +587,20 @@ public class World implements EntityChangeListener{
                 for(int targetId:entities.keySet()) {
                     ServerEntity target = entities.get(targetId);
                     if(target.getJavaBounds().intersectsLine(hitscan) && target.getTeam() != e.getTeam()){
-                        target.reduceHealth(projectileDefinition.damage,e.id);
+                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,target.getGdxBounds());
+                        if(i!=null){ //TODO i should never be null but is in some cases
+                            float angle = Tools.getAngle(i.x, i.y, target.getCenterX(), target.getCenterY());
+                            Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY,0);
+                            knockback.setAngle(angle);
+                            knockbacks.add(new Knockback(targetId, knockback));
+                            target.reduceHealth(projectileDefinition.damage,e.id);
+                        }
                     }
                 }
             }
         }
 
+        //TODO projectiles with no duration or range will never get removed
         ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
         projectiles.addAll(newProjectiles);
     }

@@ -1488,7 +1488,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         hitscan.x2 = intersection.x;
                         hitscan.y2 = intersection.y;
                     }
-                    projectiles.add(SharedMethods.createProjectile(atlas, hitscan, attack.x, attack.y, weapon.projectile));
+                    if(weapon.projectile.duration>0){
+                        projectiles.add(SharedMethods.createProjectile(atlas, hitscan, attack.x, attack.y, weapon.projectile));
+                    }
 
                     if(weapon.projectile.onDestroy!=null){
                         Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy),hitscan.x2,hitscan.y2,attack.id,-1);

@@ -55,19 +55,19 @@ public class Projectile{
     }*/
 
 /*
-    public Projectile(Rectangle bounds, TextureRegion texture, int rotation, float originX, float originY, Color color, float range, float velocity, int ownerID, int team, int damage) {
-        init(bounds, rotation, originX, originY, range,velocity,ownerID,team,damage);
+    public Projectile(Rectangle bounds, TextureRegion texture, int rotation, float originX, float originY, Color color, float range, float movement, int ownerID, int team, int damage) {
+        init(bounds, rotation, originX, originY, range,movement,ownerID,team,damage);
         createSprite(texture,bounds);
         sprite.setColor(color);
     }
 
-    public Projectile(Rectangle bounds, TextureRegion texture, int rotation, float originX, float originY, float range, float velocity, int ownerID, int team, int damage) {
-        init(bounds, rotation, originX, originY, range,velocity,ownerID,team,damage);
+    public Projectile(Rectangle bounds, TextureRegion texture, int rotation, float originX, float originY, float range, float movement, int ownerID, int team, int damage) {
+        init(bounds, rotation, originX, originY, range,movement,ownerID,team,damage);
         createSprite(texture,bounds);
     }
 
-    public Projectile(Rectangle bounds, Animation animation, int rotation, float originX, float originY, float range, float velocity, int ownerID, int team, int damage) {
-        init(bounds, rotation, originX, originY, range,velocity,ownerID,team,damage);
+    public Projectile(Rectangle bounds, Animation animation, int rotation, float originX, float originY, float range, float movement, int ownerID, int team, int damage) {
+        init(bounds, rotation, originX, originY, range,movement,ownerID,team,damage);
         this.animation = animation;
         createSprite(animation.getKeyFrame(0),bounds);
     }*/
@@ -151,7 +151,7 @@ public class Projectile{
                 ", team=" + team +
                 ", damage=" + damage +
                 ", range=" + range +
-                ", velocity=" + velocity +
+                ", movement=" + velocity +
                 ", totalDistanceTraveled=" + totalDistanceTraveled +
                 ", rotation=" + rotation +
                 ", bounds=" + bounds +

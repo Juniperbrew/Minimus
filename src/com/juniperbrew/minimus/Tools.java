@@ -72,6 +72,10 @@ public class Tools {
         return (MathUtils.atan2(line.y2 - line.y1, line.x2 - line.x1)*MathUtils.radiansToDegrees);
     }
 
+    public static float getAngle(float x1, float y1, float x2, float y2){
+        return (MathUtils.atan2(y2 - y1, x2 - x1)*MathUtils.radiansToDegrees);
+    }
+
     public static float getDistance ( float x1, float y1, float x2, float y2){
         return (float) Math.sqrt(Math.pow((x1-x2),2)+Math.pow((y1-y2),2));
     }
@@ -98,6 +102,13 @@ public class Tools {
         Polygon polygon = new Polygon(vertices);
         polygon.translate(originX,originY);
         return new Polygon(vertices);
+    }
+
+    public static Vector2 getVelocityVector(float velocity, float angle){
+        Vector2 v = new Vector2();
+        v.x = MathUtils.cosDeg(angle)*velocity;
+        v.y = MathUtils.sinDeg(angle)*velocity;
+        return v;
     }
 
     /*public static boolean intersects(Polygon polygon, Rectangle rectangle){
