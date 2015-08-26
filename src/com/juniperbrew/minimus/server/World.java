@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -631,32 +632,51 @@ public class World implements EntityChangeListener{
                     hitscan.x2 = intersection.x;
                     hitscan.y2 = intersection.y;
                 }
+                for(int targetId:entities.keySet()) {
+                    ServerEntity target = entities.get(targetId);
+                    ArrayList<ServerEntity> targetsHit = new ArrayList<>();
+                    if(target.getJavaBounds().intersectsLine(hitscan)) {
+                        targetsHit.add(target);
+                    }
+                    if(!targetsHit.isEmpty()){
+                        Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
+                        for(ServerEntity t:targetsHit){
+                            float squaredDistance = Tools.getSquaredDistance(e.getCenterX(),e.getCenterY(),t.getCenterX(),t.getCenterY());
+                            if(closestTarget.y>squaredDistance){
+                                closestTarget.set(t.id, squaredDistance);
+                            }
+                        }
+                        ServerEntity t = entities.get((int)closestTarget.x);
+                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
+                        if(i!=null){ //TODO i should never be null but is in some cases
+                            hitscan.x2 = i.x;
+                            hitscan.y2 = i.y;
+                            if(projectileDefinition.knockback>0){
+                                float angle = Tools.getAngle(e.getCenterX(), e.getCenterY(), t.getCenterX(), t.getCenterY());
+                                Vector2 knockback = new Vector2(weapon.projectile.knockback,0);
+                                knockback.setAngle(angle);
+                                knockbacks.add(new Knockback(targetId, knockback));
+                            }
+                            if(t.getTeam() != e.getTeam()){
+                                t.reduceHealth(projectileDefinition.damage,e.id);
+                            }
+                        }
+                    }
+                }
                 if(projectileDefinition.onDestroy!=null){
                     Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(projectileDefinition.onDestroy),hitscan.x2,hitscan.y2,e.id,e.getTeam());
                     p.ignoreMapCollision = true;
                     projectiles.add(p);
                 }
-                for(int targetId:entities.keySet()) {
-                    ServerEntity target = entities.get(targetId);
-                    if(target.getJavaBounds().intersectsLine(hitscan) && target.getTeam() != e.getTeam()){
-                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,target.getGdxBounds());
-                        if(i!=null){ //TODO i should never be null but is in some cases
-                            if(projectileDefinition.knockback>0){
-                                float angle = Tools.getAngle(e.getCenterX(), e.getCenterY(), target.getCenterX(), target.getCenterY());
-                                Vector2 knockback = new Vector2(weapon.projectile.knockback,0);
-                                knockback.setAngle(angle);
-                                knockbacks.add(new Knockback(targetId, knockback));
-                            }
-                            target.reduceHealth(projectileDefinition.damage,e.id);
-                        }
-                    }
+                if(weapon.projectile.duration>0){
+                    projectiles.add(SharedMethods.createProjectile(atlas, hitscan, e.getCenterX(), e.getCenterY(), weapon.projectile));
                 }
             }
+        }else{
+            //TODO projectiles with no duration or range will never get removed
+            ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
+            projectiles.addAll(newProjectiles);
         }
-
-        //TODO projectiles with no duration or range will never get removed
-        ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
-        projectiles.addAll(newProjectiles);
     }
 
     private HashMap<String,ProjectileDefinition> readProjectileList(){
@@ -901,7 +921,7 @@ public class World implements EntityChangeListener{
         npc.width = bounds.width;
         npc.image = image;
         npc.reduceHealth(10,-1);
-        entityAIs.put(networkID, new EntityAI(npc,aiType, weapon,this));
+        entityAIs.put(networkID, new EntityAI(npc, aiType, weapon, this));
         addEntity(npc);
     }
 
@@ -956,7 +976,7 @@ public class World implements EntityChangeListener{
     public void spawnPowerup(int type, int value, int duration){
 
         int x = MathUtils.random(0, mapWidth);
-        int y = MathUtils.random(0,mapHeight);
+        int y = MathUtils.random(0, mapHeight);
         final int id = getNextNetworkID();
         Powerup powerup = new Powerup(x,y,type,value);
         powerups.put(id,powerup);

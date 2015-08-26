@@ -34,6 +34,8 @@ import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
+import com.juniperbrew.minimus.server.Knockback;
+import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -1493,6 +1495,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
+        ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon!=null){
             if(weapon.projectile.hitscan){
                 for(Line2D.Float hitscan :sharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
@@ -1501,14 +1504,35 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         hitscan.x2 = intersection.x;
                         hitscan.y2 = intersection.y;
                     }
-                    if(weapon.projectile.duration>0){
-                        projectiles.add(SharedMethods.createProjectile(atlas, hitscan, attack.x, attack.y, weapon.projectile));
+                    for(int targetId:stateSnapshot.keySet()) {
+                        Entity target = stateSnapshot.get(targetId);
+                        ArrayList<Entity> targetsHit = new ArrayList<>();
+                        if(target.getJavaBounds().intersectsLine(hitscan)) {
+                            targetsHit.add(target);
+                        }
+                        if(!targetsHit.isEmpty()){
+                            Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
+                            for(Entity t:targetsHit){
+                                float squaredDistance = Tools.getSquaredDistance(attack.x,attack.y,t.getCenterX(),t.getCenterY());
+                                if(closestTarget.y>squaredDistance){
+                                    closestTarget.set(t.id, squaredDistance);
+                                }
+                            }
+                            Entity t = stateSnapshot.get((int)closestTarget.x);
+                            Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
+                            if(i!=null){ //TODO i should never be null but is in some cases
+                                hitscan.x2 = i.x;
+                                hitscan.y2 = i.y;
+                            }
+                        }
                     }
-
                     if(weapon.projectile.onDestroy!=null){
                         Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy),hitscan.x2,hitscan.y2,attack.id,-1);
                         p.ignoreMapCollision = true;
                         projectiles.add(p);
+                    }
+                    if(weapon.projectile.duration>0){
+                        projectiles.add(SharedMethods.createProjectile(atlas, hitscan, attack.x, attack.y, weapon.projectile));
                     }
                 }
             }else{

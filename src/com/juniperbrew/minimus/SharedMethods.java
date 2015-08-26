@@ -56,9 +56,8 @@ public class SharedMethods {
     public static Projectile createProjectile(TextureAtlas atlas,Line2D.Float line, float originX, float originY, ProjectileDefinition def){
         int rotation = (int)Tools.getAngle(line);
         int length = (int) Tools.getLength(line);
-        Point2D.Float start = Tools.rotatePoint(line.x1,line.y1,originX,originY,rotation*-1);
-        Rectangle bounds = new Rectangle(start.x,start.y,length,def.width);
-        Projectile p = new Projectile(bounds,rotation,originX,originY,0,0,-1,-1,0);
+        Rectangle bounds = new Rectangle(originX,originY,length,def.width);
+        Projectile p = new Projectile(bounds,rotation,0,0,0,0,-1,-1,0);
         setProjectileAttributes(atlas,p,def,bounds);
         return p;
     }
