@@ -54,13 +54,17 @@ public class NetworkEntity {
     }
 
     public NetworkEntity(int id, float x, float y, int team) {
+        this(id,x,y,team,100);
+    }
+
+    public NetworkEntity(int id, float x, float y, int team, int health) {
         this.id = id;
         this.x = x;
         this.y = y;
         width = 50;
         height = 50;
-        health = 100;
-        maxHealth = 100;
+        this.health = health;
+        maxHealth = health;
         rotation = -90;
         this.team = team;
     }

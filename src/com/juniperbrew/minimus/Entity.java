@@ -14,6 +14,10 @@ public class Entity extends NetworkEntity {
         super(id,x,y,team);
     }
 
+    public Entity(int id, float x, float y, int team, int health) {
+        super(id,x,y,team, health);
+    }
+
     public Entity(NetworkEntity e) {
         super(e);
     }

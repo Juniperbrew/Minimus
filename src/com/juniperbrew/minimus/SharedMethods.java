@@ -30,7 +30,7 @@ public class SharedMethods {
     public static ArrayList<Line2D.Float> createHitscan(Weapon weapon, float centerX, float centerY, int deg){
         ProjectileDefinition projectileDefinition = weapon.projectile;
         final ArrayList<Line2D.Float> hitscans = new ArrayList<>();
-        int startDistance = ConVars.getInt("sv_npc_default_size") / 2;
+        //int startDistance = ConVars.getInt("sv_npc_default_size") / 2;
         int length = projectileDefinition.length;
 
         deg -= weapon.spread / 2f;
@@ -38,8 +38,8 @@ public class SharedMethods {
             float sina = MathUtils.sinDeg(deg);
             float cosa = MathUtils.cosDeg(deg);
 
-            float startX = centerX+cosa*startDistance;
-            float startY = centerY+sina*startDistance;
+            float startX = centerX;//+cosa*startDistance;
+            float startY = centerY;//+sina*startDistance;
             float targetX = startX + cosa*length;
             float targetY = startY + sina*length;
             Line2D.Float line = new Line2D.Float(startX,startY,targetX,targetY);

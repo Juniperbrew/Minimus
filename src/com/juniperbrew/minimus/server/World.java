@@ -217,7 +217,8 @@ public class World implements EntityChangeListener{
         updateGameState();
         updateEntities(delta);
         updateProjectiles(delta);
-        checkPlayerEntityCollisions();
+        //checkPlayerEntityCollisions();
+        checkEntityCollisions();
         checkPowerupCollisions();
     }
 
@@ -387,6 +388,36 @@ public class World implements EntityChangeListener{
         projectiles.removeAll(destroyedProjectiles);
     }
 
+    private void checkEntityCollisions(){
+
+        for(ServerEntity e1 : entities.values()){
+            for(ServerEntity e2: entities.values()){
+                if(e1.id == e2.id){
+                    continue;
+                }
+                Rectangle bounds1 = e1.getGdxBounds();
+                Rectangle bounds2 = e2.getGdxBounds();
+                //if(bounds1.overlaps(bounds2)){
+                    Rectangle intersection = new Rectangle();
+                    if(Intersector.intersectRectangles(bounds1,bounds2,intersection)){
+                        float scale = intersection.area()/bounds1.area();
+                        Vector2 i = new Vector2(e1.getCenterX()-e2.getCenterX(),e1.getCenterY()-e2.getCenterY());
+                        Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
+                        knockback.setAngle(i.angle());
+                        knockbacks.add(new Knockback(e1.id, knockback));
+                        if(playerList.contains(e1.id)&&!isInvulnerable(e1)) {
+                            if(e1.getTeam()!=e2.getTeam()) {
+                                e1.lastContactDamageTaken = System.nanoTime();
+                                e1.reduceHealth(ConVars.getInt("sv_contact_damage"), e2.id);
+                            }
+                        }
+                    }
+                //}
+            }
+        }
+    }
+
+
     private void checkPlayerEntityCollisions(){
 
         for(int playerID : playerList){
@@ -394,7 +425,10 @@ public class World implements EntityChangeListener{
             Iterator<ServerEntity> iter = entities.values().iterator();
             while(iter.hasNext()){
                 ServerEntity e = iter.next();
-                if(e.getTeam()!=player.getTeam()){
+                if(e.id == playerID){
+                    continue;
+                }
+                if(e.getTeam()!=player.getTeam()) {
                     Rectangle intersection = new Rectangle();
                     if(Intersector.intersectRectangles(player.getGdxBounds(),e.getGdxBounds(),intersection)){
                         float scale = intersection.area()/player.getGdxBounds().area();
@@ -404,23 +438,14 @@ public class World implements EntityChangeListener{
                         knockbacks.add(new Knockback(player.id, knockback));
                         if(!isInvulnerable(player)) {
                             player.lastContactDamageTaken = System.nanoTime();
-                            player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
+                            player.reduceHealth(ConVars.getInt("sv_contact_damage"), e.id);
                         }
-                    }/*
-                    if(player.getJavaBounds().intersects(e.getJavaBounds())){
-                        if(!isInvulnerable(player)) {
-                            Vector2 i = new Vector2(player.getCenterX()-e.getCenterX(),player.getCenterY()-e.getCenterY());
-                            Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY,0);
-                            knockback.setAngle(i.angle());
-                            knockbacks.add(new Knockback(player.id, knockback));
-                            player.lastContactDamageTaken = System.nanoTime();
-                            player.reduceHealth(ConVars.getInt("sv_contact_damage"),e.id);
-                        }
-                    }*/
+                    }
                 }
             }
         }
     }
+
 
     private void checkPowerupCollisions(){
         for(int playerID : playerList){
@@ -761,7 +786,7 @@ public class World implements EntityChangeListener{
         return weapons;
     }
 
-    private void loadImages(){
+    private void loadImages() {
         listener.message("Loading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
     }
@@ -809,8 +834,7 @@ public class World implements EntityChangeListener{
         }
 
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
-        ServerEntity newPlayer = new ServerEntity(networkID,x,y,ConVars.getInt("sv_player_default_team"),this);
-        newPlayer.maxHealth = ConVars.getInt("sv_player_max_health");
+        ServerEntity newPlayer = new ServerEntity(networkID,x,y,ConVars.getInt("sv_player_default_team"),ConVars.getInt("sv_player_max_health"),this);
         newPlayer.invulnerable = true;
         newPlayer.width = width;
         newPlayer.height = height;
@@ -838,7 +862,7 @@ public class World implements EntityChangeListener{
     }
 
     public void addNPC(Rectangle bounds, int aiType, int weapon, String image){
-        System.out.println("Adding npc "+aiType+","+weapon);
+        System.out.println("Adding npc "+aiType+","+ weapon);
 
         int networkID = getNextNetworkID();
         ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,-1,this);
@@ -846,7 +870,7 @@ public class World implements EntityChangeListener{
         npc.width = bounds.width;
         npc.image = image;
         npc.reduceHealth(10,-1);
-        entityAIs.put(networkID,new EntityAI(npc,aiType, weapon,this));
+        entityAIs.put(networkID, new EntityAI(npc,aiType, weapon,this));
         addEntity(npc);
     }
 

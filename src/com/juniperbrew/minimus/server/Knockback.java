@@ -29,9 +29,11 @@ public class Knockback {
         frictionAcceleration = frictionForce.cpy().scl(1/mass);
         this.id = id;
 
+        /*
         System.out.println("####"+id+"####");
         System.out.println("StartVelocity:"+startVelocity);
         System.out.println("a:"+frictionAcceleration);
+        */
     }
 
     public Vector2 getMovement(float delta){
@@ -43,17 +45,22 @@ public class Knockback {
         duration += delta;
         updateCounter++;
 
+        /*
         System.out.println("#:"+updateCounter);
         System.out.println("Delta:"+delta);
         System.out.println("Velocity:"+velocity);
         System.out.println("Movement:"+movement);
+        */
+
         if(velocity.hasSameDirection(frictionAcceleration)){
             expired = true;
+            /*
             System.out.println("Knockback duration:"+duration);
             System.out.println("Angle:"+startAngle);
             System.out.println("EndAngle:"+endAngle);
             System.out.println("StartVelocity:"+startVelocity);
             System.out.println("Updates:"+updateCounter);
+            */
         }
         return movement;
     }

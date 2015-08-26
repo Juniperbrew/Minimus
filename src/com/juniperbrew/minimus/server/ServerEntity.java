@@ -18,6 +18,11 @@ public class ServerEntity extends Entity {
         this.listener = listener;
     }
 
+    public ServerEntity(int id, float x, float y, int team, int health, EntityChangeListener listener) {
+        super(id,x,y, team, health);
+        this.listener = listener;
+    }
+
     public NetworkEntity getNetworkEntity(){
         NetworkEntity e = new NetworkEntity(id,getX(),getY(),width,height,getHealth(),maxHealth, getTeam(), image);
         return e;
