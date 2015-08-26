@@ -85,6 +85,7 @@ public class SharedMethods {
             p.setDuration(def.duration);
         }
 
+        p.knockback = def.knockback;
         p.hitscan = def.hitscan;
     }
 

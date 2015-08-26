@@ -21,6 +21,7 @@ width=3
 length=100
 duration=0.5
 damage=35
+knockback=50
 }
 
 {
@@ -33,7 +34,8 @@ radius=5
 range=600
 velocity=600
 damage=35
-onDestroy=Big_bullet_puff
+onDestroy=Bullet_puff
+knockback=200
 }
  
 {
@@ -45,6 +47,7 @@ length=3
 range=400
 velocity=400
 damage=10
+knockback=50
 }
 
 {
@@ -56,6 +59,7 @@ length=2
 range=500
 velocity=400
 damage=5
+knockback=50
 }
 
 {
@@ -66,6 +70,7 @@ duration=0.5
 width=3
 length=1000
 damage=1
+knockback=50
 }
 
 {
@@ -75,6 +80,7 @@ duration=0.5
 width=3
 length=1000
 damage=50
+knockback=50
 }
 
 {
@@ -86,6 +92,7 @@ length=20
 range=400
 velocity=200
 damage=10
+knockback=50
 }
 
 {
@@ -98,6 +105,7 @@ frameDuration=0.1
 range=600
 velocity=150
 damage=35
+knockback=50
 }
 
 #####################
@@ -122,6 +130,7 @@ length=96
 duration=0.5
 animation=puff
 frameDuration=0.125
+knockback=200
 }
 
 {
@@ -130,6 +139,7 @@ type=hitscan
 length=400
 damage=20
 onDestroy=Bullet_puff
+knockback=50
 }
 
 {
@@ -138,6 +148,7 @@ type=hitscan
 length=350
 damage=15
 onDestroy=Bullet_puff
+knockback=50
 }
 
 {
@@ -146,6 +157,7 @@ type=hitscan
 length=400
 damage=18
 onDestroy=Bullet_puff
+knockback=50
 }
 
 {
@@ -154,4 +166,5 @@ type=hitscan
 length=450
 damage=25
 onDestroy=Bullet_puff
+knockback=50
 }

@@ -365,6 +365,11 @@ public class World implements EntityChangeListener{
                         if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
                             projectile.destroyed = true;
                             if(target.getTeam() != projectile.team){
+                                if(projectile.knockback>0){
+                                    Vector2 knockback = new Vector2(projectile.knockback,0);
+                                    knockback.setAngle(projectile.rotation);
+                                    knockbacks.add(new Knockback(target.id, knockback));
+                                }
                                 target.reduceHealth(projectile.damage,projectile.ownerID);
                             }
                         }
@@ -572,15 +577,15 @@ public class World implements EntityChangeListener{
         if(weapon==null){
             return;
         }
-        if(weapon.projectile.hitscan){
+        if(projectileDefinition.hitscan){
             for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,e.getCenterX(),e.getCenterY(),e.getRotation())){
                 Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
                 if(intersection!=null){
                     hitscan.x2 = intersection.x;
                     hitscan.y2 = intersection.y;
                 }
-                if(weapon.projectile.onDestroy!=null){
-                    Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy),hitscan.x2,hitscan.y2,e.id,e.getTeam());
+                if(projectileDefinition.onDestroy!=null){
+                    Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(projectileDefinition.onDestroy),hitscan.x2,hitscan.y2,e.id,e.getTeam());
                     p.ignoreMapCollision = true;
                     projectiles.add(p);
                 }
@@ -589,10 +594,12 @@ public class World implements EntityChangeListener{
                     if(target.getJavaBounds().intersectsLine(hitscan) && target.getTeam() != e.getTeam()){
                         Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,target.getGdxBounds());
                         if(i!=null){ //TODO i should never be null but is in some cases
-                            float angle = Tools.getAngle(i.x, i.y, target.getCenterX(), target.getCenterY());
-                            Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY,0);
-                            knockback.setAngle(angle);
-                            knockbacks.add(new Knockback(targetId, knockback));
+                            if(projectileDefinition.knockback>0){
+                                float angle = Tools.getAngle(e.getCenterX(), e.getCenterY(), target.getCenterX(), target.getCenterY());
+                                Vector2 knockback = new Vector2(weapon.projectile.knockback,0);
+                                knockback.setAngle(angle);
+                                knockbacks.add(new Knockback(targetId, knockback));
+                            }
                             target.reduceHealth(projectileDefinition.damage,e.id);
                         }
                     }
@@ -675,6 +682,9 @@ public class World implements EntityChangeListener{
                 }
                 if(splits[0].equals("onDestroy")){
                     projectileDefinition.onDestroy = splits[1];
+                }
+                if(splits[0].equals("knockback")){
+                    projectileDefinition.knockback = Float.parseFloat(splits[1]);
                 }
             }
         } catch (FileNotFoundException e) {

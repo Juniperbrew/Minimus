@@ -20,24 +20,10 @@ public class ProjectileDefinition {
     public String animation;
     public float frameDuration;
     public String onDestroy;
+    public float knockback;
 
 
     public ProjectileDefinition(){
 
-    }
-    public ProjectileDefinition(ProjectileDefinition p) {
-        this.hitscan = p.hitscan;
-        this.duration = p.duration;
-        this.damage = p.damage;
-        this.range = p.range;
-        this.velocity = p.velocity;
-        this.shape = p.shape;
-        this.color = p.color;
-        this.width = p.width;
-        this.length = p.length;
-        this.image = p.image;
-        this.animation = p.animation;
-        this.frameDuration = p.frameDuration;
-        this.onDestroy = p.onDestroy;
     }
 }

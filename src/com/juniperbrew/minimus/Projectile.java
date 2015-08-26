@@ -25,12 +25,14 @@ public class Projectile{
     public int team;
     public int damage;
 
+    public float knockback;
+
     float range;
     float velocity;
 
     float totalDistanceTraveled;
 
-    int rotation;
+    public int rotation;
     Polygon bounds;
     Sprite sprite;
     Animation animation;
