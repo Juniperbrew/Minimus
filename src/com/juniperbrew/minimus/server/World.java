@@ -669,7 +669,7 @@ public class World implements EntityChangeListener{
                     projectiles.add(p);
                 }
                 if(weapon.projectile.duration>0){
-                    projectiles.add(SharedMethods.createProjectile(atlas, hitscan, e.getCenterX(), e.getCenterY(), weapon.projectile));
+                    projectiles.add(SharedMethods.createProjectile(atlas, hitscan, weapon.projectile));
                 }
             }
         }else{

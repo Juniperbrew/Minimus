@@ -53,11 +53,11 @@ public class SharedMethods {
         return hitscans;
     }
 
-    public static Projectile createProjectile(TextureAtlas atlas,Line2D.Float line, float originX, float originY, ProjectileDefinition def){
+    public static Projectile createProjectile(TextureAtlas atlas,Line2D.Float line, ProjectileDefinition def){
         int rotation = (int)Tools.getAngle(line);
         int length = (int) Tools.getLength(line);
-        Rectangle bounds = new Rectangle(originX,originY,length,def.width);
-        Projectile p = new Projectile(bounds,rotation,0,0,0,0,-1,-1,0);
+        Rectangle bounds = new Rectangle(line.x1,line.y1,length,def.width);
+        Projectile p = new Projectile(bounds,rotation,line.x1,line.y1,0,0,-1,-1,0);
         setProjectileAttributes(atlas,p,def,bounds);
         return p;
     }
