@@ -400,11 +400,14 @@ public class World implements EntityChangeListener{
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
                 if(projectile.onDestroy!=null){
+                    ProjectileDefinition def = projectileList.get(projectile.onDestroy);
                     Vector2 center = new Vector2();
                     projectile.getHitbox().getBoundingRectangle().getCenter(center);
-                    Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(projectile.onDestroy),center.x,center.y,projectile.ownerID,projectile.team);
+                    Projectile p = SharedMethods.createProjectile(atlas, def,center.x,center.y,projectile.ownerID,projectile.team);
                     projectiles.add(p);
-                    listener.networkedProjectileSpawned(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
+                    if(def.networked){
+                        listener.networkedProjectileSpawned(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
+                    }
                 }
             }
         }
@@ -761,6 +764,18 @@ public class World implements EntityChangeListener{
                 }
                 if (splits[0].equals("dontDestroyOnCollision")) {
                     projectileDefinition.dontDestroyOnCollision = true;
+                }
+                if (splits[0].equals("sound")) {
+                    projectileDefinition.sound = splits[1];
+                }
+                if (splits[0].equals("friction")) {
+                    projectileDefinition.friction = true;
+                }
+                if (splits[0].equals("noCollision")) {
+                    projectileDefinition.noCollision = true;
+                }
+                if (splits[0].equals("networked")) {
+                    projectileDefinition.networked = true;
                 }
             }
         } catch (FileNotFoundException e) {

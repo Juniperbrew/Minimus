@@ -46,6 +46,7 @@ public class Projectile{
     public boolean ignoreMapCollision;
     public boolean explosionKnockback;
     public boolean dontDestroyOnCollision;
+    public boolean noCollision;
 
     float originX;
     float originY;

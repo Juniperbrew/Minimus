@@ -70,25 +70,24 @@ public class EntityAI {
     }
 
     private void lookForTarget(){
-            ArrayList<ServerEntity> potentialTargets = new ArrayList<>();
-            Circle c = new Circle(entity.getCenterX(), entity.getCenterY(), ConVars.getFloat("sv_npc_target_search_radius"));
-            Iterator<ServerEntity> iter = world.entities.values().iterator();
-            while (iter.hasNext()) {
-                ServerEntity e = iter.next();
-                if (e.invulnerable) {
-                    continue;
-                }
-                if (Intersector.overlaps(c, e.getGdxBounds()) && e.getTeam() != entity.getTeam()) {
-                    if (!SharedMethods.isTileCollisionOnLine(entity.getCenterX(), entity.getCenterY(), e.getCenterX(), e.getCenterY())) {
-                        potentialTargets.add(e);
-                    }
+        float closestDistance = Float.POSITIVE_INFINITY;
+        ServerEntity closestTarget = null;
+        for(ServerEntity target : world.entities.values()){
+            if (target.invulnerable ||  target.getTeam() == entity.getTeam()) {
+                continue;
+            }
+            float distance = Tools.getSquaredDistance(target.getCenterX(),target.getCenterY(),entity.getCenterX(),entity.getCenterY());
+            if(distance < closestDistance){
+                if (!SharedMethods.isTileCollisionOnLine(entity.getCenterX(), entity.getCenterY(), target.getCenterX(), target.getCenterY())) {
+                    closestDistance = distance;
+                    closestTarget = target;
                 }
             }
-            if (!potentialTargets.isEmpty()) {
-                int random = MathUtils.random(0, potentialTargets.size() - 1);
-                ServerEntity e = potentialTargets.get(random);
-                targetLocation = new Vector2(e.getCenterX(), e.getCenterY());
-            }
+        }
+        if(closestTarget!=null && Math.sqrt(closestDistance) < ConVars.getFloat("sv_npc_target_search_radius")){
+            targetLocation = new Vector2(closestTarget.getCenterX(), closestTarget.getCenterY());
+        }
+
         if(targetLocation!=null){
             setDestination(targetLocation.x,targetLocation.y);
         }

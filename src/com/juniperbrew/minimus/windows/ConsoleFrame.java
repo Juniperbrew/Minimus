@@ -264,6 +264,14 @@ public class ConsoleFrame extends JFrame {
             }
             return;
         }
+        if(splits[0].equals("weapon")){
+            if(minimusClient!=null){
+                minimusClient.selectWeapon(Integer.parseInt(splits[1]));
+            }else{
+                addLine("The "+splits[0]+" command can only be used on client");
+            }
+            return;
+        }
         addLine(command);
     }
 

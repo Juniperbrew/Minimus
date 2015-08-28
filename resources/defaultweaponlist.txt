@@ -66,7 +66,6 @@ sound=rifle.wav
 ## OLD WEAPONS ##
 #################
 
-#OP Laser
 {
 name=OP_Laser
 projectile=OP_Laser
@@ -78,7 +77,6 @@ image=bfg
 ammoImage=largeCell
 }
 
-#Animated Flamer
 {
 name=Animated Flamer
 projectile=Animated_Flame
@@ -89,7 +87,6 @@ image=fire
 ammoImage=yellowSkull
 }
 
-#Rocket launcher
 {
 name=Rocket launcher
 projectile=Rocket
@@ -99,6 +96,7 @@ sound=projectile.ogg
 cooldown=0.5
 image=rifle
 ammoImage=largeAmmo
+sound=sinko.wav
 }
  
 #Shotgun

@@ -90,6 +90,17 @@ public class SharedMethods {
         p.ignoreMapCollision = def.ignoreMapCollision;
         p.explosionKnockback = def.explosionKnockback;
         p.dontDestroyOnCollision = def.dontDestroyOnCollision;
+        p.noCollision = def.noCollision;
+    }
+
+    public static Projectile createProjectile(TextureAtlas atlas, ProjectileDefinition def, float x, float y) {
+        Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
+
+        Projectile p = new Projectile(bounds, -1, -1, def.damage);
+
+        setProjectileAttributes(atlas,p,def,bounds);
+
+        return p;
     }
 
     public static Projectile createProjectile(TextureAtlas atlas, ProjectileDefinition def, float x, float y, int entityId, int team) {

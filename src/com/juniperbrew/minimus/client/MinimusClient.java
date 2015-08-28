@@ -317,8 +317,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             weapons.put(weaponAdded.weapon,true);
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
-            Projectile p = SharedMethods.createProjectile(atlas,projectileList.get(spawnProjectile.projectileName),spawnProjectile.x,spawnProjectile.y,spawnProjectile.ownerID,spawnProjectile.team);
+            ProjectileDefinition def = projectileList.get(spawnProjectile.projectileName);
+            Projectile p = SharedMethods.createProjectile(atlas,def,spawnProjectile.x,spawnProjectile.y,spawnProjectile.ownerID,spawnProjectile.team);
             projectiles.add(p);
+            if(def.sound!=null){
+                playSoundInLocation(sounds.get(def.sound),spawnProjectile.x,spawnProjectile.y);
+            }
         }
 
 
@@ -750,7 +754,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.update(delta);
-            if(!projectile.hitscan) {
+            if(!projectile.noCollision) {
                 for (int id : stateSnapshot.keySet()) {
                     if (id == projectile.ownerID) {
                         continue;
@@ -769,6 +773,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                             } else {
                                 playSoundInLocation(sounds.get("hit.ogg"),target.getCenterX(),target.getCenterY());
                             }
+                            Vector2 center = new Vector2();
+                            projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                            projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bloodsplat"),center.x,center.y));
                             projectile.entitiesHit.add(target.id);
                         }
                     }
@@ -782,6 +789,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
+                //TODO if projectile hits some entity the onDestroy projectile is never created probably want to change this at some point
+                //TODO server will create the onDestroy projectile in any case and send it to client if its networked
+                if(projectile.onDestroy!=null && projectile.entitiesHit.isEmpty()){
+                    ProjectileDefinition def = projectileList.get(projectile.onDestroy);
+                    Vector2 center = new Vector2();
+                    projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                    Projectile p = SharedMethods.createProjectile(atlas, def,center.x,center.y,projectile.ownerID,projectile.team);
+                    projectiles.add(p);
+                }
             }
         }
         projectiles.removeAll(destroyedProjectiles);
@@ -1377,6 +1393,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         statusData.addBytesSent(bytesSent);
     }
 
+    public void selectWeapon(int weapon){
+        slot1Weapon = weapon;
+        Network.ChangeWeapon changeWeapon = new Network.ChangeWeapon();
+        changeWeapon.weapon = weapon;
+        sendTCP(changeWeapon);
+    }
+
 
     private void printStateHistory(){
         showMessage("#State History:");
@@ -1476,6 +1499,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void removeEntity(int id){
         //Entities will be removed from latest state despite their remove time
+        //TODO nullpointer if our oldest state already has removed the entity in interpolation
+        NetworkEntity e = interpFrom.entities.get(id);
+        System.out.println("Removing entity:"+e);
+        projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bigbloodsplat"), e.getCenterX(), e.getCenterY()));
         authoritativeState.entities.remove(id);
         if(playerList.contains(id)){
             showMessage("PlayerID "+id+" removed.");
@@ -1504,9 +1531,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         hitscan.x2 = intersection.x;
                         hitscan.y2 = intersection.y;
                     }
+                    ArrayList<Entity> targetsHit = new ArrayList<>();
                     for(int targetId:stateSnapshot.keySet()) {
                         Entity target = stateSnapshot.get(targetId);
-                        ArrayList<Entity> targetsHit = new ArrayList<>();
+                        if(target.id == attack.id){
+                            continue;
+                        }
                         if(target.getJavaBounds().intersectsLine(hitscan)) {
                             targetsHit.add(target);
                         }
@@ -1524,10 +1554,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                                 hitscan.x2 = i.x;
                                 hitscan.y2 = i.y;
                             }
+                            //TODO spawn blood here
+                            projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bloodsplat"),hitscan.x2,hitscan.y2));
                         }
                     }
-                    if(weapon.projectile.onDestroy!=null){
-                        Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy),hitscan.x2,hitscan.y2,attack.id,-1);
+                    if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
+                        ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
+                        Projectile p = SharedMethods.createProjectile(atlas, def,hitscan.x2,hitscan.y2,attack.id,-1);
                         p.ignoreMapCollision = true;
                         projectiles.add(p);
                     }

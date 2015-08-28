@@ -24,6 +24,10 @@ public class ProjectileDefinition {
     public boolean ignoreMapCollision;
     public boolean explosionKnockback;
     public boolean dontDestroyOnCollision;
+    public String sound;
+    public boolean friction;
+    public boolean noCollision;
+    public boolean networked;
 
     public ProjectileDefinition(){
 

@@ -213,6 +213,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }else if (object instanceof Network.TeamChangeRequest){
             Network.TeamChangeRequest teamChangeRequest = (Network.TeamChangeRequest) object;
             world.getEntity(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
+        }else if (object instanceof Network.ChangeWeapon){
+            Network.ChangeWeapon changeWeapon = (Network.ChangeWeapon) object;
+            world.entities.get(playerList.getKey(connection)).slot1Weapon = changeWeapon.weapon;
         }else if(object instanceof Disconnect){
             connectionStatus.get(connection).disconnected();
             if(playerList.containsValue(connection)){
