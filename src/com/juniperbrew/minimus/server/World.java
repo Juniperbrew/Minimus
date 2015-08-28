@@ -159,15 +159,17 @@ public class World implements EntityChangeListener{
                 Rectangle r = o.getRectangle();
                 MapProperties p = o.getProperties();
                 if(p.containsKey("weapon")){
-                    int typeModifier = Integer.parseInt(p.get("weapon", String.class));
-                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, typeModifier, -1));
+                    String weaponName = p.get("weapon",String.class);
+                    int weaponID = SharedMethods.getWeaponID(weaponList,weaponName);
+                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, weaponID, -1));
                 }else if(p.containsKey("health")){
                     int value = Integer.parseInt(p.get("value",String.class));
                     spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.HEALTH, -1, value));
                 }else if(p.containsKey("ammo")){
-                    int typeModifier = Integer.parseInt(p.get("ammo", String.class));
+                    String weaponName = p.get("ammo",String.class);
+                    int weaponID = SharedMethods.getWeaponID(weaponList, weaponName);
                     int value = Integer.parseInt(p.get("value",String.class));
-                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, typeModifier, value));
+                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, weaponID, value));
                 }
             }
         }

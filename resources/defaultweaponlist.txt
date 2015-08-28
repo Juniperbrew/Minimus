@@ -14,7 +14,7 @@ ammoImage=smallCell
 ### NEW WEAPONS ###
 ###################
 
-#Hitscan Pistol
+#1
 {
 name=Hitscan_Pistol
 projectile=Hitscan_Pistol_Bullet
@@ -26,7 +26,7 @@ ammoImage=smallAmmo
 sound=pistol.wav
 }
 
-#Hitscan Shotgun
+#2
 {
 name=Hitscan_Shotgun
 projectile=Hitscan_Shotgun_Bullet
@@ -38,19 +38,19 @@ ammoImage=smallShell
 sound=shotgun.wav
 }
 
-#Hitscan Uzi
+#3
 {
 name=Hitscan_Uzi
 projectile=Hitscan_Uzi_Bullet
 spread=0
 projectileCount=1
 cooldown=0.15
-image=uzi
+image=chainGun
 ammoImage=largeAmmo
 sound=uzi.wav
 }
 
-#Hitscan Rifle
+#4
 {
 name=Hitscan_Rifle
 projectile=Hitscan_Rifle_Bullet
@@ -66,6 +66,7 @@ sound=rifle.wav
 ## OLD WEAPONS ##
 #################
 
+#5
 {
 name=OP_Laser
 projectile=OP_Laser
@@ -77,6 +78,7 @@ image=bfg
 ammoImage=largeCell
 }
 
+#6
 {
 name=Animated Flamer
 projectile=Animated_Flame
@@ -87,6 +89,7 @@ image=fire
 ammoImage=yellowSkull
 }
 
+#7
 {
 name=Rocket launcher
 projectile=Rocket
@@ -99,7 +102,7 @@ ammoImage=largeAmmo
 sound=sinko.wav
 }
  
-#Shotgun
+#8
 {
 name=Shotgun
 projectile=Shotgun_Bullet
@@ -110,7 +113,7 @@ image=superShotgun
 ammoImage=smallShell
 }
 
-#Uzi
+#9
 {
 name=Uzi
 projectile=Uzi_Bullet
@@ -122,7 +125,7 @@ ammoImage=smallAmmo
 }
 
 
-#Broken Laser
+#10
 {
 name=Broken_Laser
 projectile=Broken_Laser
@@ -134,7 +137,7 @@ image=helmet
 ammoImage=goggles
 }
 
-#Flamer
+#11
 {
 name=Flamer
 projectile=Flame
@@ -145,7 +148,7 @@ image=flame
 ammoImage=blueSkull
 }
 
-#Flame
+#12
 {
 name=Flame
 projectile=Animated_Flame

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="64">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="67">
  <properties>
   <property name="mapScale" value="4"/>
   <property name="nextLevel" value="e1m2"/>
@@ -2418,89 +2418,83 @@
  <objectgroup name="Object Layer 1">
   <object id="1" type="spawn" x="100" y="500" width="60" height="60"/>
   <object id="6" type="enemySpawn" x="420" y="520" width="40" height="40"/>
-  <object id="15" type="powerup" x="140" y="380" width="7.5" height="3.5">
+  <object id="17" name="Hitscan_Uzi" type="powerup" x="520" y="520" width="20" height="20">
    <properties>
-    <property name="ammo" value="2"/>
-    <property name="value" value="40"/>
+    <property name="weapon" value="Hitscan_Uzi"/>
    </properties>
   </object>
-  <object id="17" type="powerup" x="520" y="520" width="20" height="20">
+  <object id="18" name="Hitscan_Uzi ammo" type="powerup" x="440" y="260" width="20" height="20">
    <properties>
-    <property name="weapon" value="3"/>
-   </properties>
-  </object>
-  <object id="18" type="powerup" x="440" y="260" width="20" height="20">
-   <properties>
-    <property name="ammo" value="3"/>
+    <property name="ammo" value="Hitscan_Uzi"/>
     <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="19" type="powerup" x="140" y="780" width="20" height="20">
+  <object id="19" name="Hitscan_Uzi" type="powerup" x="140" y="780" width="20" height="20">
    <properties>
-    <property name="weapon" value="3"/>
+    <property name="weapon" value="Hitscan_Uzi"/>
    </properties>
   </object>
-  <object id="20" type="powerup" x="700" y="540" width="20" height="20">
+  <object id="20" name="Hitscan_Uzi ammo" type="powerup" x="700" y="540" width="20" height="20">
    <properties>
-    <property name="ammo" value="3"/>
+    <property name="ammo" value="Hitscan_Uzi"/>
     <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="21" type="powerup" x="640" y="60" width="20" height="20">
+  <object id="21" name="Hitscan_Uzi ammo" type="powerup" x="640" y="60" width="20" height="20">
    <properties>
-    <property name="ammo" value="3"/>
+    <property name="ammo" value="Hitscan_Uzi"/>
     <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="22" type="powerup" x="260" y="240" width="20" height="20">
+  <object id="22" name="Hitscan_Shotgun ammo" type="powerup" x="260" y="240" width="20" height="20">
    <properties>
-    <property name="ammo" value="2"/>
+    <property name="ammo" value="Hitscan_Shotgun"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="23" type="powerup" x="440" y="460" width="20" height="20">
+  <object id="23" name="Hitscan_Shotgun ammo" type="powerup" x="440" y="460" width="20" height="20">
    <properties>
-    <property name="ammo" value="2"/>
+    <property name="ammo" value="Hitscan_Shotgun"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="24" type="powerup" x="360" y="640" width="20" height="20">
+  <object id="24" name="Health" type="powerup" x="360" y="640" width="20" height="20">
    <properties>
     <property name="health" value=""/>
     <property name="value" value="20"/>
    </properties>
   </object>
-  <object id="25" type="powerup" x="880" y="500" width="20" height="20">
+  <object id="25" name="Health" type="powerup" x="880" y="500" width="20" height="20">
    <properties>
     <property name="health" value=""/>
     <property name="value" value="20"/>
    </properties>
   </object>
-  <object id="26" type="powerup" x="740" y="760" width="20" height="20">
+  <object id="26" name="Health" type="powerup" x="740" y="760" width="20" height="20">
    <properties>
     <property name="health" value=""/>
     <property name="value" value="20"/>
    </properties>
   </object>
-  <object id="27" type="powerup" x="100" y="40" width="20" height="20">
+  <object id="27" name="Shotgun" type="powerup" x="100" y="40" width="20" height="20">
    <properties>
-    <property name="weapon" value="8"/>
+    <property name="weapon" value="Shotgun"/>
    </properties>
   </object>
-  <object id="30" type="powerup" x="500" y="820" width="20" height="20">
+  <object id="30" name="Shotgun ammo" type="powerup" x="500" y="820" width="20" height="20">
    <properties>
-    <property name="ammo" value="8"/>
+    <property name="ammo" value="Shotgun"/>
     <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="31" type="powerup" x="340" y="780" width="20" height="20">
+  <object id="31" name="Shotgun" type="powerup" x="340" y="780" width="20" height="20">
    <properties>
-    <property name="weapon" value="8"/>
+    <property name="weapon" value="Shotgun"/>
    </properties>
   </object>
-  <object id="32" type="powerup" x="820" y="240" width="20" height="20">
+  <object id="32" name="Shotgun ammo" type="powerup" x="820" y="240" width="20" height="20">
    <properties>
-    <property name="ammo" value="8"/>
+    <property name="ammo" value="Shotgun"/>
     <property name="value" value="50"/>
    </properties>
   </object>
@@ -2605,63 +2599,31 @@
   <object id="48" type="enemySpawn" x="640" y="160" width="60" height="60"/>
   <object id="50" type="enemySpawn" x="560" y="740" width="80" height="60"/>
   <object id="52" type="enemySpawn" x="60" y="620" width="60" height="60"/>
-  <object id="53" type="powerup" x="140" y="400" width="26" height="7">
+  <object id="60" name="Hitscan_Shotgun" type="powerup" x="20" y="520" width="20" height="20">
    <properties>
-    <property name="weapon" value="2"/>
+    <property name="weapon" value="Hitscan_Shotgun"/>
    </properties>
   </object>
-  <object id="54" type="powerup" x="140" y="360" width="15" height="7">
+  <object id="61" name="Hitscan_Shotgun" type="powerup" x="60" y="520" width="20" height="20">
    <properties>
-    <property name="ammo" value="2"/>
+    <property name="weapon" value="Hitscan_Shotgun"/>
+   </properties>
+  </object>
+  <object id="62" name="Hitscan_Shotgun ammo" type="powerup" x="20" y="480" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Hitscan_Shotgun"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="55" type="powerup" x="140" y="420" width="26" height="7">
+  <object id="63" name="Hitscan_Shotgun ammo" type="powerup" x="60" y="480" width="20" height="20">
    <properties>
-    <property name="weapon" value="2"/>
-   </properties>
-  </object>
-  <object id="56" type="powerup" x="160" y="380" width="7.5" height="3.5">
-   <properties>
-    <property name="ammo" value="2"/>
+    <property name="ammo" value="Hitscan_Shotgun"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="57" type="powerup" x="60" y="340" width="20" height="40">
+  <object id="66" name="Hitscan_Uzi" type="powerup" x="520" y="520" width="20" height="20">
    <properties>
-    <property name="weapon" value="2"/>
-   </properties>
-  </object>
-  <object id="58" type="powerup" x="20" y="400" width="100" height="20">
-   <properties>
-    <property name="weapon" value="2"/>
-   </properties>
-  </object>
-  <object id="59" type="powerup" x="20" y="300" width="20" height="80">
-   <properties>
-    <property name="weapon" value="2"/>
-   </properties>
-  </object>
-  <object id="60" type="powerup" x="20" y="520" width="20" height="20">
-   <properties>
-    <property name="weapon" value="2"/>
-   </properties>
-  </object>
-  <object id="61" type="powerup" x="60" y="520" width="20" height="20">
-   <properties>
-    <property name="weapon" value="2"/>
-   </properties>
-  </object>
-  <object id="62" type="powerup" x="20" y="480" width="20" height="20">
-   <properties>
-    <property name="ammo" value="2"/>
-    <property name="value" value="40"/>
-   </properties>
-  </object>
-  <object id="63" type="powerup" x="60" y="480" width="20" height="20">
-   <properties>
-    <property name="ammo" value="2"/>
-    <property name="value" value="40"/>
+    <property name="weapon" value="Hitscan_Uzi"/>
    </properties>
   </object>
  </objectgroup>

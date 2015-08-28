@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.collision.Ray;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -594,5 +595,16 @@ public class SharedMethods {
         } else {
             return 1;
         }
+    }
+
+    //TODO inefficient lookup of weapon by name
+    public static int getWeaponID(HashMap<Integer,Weapon> weaponList, String name){
+        for(int weaponID:weaponList.keySet()){
+            Weapon w = weaponList.get(weaponID);
+            if(w.name.equals(name)){
+                return weaponID;
+            }
+        }
+        return -1;
     }
 }
