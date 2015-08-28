@@ -1502,7 +1502,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO nullpointer if our oldest state already has removed the entity in interpolation
         NetworkEntity e = interpFrom.entities.get(id);
         System.out.println("Removing entity:"+e);
+        /*
         projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bigbloodsplat"), e.getCenterX(), e.getCenterY()));
+        */
         authoritativeState.entities.remove(id);
         if(playerList.contains(id)){
             showMessage("PlayerID "+id+" removed.");

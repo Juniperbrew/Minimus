@@ -371,19 +371,17 @@ public class World implements EntityChangeListener{
                             if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
-                            if(target.getTeam() != projectile.team){
-                                if(projectile.knockback>0){
-                                    Vector2 knockback = new Vector2(projectile.knockback,0);
-                                    if(projectile.explosionKnockback){
-                                        Vector2 projectileCenter = new Vector2();
-                                        projectile.getHitbox().getBoundingRectangle().getCenter(projectileCenter);
-                                        float angle = Tools.getAngle(projectileCenter.x,projectileCenter.y,target.getCenterX(),target.getCenterY());
-                                        knockback.setAngle(angle);
-                                    }else{
-                                        knockback.setAngle(projectile.rotation);
-                                    }
-                                    knockbacks.add(new Knockback(target.id, knockback));
+                            if(projectile.knockback>0){
+                                Vector2 knockback = new Vector2(projectile.knockback,0);
+                                if(projectile.explosionKnockback){
+                                    Vector2 projectileCenter = new Vector2();
+                                    projectile.getHitbox().getBoundingRectangle().getCenter(projectileCenter);
+                                    float angle = Tools.getAngle(projectileCenter.x,projectileCenter.y,target.getCenterX(),target.getCenterY());
+                                    knockback.setAngle(angle);
+                                }else{
+                                    knockback.setAngle(projectile.rotation);
                                 }
+                                knockbacks.add(new Knockback(target.id, knockback));
                                 target.reduceHealth(projectile.damage,projectile.ownerID);
                             }
                         }
