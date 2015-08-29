@@ -982,7 +982,6 @@ public class World implements EntityChangeListener{
         npc.height = bounds.height;
         npc.width = bounds.width;
         npc.image = def.image;
-        npc.reduceHealth(10,-1);
         entityAIs.put(networkID, new EntityAI(npc, EntityAI.FOLLOWING_AND_SHOOTING, def.weapon, this));
 
         attackCooldown.put(networkID,new HashMap<Integer, Double>());
