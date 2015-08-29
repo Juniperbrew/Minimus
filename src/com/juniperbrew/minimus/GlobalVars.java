@@ -17,5 +17,6 @@ public class GlobalVars {
     public static int mapHeightTiles;
     public static int mapWidth;
     public static int mapHeight;
+    public static float mapScale;
     public static boolean[][] collisionMap;
 }

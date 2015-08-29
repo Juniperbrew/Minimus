@@ -160,6 +160,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     HashMap<Integer,Weapon> weaponList;
     HashMap<String,ProjectileDefinition> projectileList;
+    HashMap<String,EnemyDefinition> enemyList;
 
     float lastMouseX = -1;
     float lastMouseY = -1;

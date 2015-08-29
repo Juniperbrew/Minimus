@@ -27,7 +27,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,8 +47,8 @@ public class World implements EntityChangeListener{
 
     Set<Integer> playerList = new HashSet<>();
     Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
-    Map<Integer,HashMap<Integer,Integer>> playerAmmo = new HashMap<>();
-    Map<Integer,HashMap<Integer,Boolean>> playerWeapons = new HashMap<>();
+    Map<Integer,HashMap<Integer,Integer>> entityAmmo = new HashMap<>();
+    Map<Integer,HashMap<Integer,Boolean>> entityWeapons = new HashMap<>();
     Map<Integer,Integer> playerLives = new HashMap<>();
 
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
@@ -84,6 +83,7 @@ public class World implements EntityChangeListener{
     private final int ENEMY_SPAWN_DELAY = 1;
 
     HashMap<Integer,WaveDefinition> waveList;
+    HashMap<String,EnemyDefinition> enemyList;
     HashMap<Integer,Weapon> weaponList;
     HashMap<String,ProjectileDefinition> projectileList;
 
@@ -105,7 +105,7 @@ public class World implements EntityChangeListener{
 
     ArrayList<Rectangle> enemySpawnZones;
 
-   public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
+    public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
         this.mapLoader = mapLoader;
         this.batch = batch;
@@ -113,6 +113,7 @@ public class World implements EntityChangeListener{
         loadMaps();
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
+        enemyList = readEnemyList(weaponList);
         loadImages();
 
         changeMap(ConVars.get("sv_map"));
@@ -128,6 +129,7 @@ public class World implements EntityChangeListener{
         this.mapName = mapName;
         float mapScale = SharedMethods.getMapScale(map);
 
+        GlobalVars.mapScale = mapScale;
         GlobalVars.mapWidthTiles = map.getProperties().get("width",Integer.class);
         GlobalVars.mapHeightTiles = map.getProperties().get("height",Integer.class);
         GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
@@ -180,16 +182,8 @@ public class World implements EntityChangeListener{
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
                 Rectangle r = o.getRectangle();
                 MapProperties p = o.getProperties();
-                int aiType = -1;
-                int weapon = Integer.parseInt(p.get("weapon", String.class));
-                String image = p.get("image", String.class);
-                switch (p.get("aiType",String.class)){
-                    case "moving":aiType=EntityAI.MOVING; break;
-                    case "following":aiType=EntityAI.FOLLOWING; break;
-                    case "movingAndShooting":aiType=EntityAI.MOVING_AND_SHOOTING; break;
-                    case "followingAndShooting":aiType=EntityAI.FOLLOWING_AND_SHOOTING; break;
-                }
-                addNPC(r, aiType, weapon, image);
+                String enemy = p.get("enemy", String.class);
+                addNPC(enemyList.get(enemy), r);
             }
         }
     }
@@ -258,40 +252,6 @@ public class World implements EntityChangeListener{
         }
     }
 
-        /*
-    private void spawnNextCustomWave(){
-
-        WaveDefinition waveDef = waveList.get(wave+1);
-        if(waveDef!=null){
-            if(waveDef.map!=null){
-                changeMap(waveDef.map);
-            }
-            setWave(wave+1);
-
-            for(WaveDefinition.EnemyDefinition enemy:waveDef.enemies){
-                for (int i = 0; i < enemy.count; i++) {
-                    switch (enemy.aiType){
-                        case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
-                        case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
-                        case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
-                        case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
-                    }
-                }
-            }
-        }else{
-            spawnNextWave();
-        }
-
-    }
-*/
-    /*
-    private void spawnNextWave(){
-        setWave(wave + 1);
-        for (int i = 0; i < (wave*2)+4; i++) {
-            addRandomNPC();
-        }
-    }*/
-
     private void movePlayerToSpawn(int id){
         Rectangle spawnZone = getSpawnZone(map);
         ServerEntity e = entities.get(id);
@@ -332,6 +292,15 @@ public class World implements EntityChangeListener{
     private void updateEntities(float delta){
         for(EntityAI ai:entityAIs.values()){
             ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
+
+            if(attackCooldown.get(ai.entity.id)!=null){
+                Map<Integer,Double> cooldowns = attackCooldown.get(ai.entity.id);
+                for(int weaponslot : cooldowns.keySet()){
+                    double cd = cooldowns.get(weaponslot);
+                    cd -= (delta);
+                    cooldowns.put(weaponslot,cd);
+                }
+            }
         }
         Iterator<Knockback> iter = knockbacks.iterator();
         while(iter.hasNext()){
@@ -352,6 +321,7 @@ public class World implements EntityChangeListener{
         for(ServerEntity e:entities.values()){
             e.applyMovement();
         }
+
     }
 
     private void updateProjectiles(float delta){
@@ -485,17 +455,17 @@ public class World implements EntityChangeListener{
                             despawnPowerup(powerupID);
                         }
                     }else if(p.type == Powerup.AMMO){
-                        if(playerAmmo.get(playerID).get(p.typeModifier)!=null){
-                            int ammo = playerAmmo.get(playerID).get(p.typeModifier);
+                        if(entityAmmo.get(playerID).get(p.typeModifier)!=null){
+                            int ammo = entityAmmo.get(playerID).get(p.typeModifier);
                             ammo += p.value;
-                            playerAmmo.get(playerID).put(p.typeModifier,ammo);
+                            entityAmmo.get(playerID).put(p.typeModifier,ammo);
                             listener.ammoAddedChanged(playerID, p.typeModifier, p.value);
                             despawnPowerup(powerupID);
                         }
                     }else if(p.type == Powerup.WEAPON){
                         int weapon = p.typeModifier;
-                        if(playerWeapons.get(playerID).get(weapon)!=null&&playerWeapons.get(playerID).get(weapon)==false){
-                            playerWeapons.get(playerID).put(weapon,true);
+                        if(entityWeapons.get(playerID).get(weapon)!=null&& entityWeapons.get(playerID).get(weapon)==false){
+                            entityWeapons.get(playerID).put(weapon,true);
                             listener.weaponAdded(playerID,weapon);
                             despawnPowerup(powerupID);
                         }
@@ -583,10 +553,10 @@ public class World implements EntityChangeListener{
         }
 
         if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-            attackWithPlayer(id, e.slot1Weapon);
+            attackWithEntity(id, e.slot1Weapon);
         }
         if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-            attackWithPlayer(id, e.slot2Weapon);
+            attackWithEntity(id, e.slot2Weapon);
         }
 
         if(attackCooldown.get(id)!=null){
@@ -599,15 +569,16 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private void attackWithPlayer(int id, int weaponSlot){
+    public void attackWithEntity(int id, int weaponSlot){
+
         if(weaponList.get(weaponSlot)==null){
             return;
         }
-        if(attackCooldown.get(id).get(weaponSlot) > 0 || playerAmmo.get(id).get(weaponSlot) <= 0 || !playerWeapons.get(id).get(weaponSlot)){
+        if(attackCooldown.get(id).get(weaponSlot) > 0 || entityAmmo.get(id).get(weaponSlot) <= 0 || !entityWeapons.get(id).get(weaponSlot)){
             return;
         }else{
             attackCooldown.get(id).put(weaponSlot, weaponList.get(weaponSlot).cooldown);
-            playerAmmo.get(id).put(weaponSlot,playerAmmo.get(id).get(weaponSlot)-1);
+            entityAmmo.get(id).put(weaponSlot, entityAmmo.get(id).get(weaponSlot)-1);
             createAttack(id, weaponSlot);
         }
     }
@@ -680,6 +651,53 @@ public class World implements EntityChangeListener{
             ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
             projectiles.addAll(newProjectiles);
         }
+    }
+
+    private HashMap<String,EnemyDefinition> readEnemyList(HashMap<Integer,Weapon> weaponList){
+        File file = new File(Tools.getUserDataDirectory()+ File.separator+"enemylist.txt");
+        if(!file.exists()){
+            file = new File("resources"+File.separator+"defaultenemylist.txt");
+        }
+        System.out.println("Loading enemies from file:"+file);
+        HashMap<String,EnemyDefinition> enemies = new HashMap<>();
+        EnemyDefinition enemyDefinition = null;
+        String enemyName = null;
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
+                    continue;
+                }
+                if (line.charAt(0) == '{') {
+                    enemyDefinition = new EnemyDefinition();
+                    enemyDefinition.weapon = -1;
+                    continue;
+                }
+                if (line.charAt(0) == '}') {
+                    enemies.put(enemyName, enemyDefinition);
+                    enemyName = null;
+                    continue;
+                }
+                String[] splits = line.split("=");
+                if(splits[0].equals("name")){
+                    enemyName = splits[1];
+                }
+                if(splits[0].equals("weapon")){
+                    enemyDefinition.weapon = SharedMethods.getWeaponID(weaponList,splits[1]);
+                }
+                if(splits[0].equals("image")){
+                    enemyDefinition.image = splits[1];
+                }
+                if(splits[0].equals("health")){
+                    enemyDefinition.health = Integer.parseInt(splits[1]);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return enemies;
     }
 
     private HashMap<String,ProjectileDefinition> readProjectileList(){
@@ -866,8 +884,8 @@ public class World implements EntityChangeListener{
 
         int networkID = getNextNetworkID();
         playerList.add(networkID);
-        int width = ConVars.getInt("sv_npc_default_size");
-        int height = ConVars.getInt("sv_npc_default_size");
+        int width = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
+        int height = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
         Rectangle spawnZone = getSpawnZone(map);
         float x;
         float y;
@@ -880,22 +898,22 @@ public class World implements EntityChangeListener{
         }
 
         attackCooldown.put(networkID,new HashMap<Integer, Double>());
-        playerAmmo.put(networkID,new HashMap<Integer, Integer>());
-        playerWeapons.put(networkID,new HashMap<Integer, Boolean>());
+        entityAmmo.put(networkID, new HashMap<Integer, Integer>());
+        entityWeapons.put(networkID, new HashMap<Integer, Boolean>());
 
         for(int weaponslot: weaponList.keySet()){
             attackCooldown.get(networkID).put(weaponslot,-1d);
-            playerAmmo.get(networkID).put(weaponslot,0);
-            playerWeapons.get(networkID).put(weaponslot,false);
+            entityAmmo.get(networkID).put(weaponslot,0);
+            entityWeapons.get(networkID).put(weaponslot,false);
 
         }
         //Lots of ammo for primary weapon
-        playerWeapons.get(networkID).put(0,true);
-        playerAmmo.get(networkID).put(0,999999999);
+        entityWeapons.get(networkID).put(0,true);
+        entityAmmo.get(networkID).put(0,999999999);
         if(ConVars.getBool("sv_idkfa")){
             for(int weaponID : weaponList.keySet()){
-                playerWeapons.get(networkID).put(weaponID,true);
-                playerAmmo.get(networkID).put(weaponID,999999999);
+                entityWeapons.get(networkID).put(weaponID,true);
+                entityAmmo.get(networkID).put(weaponID,999999999);
             }
         }
 
@@ -917,8 +935,8 @@ public class World implements EntityChangeListener{
         assign.wave = wave;
         assign.weaponList = new HashMap<>(weaponList);
         assign.projectileList = new HashMap<>(projectileList);
-        assign.ammo = playerAmmo.get(networkID);
-        assign.weapons = playerWeapons.get(networkID);
+        assign.ammo = entityAmmo.get(networkID);
+        assign.weapons = entityWeapons.get(networkID);
 
         listener.playerAdded(c,assign);
     }
@@ -927,22 +945,9 @@ public class World implements EntityChangeListener{
         pendingEntityRemovals.add(id);
     }
 
-    public void addNPC(Rectangle bounds, int aiType, int weapon, String image){
-        System.out.println("Adding npc "+aiType+","+ weapon);
-
-        int networkID = getNextNetworkID();
-        ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,-1,this);
-        npc.height = bounds.height;
-        npc.width = bounds.width;
-        npc.image = image;
-        npc.reduceHealth(10,-1);
-        entityAIs.put(networkID, new EntityAI(npc, aiType, weapon, this));
-        addEntity(npc);
-    }
-
-    public void addNPC(int aiType, int weapon){
-        int width = ConVars.getInt("sv_npc_default_size");
-        int height = ConVars.getInt("sv_npc_default_size");
+    public void addNPC(EnemyDefinition def){
+        int width = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
+        int height = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
         float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH * -1, SPAWN_AREA_WIDTH);
         float x;
         float y;
@@ -967,11 +972,38 @@ public class World implements EntityChangeListener{
                 x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth + SPAWN_AREA_WIDTH);
             }
         }
-        addNPC(new Rectangle(x, y, width, height), aiType, weapon, "civilian");
+        addNPC(def, new Rectangle(x, y, width, height));
+    }
+
+    public void addNPC(EnemyDefinition def, Rectangle bounds){
+        System.out.println("Adding npc:"+def);
+        int networkID = getNextNetworkID();
+        ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,-1,def.health,this);
+        npc.height = bounds.height;
+        npc.width = bounds.width;
+        npc.image = def.image;
+        npc.reduceHealth(10,-1);
+        entityAIs.put(networkID, new EntityAI(npc, EntityAI.FOLLOWING_AND_SHOOTING, def.weapon, this));
+
+        attackCooldown.put(networkID,new HashMap<Integer, Double>());
+        entityAmmo.put(networkID, new HashMap<Integer, Integer>());
+        entityWeapons.put(networkID, new HashMap<Integer, Boolean>());
+
+        for(int weaponslot: weaponList.keySet()){
+            attackCooldown.get(networkID).put(weaponslot,-1d);
+            entityAmmo.get(networkID).put(weaponslot,0);
+            entityWeapons.get(networkID).put(weaponslot,false);
+        }
+        //Lots of ammo for weapon
+        entityWeapons.get(networkID).put(def.weapon,true);
+        entityAmmo.get(networkID).put(def.weapon,999999999);
+
+        addEntity(npc);
     }
 
     public void addRandomNPC(){
-        addNPC(MathUtils.random(0, 3), MathUtils.random(0, 2));
+        EnemyDefinition def = enemyList.values().toArray(new EnemyDefinition[enemyList.size()])[MathUtils.random(enemyList.size()-1)];
+        addNPC(def);
     }
 
     private boolean isInvulnerable(ServerEntity e){
@@ -1151,15 +1183,6 @@ public class World implements EntityChangeListener{
         listener.waveChanged(wave);
     }
 
-    private void spawnEnemy(WaveDefinition.EnemyDefinition enemy){
-        switch (enemy.aiType){
-            case "a": addNPC(EntityAI.MOVING,enemy.weapon); break;
-            case "b": addNPC(EntityAI.FOLLOWING,enemy.weapon); break;
-            case "c": addNPC(EntityAI.MOVING_AND_SHOOTING,enemy.weapon); break;
-            case "d": addNPC(EntityAI.FOLLOWING_AND_SHOOTING,enemy.weapon); break;
-        }
-    }
-
     public void removeAllNpcs(){
         for(int id:entityAIs.keySet()) {
             pendingEntityRemovals.add(id);
@@ -1205,6 +1228,10 @@ public class World implements EntityChangeListener{
         posChangedEntities.remove(networkID);
         teamChangedEntities.remove(networkID);
         rotationChangedEntities.remove(networkID);
+
+        attackCooldown.remove(networkID);
+        entityWeapons.remove(networkID);
+        entityAmmo.remove(networkID);
 
         if(playerList.remove(networkID)){
             listener.playerRemoved(networkID);

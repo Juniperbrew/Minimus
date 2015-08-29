@@ -332,10 +332,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             world.addRandomNPC();
         }
         pendingRandomNpcAdds = 0;
-        for (int i = 0; i < pendingFollowingNpcAdds; i++) {
-            world.addNPC(EntityAI.FOLLOWING,1);
-        }
-        pendingFollowingNpcAdds = 0;
         for (int i = 0; i < pendingRandomNpcRemovals; i++) {
             world.removeRandomNPC();
         }
@@ -408,15 +404,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     public void addAmmo(int id, int weapon, int amount){
-        int ammo = world.playerAmmo.get(id).get(weapon);
+        int ammo = world.entityAmmo.get(id).get(weapon);
         ammo += amount;
-        world.playerAmmo.get(id).put(weapon,ammo);
+        world.entityAmmo.get(id).put(weapon,ammo);
         Network.AddAmmo addAmmo = new Network.AddAmmo();
         addAmmo.weapon = weapon;
         addAmmo.amount = amount;
         sendTCP(playerList.get(id),addAmmo);
         Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
-        world.playerWeapons.get(id).put(weapon,true);
+        world.entityWeapons.get(id).put(weapon,true);
         weaponAdded.weapon = weapon;
         sendTCP(playerList.get(id),weaponAdded);
     }
@@ -664,7 +660,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             pendingRandomNpcAdds++;
         }
         if (character == 't') {
-            pendingFollowingNpcAdds += 10;
+            pendingRandomNpcAdds += 10;
         }
         if (character == 'c') {
             Network.GameClockCompare gameClockCompare = new Network.GameClockCompare();

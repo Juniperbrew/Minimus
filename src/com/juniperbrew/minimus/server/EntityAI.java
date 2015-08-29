@@ -39,6 +39,7 @@ public class EntityAI {
     Vector2 targetLocation;
     float destinationTimer;
     float destinationTimeLimit;
+    boolean targetUpdated;
 
     public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
         this.entity = entity;
@@ -86,6 +87,7 @@ public class EntityAI {
         }
         if(closestTarget!=null && Math.sqrt(closestDistance) < ConVars.getFloat("sv_npc_target_search_radius")){
             targetLocation = new Vector2(closestTarget.getCenterX(), closestTarget.getCenterY());
+            targetUpdated = true;
         }
 
         if(targetLocation!=null){
@@ -142,12 +144,10 @@ public class EntityAI {
     }
 
     private void shoot(){
-        if(System.nanoTime()-lastAttackDone < Tools.secondsToNano(attackDelay)){
-            return;
+        if(targetUpdated){
+            world.attackWithEntity(entity.id, weapon);
+            targetUpdated = false;
         }
-        lastAttackDone = System.nanoTime();
-        attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
-        world.createAttack(entity.id, weapon);
     }
 
     private void setDestination(float x, float y){
