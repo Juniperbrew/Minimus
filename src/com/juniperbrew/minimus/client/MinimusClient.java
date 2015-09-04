@@ -34,12 +34,9 @@ import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
-import com.juniperbrew.minimus.server.Knockback;
-import com.juniperbrew.minimus.server.ServerEntity;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
-import sun.awt.ScrollPaneWheelScroller;
 
 import java.awt.geom.Line2D;
 import java.io.File;
@@ -59,6 +56,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener {
 
     Client client;
+    @SuppressWarnings("FieldCanBeLocal")
     private int writeBuffer = 8192; //Default 8192
     private int objectBuffer = 8192; //Default 2048
     ShapeRenderer shapeRenderer;
@@ -88,7 +86,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private Network.FullEntityUpdate interpFrom;
     private Network.FullEntityUpdate interpTo;
 
-    private ConcurrentLinkedQueue pendingPackets = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Object> pendingPackets = new ConcurrentLinkedQueue<>();
 
     private HashMap<Integer,Powerup> powerups = new HashMap<>();
     ArrayList<Integer> playerList = new ArrayList<>();
@@ -123,9 +121,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int mapHeight;
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
-    SharedMethods sharedMethods;
 
-    Texture spriteSheet;
 
     Animation playerAnimation;
     float animationFrameTime = 0.15f;
@@ -134,7 +130,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Score score;
 
     HashMap<String,Sound> sounds = new HashMap<>();
-    //HashMap<String,Texture> textures = new HashMap<>();
     TextureAtlas atlas;
     HashMap<String,TextureRegion> textures = new HashMap<>();
     HashMap<String,Animation> animations = new HashMap<>();
@@ -160,7 +155,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     HashMap<Integer,Weapon> weaponList;
     HashMap<String,ProjectileDefinition> projectileList;
-    HashMap<String,EnemyDefinition> enemyList;
 
     float lastMouseX = -1;
     float lastMouseY = -1;
@@ -450,7 +444,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //We need to move player here so we can spawn the potential projectiles at correct location
         Entity player = stateSnapshot.get(playerID);
         if(player != null){
-            sharedMethods.applyInput(player,input);
+            SharedMethods.applyInput(player,input);
         }
 
         EnumSet<Enums.Buttons> buttons = input.buttons;
@@ -558,34 +552,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         addAttack(attack);
 
-        /*
-        if(weapon!=null){
-            if(weapon.projectile.hitscan){
-                for(Line2D.Float hitscan :sharedMethods.createHitscan(weapon,player.getCenterX(),player.getCenterY(),player.getRotation(),player.id,-1)){
-                    Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
-                    if(intersection!=null){
-                        hitscan.x2 = intersection.x;
-                        hitscan.y2 = intersection.y;
-                    }
-                    if(weapon.projectile.onDestroy!=null){
-                        Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(weapon.projectile.onDestroy), hitscan.x2, hitscan.y2, player.id, -1);
-                        p.ignoreMapCollision = true;
-                        projectiles.add(p);
-                    }
-                }
-            }else{
-                ArrayList<Projectile> newProjectiles = sharedMethods.createProjectile(atlas, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
-                projectiles.addAll(newProjectiles);
-            }
-
-            ArrayList<Projectile> newProjectiles = sharedMethods.createProjectile(atlas, weapon, player.getCenterX(), player.getCenterY(), player.getRotation(), player.id, -1);
-            projectiles.addAll(newProjectiles);
-
-            if(weapon.sound!=null){
-                sounds.get(weapon.sound).play(soundVolume);
-            }
-        }
-            */
     }
 
     private void runClientSidePrediction(HashMap<Integer, Entity> state){
@@ -609,7 +575,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            sharedMethods.applyInput(state.get(playerID),input);
+            SharedMethods.applyInput(state.get(playerID),input);
         }
     }
 
@@ -632,7 +598,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         double renderTime = clientTime-ConVars.getDouble("cl_interp");
 
         //Find between which two states renderTime is
-        ArrayList<Network.FullEntityUpdate> oldStates = new ArrayList<Network.FullEntityUpdate>();
+        ArrayList<Network.FullEntityUpdate> oldStates = new ArrayList<>();
         //The list is sorted starting with the oldest states, the first state we find that is newer than renderTime is thus our interpolation target
         for(Network.FullEntityUpdate state:stateHistory){
             if(state.serverTime>renderTime){
@@ -694,8 +660,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         interpEntity.setHealth(authorativeEntity.getHealth());
                     }
                     interpEntities.put(id, interpEntity);
-                }else{
-                    removeEntity(id);
                 }
             }else{
                 //For player position we use latest server position and apply clientside prediction on it later
@@ -724,7 +688,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private ArrayList<Network.UserInput> compressInputPacket(ArrayList<Network.UserInput> inputs){
         //System.out.println("Packing inputs:"+inputs.size());
-        ArrayList<Network.UserInput> packedInputs = new ArrayList<Network.UserInput>();
+        ArrayList<Network.UserInput> packedInputs = new ArrayList<>();
         Network.UserInput packedInput = null;
         for(Network.UserInput input:inputs){
             if(packedInput == null){
@@ -755,8 +719,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(pendingInputPacket.size() > 0) {
                 Network.UserInputs inputPacket = new Network.UserInputs();
                 if(ConVars.getBool("cl_compress_input")){
-                    ArrayList<Network.UserInput> packedInputs = compressInputPacket(pendingInputPacket);
-                    inputPacket.inputs = packedInputs;
+                    inputPacket.inputs = compressInputPacket(pendingInputPacket);
                 }else{
                     inputPacket.inputs = pendingInputPacket;
                 }
@@ -938,8 +901,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         texture = playerAnimation.getKeyFrame(playerAnimationState);
                     }
                     Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
-                    //TODO had to swap the width with height in draw call?????
-                    batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
+                    batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.width/2,e.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
                 }else{
                     TextureRegion texture;
 //                    if(fireAnimationTimers.get(e.id)>0){
@@ -963,8 +925,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         texture = playerAnimation.getKeyFrame(playerAnimationState);
                     }
                     Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
-                    //TODO had to swap the width with height in draw call?????
-                    batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.height,textureBounds.width,1,1,e.getRotation()+180,true);
+                    batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
                 }
                 //PSEUDO After rendering entity toggle aim weapon sprite to false
                 aimingWeapon.put(e.id,false);
@@ -1016,7 +977,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else{
             b.append("Empty");
         }
-        b.append(" ["+ ammo.get(weaponSlot)+"]");
+        b.append(" [").append(ammo.get(weaponSlot)).append("]");
         return b.toString();
     }
 
@@ -1206,6 +1167,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(character == 'l'){
             //Throw exception
+            @SuppressWarnings({"NumericOverflow", "UnusedDeclaration"})
             int kappa = 50/0;
         }
         if(character == 'i'){
@@ -1357,7 +1319,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         File soundFolder = new File("resources"+File.separator+"sounds");
         showMessage("Loading sounds from: " + soundFolder);
-        for (final File file : soundFolder.listFiles()) {
+        for (File file : soundFolder.listFiles()) {
             if (!file.isDirectory()) {
                 Sound sound = Gdx.audio.newSound(new FileHandle(file));
                 sounds.put(file.getName(), sound);
@@ -1535,16 +1497,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
         mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
-        GlobalVars.mapWidth = mapHeight;
-        GlobalVars.mapHeight = mapWidth;
+        GlobalVars.mapWidth = mapWidth;
+        GlobalVars.mapHeight = mapHeight;
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-
-        GlobalVars.mapWidth = mapHeight;
-        GlobalVars.mapHeight = mapWidth;
-
         GlobalVars.collisionMap = SharedMethods.createCollisionMap(map,GlobalVars.mapWidthTiles,GlobalVars.mapHeightTiles);
-
     }
 
     private void addEntity(Network.AddEntity addEntity){
@@ -1563,7 +1520,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void removeEntity(int id){
         //Entities will be removed from all states despite their remove time
         //TODO changed from only removing from latest state, might cause errors
-
         for(Network.FullEntityUpdate state : stateHistory){
             state.entities.remove(id);
         }
@@ -1593,12 +1549,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
-        ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon!=null){
             //PSEUDO Start timer for firing frame
             fireAnimationTimers.put(attack.id,weapon.cooldown/2d);
             if(weapon.projectile.hitscan){
-                for(Line2D.Float hitscan :sharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
+                for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
                     Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
                     if(intersection!=null){
                         hitscan.x2 = intersection.x;
@@ -1627,7 +1582,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                                 hitscan.x2 = i.x;
                                 hitscan.y2 = i.y;
                             }
-                            //TODO spawn blood here
                             projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bloodsplat"),hitscan.x2,hitscan.y2));
                         }
                     }
@@ -1642,7 +1596,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
                 }
             }else{
-                projectiles.addAll(sharedMethods.createProjectile(atlas, weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                projectiles.addAll(SharedMethods.createProjectile(atlas, weapon, attack.x, attack.y, attack.deg, attack.id, -1));
             }
 
             if(weapon.sound!=null){

@@ -54,7 +54,7 @@ public class ServerEntity extends Entity {
     }
 
     public void reduceHealth(int healthReduction, int sourceID){
-        if(!invulnerable){
+        if(!invulnerable&&getHealth()>0){
             super.setHealth(getHealth() - healthReduction);
             listener.healthChanged(id);
             if(getHealth()<=0){

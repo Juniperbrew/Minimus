@@ -206,7 +206,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             if(inputQueue.get(connection)!=null){
                 inputQueue.get(connection).addAll(inputPacket.inputs);
             }else{
-                ArrayList<Network.UserInput> list = new ArrayList<Network.UserInput>();
+                ArrayList<Network.UserInput> list = new ArrayList<>();
                 list.addAll(inputPacket.inputs);
                 inputQueue.put(connection, list);
             }
