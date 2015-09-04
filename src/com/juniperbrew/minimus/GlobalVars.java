@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 public class GlobalVars {
 
 
+    public static final int TIMEOUT = 0; //Default 12000
     public static final String mapFolder = "resources"+ File.separator+ "maps";
 
     public static int tileWidth;

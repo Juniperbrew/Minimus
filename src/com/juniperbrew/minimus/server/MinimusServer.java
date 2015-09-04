@@ -18,6 +18,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.ConsoleReader;
+import com.juniperbrew.minimus.GlobalVars;
 import com.juniperbrew.minimus.NetworkEntity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
@@ -147,6 +148,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Listener listener = new Listener(){
             public void connected(Connection connection){
                 StatusData dataUsage = new StatusData(connection, System.nanoTime(),ConVars.getInt("cl_log_interval_seconds"));
+                connection.setTimeout(GlobalVars.TIMEOUT);
                 connectionStatus.put(connection, dataUsage);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
                 Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
@@ -369,7 +371,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                     tickEndTime=System.nanoTime();
                 }
             }
-        });
+        },"WorldSimulation");
         thread.start();
     }
 

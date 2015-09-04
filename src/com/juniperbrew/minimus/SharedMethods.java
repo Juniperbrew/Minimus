@@ -19,7 +19,9 @@ import com.badlogic.gdx.math.collision.Ray;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -606,5 +608,19 @@ public class SharedMethods {
             }
         }
         return -1;
+    }
+
+    public static ArrayList<Integer> getEntitiesWithinRange(Collection<? extends NetworkEntity> entities, NetworkEntity origin, float range){
+        double squaredDistance = Math.pow(range,2);
+        ArrayList<Integer> entityIDs = new ArrayList<>();
+        for(NetworkEntity e:entities){
+            float distance = Tools.getSquaredDistance(origin.getCenterX(),origin.getCenterY(),e.getCenterX(),e.getCenterY());
+            if(distance<squaredDistance){
+                if(origin.id != e.id){
+                    entityIDs.add(e.id);
+                }
+            }
+        }
+        return entityIDs;
     }
 }

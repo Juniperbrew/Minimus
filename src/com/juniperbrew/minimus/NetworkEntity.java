@@ -165,7 +165,24 @@ public class NetworkEntity {
         return new Polygon(vertices);
     }
 
-    public String toString(){
-        return "ID:"+id+" X:"+x+" Y:"+y+" Width:"+width+" Height:"+height+" Health:"+health+"/"+maxHealth+" Image:"+image;
+    @Override
+    public String toString() {
+        return "NetworkEntity{" +
+                "id=" + id +
+                ", x=" + x +
+                ", y=" + y +
+                ", width=" + width +
+                ", height=" + height +
+                ", health=" + health +
+                ", maxHealth=" + maxHealth +
+                ", rotation=" + rotation +
+                ", slot1Weapon=" + slot1Weapon +
+                ", slot2Weapon=" + slot2Weapon +
+                ", team=" + team +
+                ", image='" + image + '\'' +
+                '}';
     }
+//    public String toString(){
+//        return "ID:"+id+" X:"+x+" Y:"+y+" Width:"+width+" Height:"+height+" Health:"+health+"/"+maxHealth+" Image:"+image;
+//    }
 }

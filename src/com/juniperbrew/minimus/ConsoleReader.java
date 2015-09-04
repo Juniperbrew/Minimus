@@ -30,7 +30,7 @@ public class ConsoleReader {
                     }
                 }
             }
-        }).start();
+        },"System.in to console").start();
 
     }
 

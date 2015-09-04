@@ -292,7 +292,6 @@ public class World implements EntityChangeListener{
     private void updateEntities(float delta){
         for(EntityAI ai:entityAIs.values()){
             ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
-
             if(attackCooldown.get(ai.entity.id)!=null){
                 Map<Integer,Double> cooldowns = attackCooldown.get(ai.entity.id);
                 for(int weaponslot : cooldowns.keySet()){
@@ -331,7 +330,7 @@ public class World implements EntityChangeListener{
             if(!projectile.hitscan) {
                 //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
                 for(int id:entities.keySet()){
-                    if(projectile.ownerID==id){
+                    if(projectile.ownerID==id&&!projectile.explosionKnockback){
                         continue;
                     }
                     if(projectile.entitiesHit.contains(id)){
@@ -343,7 +342,8 @@ public class World implements EntityChangeListener{
                             if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
-                            if(projectile.knockback>0){
+                            //Explosion self knockbacks apply on player but dont damage him
+                            if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
                                 Vector2 knockback = new Vector2(projectile.knockback,0);
                                 if(projectile.explosionKnockback){
                                     Vector2 projectileCenter = new Vector2();
@@ -354,7 +354,9 @@ public class World implements EntityChangeListener{
                                     knockback.setAngle(projectile.rotation);
                                 }
                                 knockbacks.add(new Knockback(target.id, knockback));
-                                target.reduceHealth(projectile.damage,projectile.ownerID);
+                                if(projectile.ownerID!=id){
+                                    target.reduceHealth(projectile.damage,projectile.ownerID);
+                                }
                             }
                         }
                         projectile.entitiesHit.add(target.id);
