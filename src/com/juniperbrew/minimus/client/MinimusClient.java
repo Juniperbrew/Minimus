@@ -21,6 +21,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
@@ -47,7 +48,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -80,7 +80,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     long lastAuthoritativeStateReceived;
 
     //This is what we render
-    private HashMap<Integer,Entity> stateSnapshot = new HashMap<>();
+    //private HashMap<Integer,ClientEntity> stateSnapshot = new HashMap<>();
+    private HashMap<Integer,ClientEntity> entities = new HashMap<>();
+    private PlayerClientEntity player;
 
     //StateSnapshot is an interpolation between these two states
     private Network.FullEntityUpdate interpFrom;
@@ -92,16 +94,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     ArrayList<Integer> playerList = new ArrayList<>();
 
     int currentWave;
-    int playerID = -1;
-    int slot1Weapon = 0;
-    int slot2Weapon = 1;
-    float playerAnimationState;
-    HashMap<Integer,Float> entityAnimationStateTimes = new HashMap<>();
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
-    Map<Integer,Double> cooldowns = new HashMap<>();
-    Map<Integer,Integer> ammo;
-    Map<Integer,Boolean> weapons;
+    private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
 
     long lastPingRequest;
     long renderStart;
@@ -109,7 +104,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     long clientStartTime;
 
     String serverIP;
-    
+
     StatusData statusData;
     ClientStatusFrame statusFrame;
     ConsoleFrame consoleFrame;
@@ -122,8 +117,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     ByteBuffer buffer = ByteBuffer.allocate(objectBuffer);
 
-
-    Animation playerAnimation;
+    //Animation playerAnimation;
     float animationFrameTime = 0.15f;
     SpriteBatch batch;
 
@@ -160,10 +154,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     float lastMouseY = -1;
 
     Line2D.Float tracer;
-    //PSEUDO fire weapon timer
-    HashMap<Integer,Double> fireAnimationTimers = new HashMap<>();
-    //PSEUDO boolean aimingWeapon;
-    HashMap<Integer,Boolean> aimingWeapon = new HashMap<>();
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -179,7 +169,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         statusFrame = new ClientStatusFrame(statusData);
         joinServer();
     }
-    
+
     @Override
     public void create() {
         if(ConVars.getBool("cl_auto_send_errorlogs")){
@@ -206,9 +196,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         loadSounds();
         loadTextures();
 
-        playerAnimation = new Animation(animationFrameTime,atlas.findRegions("rambo_pistol"));
-        playerAnimation.setPlayMode(Animation.PlayMode.LOOP);
-
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.setVolume(musicVolume);
@@ -220,10 +207,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Network.FullEntityUpdate fullUpdate = (Network.FullEntityUpdate) object;
             addServerState(fullUpdate);
             showMessage("Received full update");
-            for(int id : fullUpdate.entities.keySet()){
-                entityAdded(id);
+            for(int id:fullUpdate.entities.keySet()){
+                if(!entities.containsKey(id)){
+                    addEntity(fullUpdate.entities.get(id));
+                }
             }
-
         }else if(object instanceof Network.EntityPositionUpdate){
             Network.EntityPositionUpdate update = (Network.EntityPositionUpdate) object;
             if(authoritativeState!=null) {
@@ -258,14 +246,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.AddEntity){
             Network.AddEntity addEntity = (Network.AddEntity) object;
             showMessage("Adding entity " + addEntity.entity.id);
-            addEntity(addEntity);
+            addEntity(addEntity.entity);
         }else if(object instanceof Network.RemoveEntity){
             Network.RemoveEntity removeEntity = (Network.RemoveEntity) object;
             removeEntity(removeEntity.networkID);
         }else if(object instanceof Network.AssignEntity){
-            showMessage("Assigning entity");
             Network.AssignEntity assign = (Network.AssignEntity) object;
-            setPlayerID(assign.networkID);
+            showMessage("Assigning entity "+assign.networkID+" for player.");
+            Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+assign.networkID+"]");
             ConVars.set("sv_player_velocity", assign.velocity);
 
             loadMap(assign.mapName);
@@ -276,17 +264,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             currentWave = assign.wave;
             weaponList = assign.weaponList;
             projectileList = assign.projectileList;
-            ammo = assign.ammo;
-            weapons = assign.weapons;
+            player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
             for(int id : playerList){
-                showMessage("Adding id " + id + " to score");
+                showMessage("Adding entity " + id + " to score");
                 score.addPlayer(id);
             }
-            for(int weaponslot: weaponList.keySet()){
-                cooldowns.put(weaponslot,-1d);
-            }
-            fireAnimationTimers.put(assign.networkID,0d);
-            aimingWeapon.put(assign.networkID,false);
 
         }else if(object instanceof Network.WaveChanged){
             Network.WaveChanged waveChanged = (Network.WaveChanged) object;
@@ -309,22 +291,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             changeMap(mapChange);
         }else if(object instanceof Network.AddAmmo){
             Network.AddAmmo addAmmo = (Network.AddAmmo) object;
-            int a = ammo.get(addAmmo.weapon);
+            int a = player.ammo.get(addAmmo.weapon);
             a += addAmmo.amount;
-            ammo.put(addAmmo.weapon,a);
+            player.ammo.put(addAmmo.weapon,a);
         }else if(object instanceof Network.WeaponAdded){
             Network.WeaponAdded weaponAdded = (Network.WeaponAdded) object;
-            weapons.put(weaponAdded.weapon,true);
+            player.weapons.put(weaponAdded.weapon,true);
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
             ProjectileDefinition def = projectileList.get(spawnProjectile.projectileName);
-            Projectile p = SharedMethods.createProjectile(atlas,def,spawnProjectile.x,spawnProjectile.y,spawnProjectile.ownerID,spawnProjectile.team);
-            projectiles.add(p);
+            projectiles.add(SharedMethods.createStationaryProjectile(def, spawnProjectile.x, spawnProjectile.y,
+                    spawnProjectile.ownerID, spawnProjectile.team));
             if(def.sound!=null){
                 playSoundInLocation(sounds.get(def.sound),spawnProjectile.x,spawnProjectile.y);
             }
         }
-
 
         if(object instanceof String){
             String command = (String) object;
@@ -336,14 +317,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         loadMap(mapChange.mapName);
         powerups = mapChange.powerups;
         projectiles.clear();
-    }
-
-    private float getAnimationState(int id){
-        if(entityAnimationStateTimes.containsKey(id)){
-            return entityAnimationStateTimes.get(id);
-        }else{
-            return animationFrameTime*3;
-        }
+        particles.clear();
     }
 
     private void doLogic(float delta){
@@ -361,39 +335,45 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             handlePacket(o);
         }
 
-        playerAnimationState += delta;
-        for(int id : entityAnimationStateTimes.keySet()){
-            entityAnimationStateTimes.put(id,entityAnimationStateTimes.get(id)+delta);
-            //PSEUDO Decrement fire frame timer
-            fireAnimationTimers.put(id,fireAnimationTimers.get(id)-delta);
-        }
-        //PSEUDO make enemies ready their weapon when they get close
-        //FIXME this vision goes through walls
-        NetworkEntity player = stateSnapshot.get(playerID);
-        ArrayList<Integer> entityIDs = SharedMethods.getEntitiesWithinRange(stateSnapshot.values(), player, ConVars.getFloat("sv_npc_target_search_radius"));
-        for(int id : entityIDs){
-            aimingWeapon.put(id,true);
+        for(ClientEntity e : entities.values()) {
+            e.fireAnimationTimer -= delta;
+            e.animationState += delta;
         }
 
-        for(int weaponslot : cooldowns.keySet()){
-            double cd = cooldowns.get(weaponslot);
-            cd -= delta;
-            cooldowns.put(weaponslot,cd);
+        /*
+        double squaredDistance = Math.pow(ConVars.getFloat("sv_npc_target_search_radius"),2);
+        ArrayList<ClientEntity> entitiesInRange = new ArrayList<>();
+        for(ClientEntity e : entities.values()){
+            e.fireAnimationTimer -= delta;
+            e.animationState += delta;
+            float distance = Tools.getSquaredDistance(player.getCenterX(),player.getCenterY(),e.getCenterX(),e.getCenterY());
+            if(distance<squaredDistance){
+                if(!playerList.contains(e.getID())){
+                    entitiesInRange.add(e);
+                }
+            }
         }
+
+        //Make enemies ready their weapon when they get close
+        //FIXME this vision goes through walls
+        for(ClientEntity e: entitiesInRange){
+            e.aimingWeapon = true;
+        }
+        */
+
+        player.updateCooldowns(delta);
 
         sendInputPackets();
         updateProjectiles(delta);
+        updateParticles(delta);
 
         //Dont pollInput or create snapshot if we have no state from server
         if (authoritativeState != null){
-            if(stateSnapshot.get(playerID)!=null){
-                pollInput((short) (delta*1000));
+            if(player!=null){
+                pollInput(delta);
             }
             createStateSnapshot(getClientTime());
-        }
-
-        if(stateSnapshot!=null){
-            statusData.setEntityCount(stateSnapshot.size());
+            statusData.setEntityCount(entities.size());
         }
         statusData.setFps(Gdx.graphics.getFramesPerSecond());
         statusData.setServerTime(lastServerTime);
@@ -403,7 +383,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         statusFrame.update();
     }
 
-    private void pollInput(short delta){
+    private void updateParticles(float delta){
+        Iterator<Particle> iter = particles.iterator();
+        while(iter.hasNext()){
+            Particle p = iter.next();
+            p.update(delta);
+            if(p.destroyed){
+                iter.remove();
+            }
+        }
+    }
+
+    private void pollInput(float delta){
+
         float mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
         float mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
         if(lastMouseX==-1&&lastMouseY==-1){
@@ -415,12 +407,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 && !buttons.contains(Enums.Buttons.S)
                 && !buttons.contains(Enums.Buttons.D)
                 && !autoWalk){
-            playerAnimationState = 0;
+            player.animationState = 0;
         }
         if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
             int inputRequestID = getNextInputRequestID();
             Network.UserInput input = new Network.UserInput();
-            input.msec = delta;
+            input.msec = (short) (delta*1000);
             input.buttons = buttons.clone();
             if(mouse1Pressed) input.buttons.add(Enums.Buttons.MOUSE1);
             if(mouse2Pressed) input.buttons.add(Enums.Buttons.MOUSE2);
@@ -442,7 +434,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void processClientInput(Network.UserInput input){
 
         //We need to move player here so we can spawn the potential projectiles at correct location
-        Entity player = stateSnapshot.get(playerID);
         if(player != null){
             SharedMethods.applyInput(player,input);
         }
@@ -451,96 +442,95 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         if(buttons.contains(Enums.Buttons.NUM1)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 0;
+                player.slot2Weapon = 0;
             }else{
-                slot1Weapon = 0;
+                player.slot1Weapon = 0;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM2)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 1;
+                player.slot2Weapon = 1;
             }else{
-                slot1Weapon = 1;
+                player.slot1Weapon = 1;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM3)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 2;
+                player.slot2Weapon = 2;
             }else{
-                slot1Weapon = 2;
+                player.slot1Weapon = 2;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM4)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 3;
+                player.slot2Weapon = 3;
             }else{
-                slot1Weapon = 3;
+                player.slot1Weapon = 3;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM5)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 4;
+                player.slot2Weapon = 4;
             }else{
-                slot1Weapon = 4;
+                player.slot1Weapon = 4;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM6)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 5;
+                player.slot2Weapon = 5;
             }else{
-                slot1Weapon = 5;
+                player.slot1Weapon = 5;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM7)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 6;
+                player.slot2Weapon = 6;
             }else{
-                slot1Weapon = 6;
+                player.slot1Weapon = 6;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM8)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 7;
+                player.slot2Weapon = 7;
             }else{
-                slot1Weapon = 7;
+                player.slot1Weapon = 7;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM9)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 8;
+                player.slot2Weapon = 8;
             }else{
-                slot1Weapon = 8;
+                player.slot1Weapon = 8;
             }
         }
         if(buttons.contains(Enums.Buttons.NUM0)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                slot2Weapon = 9;
+                player.slot2Weapon = 9;
             }else{
-                slot1Weapon = 9;
+                player.slot1Weapon = 9;
             }
         }
         if(buttons.contains(Enums.Buttons.MOUSE1)){
-            playerAttack(stateSnapshot.get(playerID), slot1Weapon);
+            playerAttack(player.slot1Weapon);
             mouse1Pressed = false;
         }
         if(buttons.contains(Enums.Buttons.MOUSE2)){
-            playerAttack(stateSnapshot.get(playerID), slot2Weapon);
+            playerAttack(player.slot2Weapon);
             mouse2Pressed = false;
         }
     }
 
-    private void playerAttack(NetworkEntity player, int weaponSlot){
-        //PSEUDO Toggle aim weapon sprite to true
-        aimingWeapon.put(playerID,true);
+    private void playerAttack(int weaponSlot){
+        player.aimingWeapon = true;
         if(weaponList.get(weaponSlot)==null){
             return;
         }
 
-        if(cooldowns.get(weaponSlot)>0||ammo.get(weaponSlot)<=0||!weapons.get(weaponSlot)){
+        if(player.cooldowns.get(weaponSlot)>0||player.ammo.get(weaponSlot)<=0||!player.weapons.get(weaponSlot)){
             return;
         }
-        cooldowns.put(weaponSlot,weaponList.get(weaponSlot).cooldown);
-        ammo.put(weaponSlot,ammo.get(weaponSlot)-1);
+        player.cooldowns.put(weaponSlot,weaponList.get(weaponSlot).cooldown);
+        player.ammo.put(weaponSlot,player.ammo.get(weaponSlot)-1);
         //TODO Ignoring projectile team for now
 
         Network.EntityAttacking attack = new Network.EntityAttacking();
@@ -551,12 +541,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attack.weapon = weaponSlot;
 
         addAttack(attack);
-
     }
 
-    private void runClientSidePrediction(HashMap<Integer, Entity> state){
+    private void runClientSidePrediction(HashMap<Integer, ClientEntity> state){
 
-        if(playerID==-1){
+        if(player==null){
             inputQueue.clear();
         }
 
@@ -575,7 +564,30 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            SharedMethods.applyInput(state.get(playerID),input);
+            SharedMethods.applyInput(state.get(player.id),input);
+        }
+    }
+
+    private void updateNetworkedState(HashMap<Integer,NetworkEntity> interpolatedStates){
+        for(int id:entities.keySet()){
+            if(id==player.id) {
+                if (!(entities.get(id) instanceof PlayerClientEntity)) {
+                    showMessage("Took player control of entity " + id);
+                    entities.put(id, player);
+                }
+            }
+            if(interpolatedStates.containsKey(id)){
+                entities.get(id).setNetworkedState(interpolatedStates.get(id));
+            }else{
+                showMessage("Couldn't find entity "+id+" in state update");
+            }
+            NetworkEntity e= authoritativeState.entities.get(id);
+            if(e!=null){
+                //Here we update the fields that are not interpolated
+                ClientEntity old = entities.get(id);
+                old.setHealth(e.health);
+                old.setTeam(e.team);
+            }
         }
     }
 
@@ -584,14 +596,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //printStateHistory();
         //If interp delay is 0 we simply copy the latest authorative state and run clientside prediction on that
         if(ConVars.getDouble("cl_interp") <= 0){
-            HashMap<Integer, Entity> authoritativeStateEntities = new HashMap<>();
+            HashMap<Integer, NetworkEntity> authoritativeStateEntities = new HashMap<>();
             for(int id : authoritativeState.entities.keySet()){
                 NetworkEntity e = authoritativeState.entities.get(id);
-                Entity entityCopy = new Entity(e);
+                NetworkEntity entityCopy = new NetworkEntity (e);
                 authoritativeStateEntities.put(id,entityCopy);
             }
-            runClientSidePrediction(authoritativeStateEntities);
-            stateSnapshot = authoritativeStateEntities;
+            //With no interpolation we dont need the state history
+            stateHistory.clear();
+            updateNetworkedState(authoritativeStateEntities);
+            runClientSidePrediction(entities);
             return;
         }
 
@@ -636,54 +650,49 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             //System.out.println("Interp alpha:"+interpAlpha);
 
-            HashMap<Integer, Entity> interpEntities = interpolateStates(interpFrom, interpTo, interpAlpha);
-            runClientSidePrediction(interpEntities);
-            stateSnapshot = interpEntities;
+            HashMap<Integer, NetworkEntity> interpEntities = interpolateStates(interpFrom, interpTo, interpAlpha);
+            updateNetworkedState(interpEntities);
+            runClientSidePrediction(entities);
         }
     }
 
-    private HashMap<Integer, Entity> interpolateStates(Network.FullEntityUpdate from, Network.FullEntityUpdate to, double alpha){
-        HashMap<Integer, Entity> interpEntities = new HashMap<>();
+    private HashMap<Integer, NetworkEntity> interpolateStates(Network.FullEntityUpdate from, Network.FullEntityUpdate to, double alpha){
+        HashMap<Integer, NetworkEntity> interpEntities = new HashMap<>();
         //FIXME if interpolation destination is missing entity we need to remove it from result
         for(int id: from.entities.keySet()){
-            if(id != playerID) {
-                NetworkEntity fromPos = from.entities.get(id);
-                NetworkEntity toPos = to.entities.get(id);
-                Network.Position interpPos = interpolate(fromPos, toPos, alpha);
+            if(id != player.id) {
+                NetworkEntity fromEntity = from.entities.get(id);
+                NetworkEntity toEntity = to.entities.get(id);
                 //System.out.println("Interpolating from ("+fromPos.x+","+fromPos.y+") to ("+toPos.x+","+toPos.y+") Result ("+interpPos.x+","+interpPos.y+")");
-                //If interpPos null means entity missing from next state
-                if (interpPos != null){
-                    Entity interpEntity = new Entity(fromPos);
-                    interpEntity.moveTo(interpPos.x,interpPos.y);
-                    NetworkEntity authorativeEntity = authoritativeState.entities.get(id);
-                    if(authorativeEntity != null){
-                        interpEntity.setHealth(authorativeEntity.getHealth());
-                    }
+                //If toEntity null means entity missing from next state
+                if (toEntity != null){
+                    Vector2 interpPos = interpolatePosition(fromEntity, toEntity, alpha);
+                    NetworkEntity interpEntity = new NetworkEntity(fromEntity);
+                    interpEntity.x = interpPos.x;
+                    interpEntity.y = interpPos.y;
+                    interpEntity.rotation = interpolateRotation(fromEntity, toEntity, alpha);
                     interpEntities.put(id, interpEntity);
                 }
             }else{
                 //For player position we use latest server position and apply clientside prediction on it later
                 //FIXME copy this value or else you'll be modifying the authoritative state
-                NetworkEntity player = authoritativeState.entities.get(playerID);
-                Entity playerCopy = new Entity(player);
+                NetworkEntity playerE = authoritativeState.entities.get(player.id);
+                NetworkEntity playerCopy = new NetworkEntity(playerE);
                 interpEntities.put(id, playerCopy);
             }
         }
         return interpEntities;
     }
 
-    private Network.Position interpolate(NetworkEntity from, NetworkEntity to, double alpha){
-        if(to == null){
-            //If entity has dissapeared in next state we simply remove it without interpolation
-            return null;
-        }
-        Network.Position interpPos = new Network.Position();
-        if(from.getX()==to.getX()&&from.getY()==to.getY()){
-            entityAnimationStateTimes.put(to.id,0f);
-        }
-        interpPos.x = (float)(from.getX()+(to.getX()-from.getX())*alpha);
-        interpPos.y = (float)(from.getY()+(to.getY()-from.getY())*alpha);
+    private Vector2 interpolatePosition(NetworkEntity from, NetworkEntity to, double alpha){
+        Vector2 interpPos = new Vector2();
+        interpPos.x = (float)(from.x+(to.x-from.x)*alpha);
+        interpPos.y = (float)(from.y+(to.y-from.y)*alpha);
         return interpPos;
+    }
+
+    private int interpolateRotation(NetworkEntity from, NetworkEntity to, double alpha){
+        return (int) (from.rotation+(to.rotation-from.rotation)*alpha);
     }
 
     private ArrayList<Network.UserInput> compressInputPacket(ArrayList<Network.UserInput> inputs){
@@ -735,28 +744,33 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         for(Projectile projectile:projectiles){
             projectile.update(delta);
             if(!projectile.noCollision) {
-                for (int id : stateSnapshot.keySet()) {
+                for (int id : entities.keySet()) {
                     if (id == projectile.ownerID) {
                         continue;
                     }
                     if(projectile.entitiesHit.contains(id)){
                         continue;
                     }
-                    NetworkEntity target = stateSnapshot.get(id);
+                    ClientEntity target = entities.get(id);
                     if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(),target.getGdxBounds())){
                         if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
                             if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
-                            if (id == playerID) {
+                            if (id == player.id) {
                                 playSoundInLocation(sounds.get("hurt.ogg"),target.getCenterX(),target.getCenterY());
                             } else {
                                 playSoundInLocation(sounds.get("hit.ogg"),target.getCenterX(),target.getCenterY());
                             }
                             Vector2 center = new Vector2();
                             projectile.getHitbox().getBoundingRectangle().getCenter(center);
-                            projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bloodsplat"),center.x,center.y));
-                            projectile.entitiesHit.add(target.id);
+                            projectile.entitiesHit.add(target.getID());
+                            particles.add(SharedMethods.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y));
+                            if(projectile.explosionKnockback){
+                                particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x,center.y,target.getCenterX(),target.getCenterY())+MathUtils.random(-10,10)),MathUtils.random(60, 100)));
+                            }else{
+                                particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),center.x, center.y,projectile.rotation+MathUtils.random(-10,10),MathUtils.random(60,100)));
+                            }
                         }
                     }
                 }
@@ -773,10 +787,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 //TODO server will create the onDestroy projectile in any case and send it to client if its networked
                 if(projectile.onDestroy!=null && projectile.entitiesHit.isEmpty()){
                     ProjectileDefinition def = projectileList.get(projectile.onDestroy);
-                    Vector2 center = new Vector2();
-                    projectile.getHitbox().getBoundingRectangle().getCenter(center);
-                    Projectile p = SharedMethods.createProjectile(atlas, def,center.x,center.y,projectile.ownerID,projectile.team);
-                    projectiles.add(p);
+                    if(def.type == ProjectileDefinition.PARTICLE){
+                        Vector2 center = new Vector2();
+                        projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                        particles.add(SharedMethods.createStationaryParticle(def, center.x, center.y));
+                    }
                 }
             }
         }
@@ -809,141 +824,109 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
         Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 
-        if(stateSnapshot !=null){
+        centerCameraOnPlayer();
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        batch.setProjectionMatrix(camera.combined);
 
-            centerCameraOnPlayer();
-            shapeRenderer.setProjectionMatrix(camera.combined);
-            batch.setProjectionMatrix(camera.combined);
+        if(mapRenderer!=null){
+            batch.setColor(1,1,1,1);
+            mapRenderer.setView(camera);
+            mapRenderer.render();
+        }
 
-            if(mapRenderer!=null){
+        if(ConVars.getBool("cl_show_debug")) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(1, 0, 0, 1); //red
+            for (NetworkEntity e : interpFrom.entities.values()) {
+                shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
+            }
+            shapeRenderer.setColor(0, 1, 0, 1); //green
+            for (NetworkEntity e : interpTo.entities.values()) {
+                shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
+            }
+            shapeRenderer.setColor(0, 0, 1, 1); //blue
+            for (NetworkEntity e : authoritativeState.entities.values()) {
+                shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
+            }
+            shapeRenderer.setColor(1, 1, 1, 1); //white
+            for (NetworkEntity e : authoritativeState.entities.values()) {
+                shapeRenderer.rect(e.x, e.y, e.width, e.height);
+            }
+            shapeRenderer.end();
+        }
+
+        batch.begin();
+        for(Powerup p : powerups.values()){
+            if(p.type==Powerup.HEALTH){
                 batch.setColor(1,1,1,1);
-                mapRenderer.setView(camera);
-                mapRenderer.render();
-            }
-
-            if(ConVars.getBool("cl_show_debug")) {
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                shapeRenderer.setColor(1, 0, 0, 1); //red
-                for (NetworkEntity e : interpFrom.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
+                batch.draw(getTexture("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+            }else if(p.type==Powerup.AMMO){
+                //TODO clean up these nullchecks
+                if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
+                    TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
+                    batch.setColor(1, 1, 1, 1);
+                    batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
+                    continue;
                 }
-                shapeRenderer.setColor(0, 1, 0, 1); //green
-                for (NetworkEntity e : interpTo.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
-                }
-                shapeRenderer.setColor(0, 0, 1, 1); //blue
-                for (NetworkEntity e : authoritativeState.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
-                }
-                shapeRenderer.setColor(1, 1, 1, 1); //white
-                for (NetworkEntity e : authoritativeState.entities.values()) {
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
-                }
-                shapeRenderer.end();
-            }
-
-            batch.begin();
-            for(Powerup p : powerups.values()){
-                if(p.type==Powerup.HEALTH){
+                batch.setColor(1, 0, 0, 1);
+                batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+            }else if(p.type==Powerup.WEAPON){
+                //TODO clean up these nullchecks
+                if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
+                    TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
                     batch.setColor(1,1,1,1);
-                    batch.draw(getTexture("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-                }else if(p.type==Powerup.AMMO){
-                    //TODO clean up these nullchecks
-                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
-                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
-                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
-                        batch.setColor(1, 1, 1, 1);
-                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
-                        continue;
-                    }
-                    batch.setColor(1, 0, 0, 1);
-                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-                }else if(p.type==Powerup.WEAPON){
-                    //TODO clean up these nullchecks
-                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
-                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
-                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
-                        batch.setColor(1,1,1,1);
-                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
-                        continue;
-                    }
-                    batch.setColor(0, 0, 1, 1);
-                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
+                    continue;
                 }
+                batch.setColor(0, 0, 1, 1);
+                batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
             }
-            batch.end();
+        }
+        batch.end();
 
-            //Render entities
-            batch.begin();
-            for(int id: stateSnapshot.keySet()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
-                NetworkEntity e = stateSnapshot.get(id);
-                float health = 1-((float)e.getHealth()/e.maxHealth);
-                float healthbarWidth = e.width+20;
-                float healthbarHeight = healthbarWidth/7;
-                float healthbarXOffset =- healthbarHeight;
-                float healthbarYOffset = e.width+10;
-                float x = e.getX();
-                float y = e.getY();
-                batch.setColor(1,1,1,1);
-                if(e.id==playerID){
-                    //Cast player position to int because we are centering the camera using casted values too
-                    x = (int)e.getX();
-                    y = (int)e.getY();
-                    TextureRegion texture;
-                    if(fireAnimationTimers.get(e.id)>0){
-                        //PSEUDO If fire animation timer still running use firing frame
-                        texture = getTexture("rambo_pistol_attack_fire");
-                    }else if(aimingWeapon.get(e.id)){
-                        //PSEUDO Else if aim weapon is true render aim weapon frame
-                        texture = getTexture("rambo_pistol_attack_aim");
-                    }else{
-                        //PSEUDO Else render normal sprite
-                        texture = playerAnimation.getKeyFrame(playerAnimationState);
-                    }
-                    Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
-                    batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.width/2,e.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
-                }else{
-                    TextureRegion texture;
-//                    if(fireAnimationTimers.get(e.id)>0){
-//                        //PSEUDO If fire animation timer still running use firing frame
-//                        texture = getTexture(e.image+"_attack_fire");
-//                    }else if(aimingWeapon){
-//                        //PSEUDO Else if aim weapon is true render aim weapon frame
-//                        texture = getTexture(e.image+"_attack_aim");
-//                    }else{
-//                        //PSEUDO Else render normal sprite
-//                        texture = getTexture(e.image,e.id);
-//                    }
-                    if(fireAnimationTimers.get(e.id)>0){
-                        //PSEUDO If fire animation timer still running use firing frame
-                        texture = getTexture("rambo_pistol_attack_fire");
-                    }else if(aimingWeapon.get(e.id)){
-                        //PSEUDO Else if aim weapon is true render aim weapon frame
-                        texture = getTexture("rambo_pistol_attack_aim");
-                    }else{
-                        //PSEUDO Else render normal sprite
-                        texture = playerAnimation.getKeyFrame(playerAnimationState);
-                    }
-                    Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
-                    batch.draw(texture,textureBounds.x,textureBounds.y,e.width/2,e.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
-                }
-                //PSEUDO After rendering entity toggle aim weapon sprite to false
-                aimingWeapon.put(e.id,false);
-                batch.setColor(0,1,0,1);
-                batch.draw(getTexture("blank", e.id), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
-                batch.setColor(1,0,0,1);
-                float healthWidth = healthbarWidth*health;
-                batch.draw(getTexture("blank",e.id), x+healthbarXOffset,y+healthbarYOffset,healthWidth,healthbarHeight);
+        //Render entities
+        batch.begin();
+        for(ClientEntity e: entities.values()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
+            float healthbarWidth = e.getWidth()+20;
+            float healthbarHeight = healthbarWidth/7;
+            float healthbarXOffset =- healthbarHeight;
+            float healthbarYOffset = e.getWidth()+10;
+            float x = e.getX();
+            float y = e.getY();
+            batch.setColor(1,1,1,1);
+            if(e.getID()==player.id) {
+                //Cast player position to int because we are centering the camera using casted values too
+                x = (int) e.getX();
+                y = (int) e.getY();
             }
-            batch.end();
+            TextureRegion texture;
+            if(e.fireAnimationTimer>0){
+                texture = getTexture(e.getImage()+"_attack_fire");
+            }else if(e.aimingWeapon){
+                texture = getTexture(e.getImage()+"_attack_aim");
+            }else{
+                texture = getTexture(e.getImage(),e.getID());
+            }
+            Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
+            batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.getWidth()/2,e.getHeight()/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
+            e.aimingWeapon = false;
+            batch.setColor(0,1,0,1);
+            batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
+            batch.setColor(1,0,0,1);
+            float healthWidth = healthbarWidth*e.getHealthPercent();
+            batch.draw(getTexture("blank",e.getID()), x+healthbarXOffset,y+healthbarYOffset,healthWidth,healthbarHeight);
+        }
+        batch.end();
 
-            SharedMethods.renderAttack(delta, batch, projectiles);
-            if(ConVars.getBool("cl_show_debug")) {
-                shapeRenderer.setColor(1,1,1,1);
-                SharedMethods.renderAttackBoundingBox(shapeRenderer,projectiles);
-                shapeRenderer.setColor(1,1,0,1);
-                SharedMethods.renderAttackPolygon(shapeRenderer,projectiles);
-            }
+        SharedMethods.renderParticles(delta, batch, projectiles);
+        SharedMethods.renderParticles(delta, batch, particles);
+        if(ConVars.getBool("cl_show_debug")) {
+            shapeRenderer.setColor(1,1,1,1);
+            SharedMethods.renderAttackBoundingBox(shapeRenderer,projectiles);
+            shapeRenderer.setColor(1,1,0,1);
+            SharedMethods.renderAttackPolygon(shapeRenderer,projectiles);
         }
 
         drawTracer(shapeRenderer);
@@ -955,12 +938,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         batch.setProjectionMatrix(hudCamera.combined);
         int offset = 0;
         for(int id: playerList){
-            font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id) + " Deaths: "+score.getDeaths(id) + " Team: "+authoritativeState.entities.get(id).getTeam(), 5, windowHeight-5-offset);
+            font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id)
+                    + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
-        font.draw(batch, "Mouse 1: "+ getWeaponLine(slot1Weapon), 5, 40);
-        font.draw(batch, "Mouse 2: " + getWeaponLine(slot2Weapon), 5, 20);
-                glyphLayout.setText(font, "Wave " + currentWave);
+        font.draw(batch, "Mouse 1: "+ getWeaponLine(player.slot1Weapon), 5, 40);
+        font.draw(batch, "Mouse 2: " + getWeaponLine(player.slot2Weapon), 5, 20);
+        glyphLayout.setText(font, "Wave " + currentWave);
         font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
         glyphLayout.setText(font, "Lives: "+lives);
         font.draw(batch, "Lives: "+lives,windowWidth-glyphLayout.width ,windowHeight-5);
@@ -968,23 +952,22 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private String getWeaponLine(int weaponSlot){
-        if(weapons==null||weapons.get(weaponSlot)==null){
+        if(weaponList==null||weaponList.get(weaponSlot)==null){
             return "N/A";
         }
         StringBuilder b = new StringBuilder(weaponSlot+".");
-        if(weapons.get(weaponSlot)){
+        if(player.weapons.get(weaponSlot)){
             b.append(weaponList.get(weaponSlot).name);
         }else{
             b.append("Empty");
         }
-        b.append(" [").append(ammo.get(weaponSlot)).append("]");
+        b.append(" [").append(player.ammo.get(weaponSlot)).append("]");
         return b.toString();
     }
 
     private void createTracer(){
-        NetworkEntity e = authoritativeState.entities.get(playerID);
-        float x1 = e.getCenterX();
-        float y1 = e.getCenterY();
+        float x1 = player.getX();
+        float y1 = player.getY();
         float x2 = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
         float y2 = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
 
@@ -1009,12 +992,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 shapeRenderer.end();
             }
 
-            for(Entity e : stateSnapshot.values()){
+            for(Entity e : entities.values()){
                 Vector2 p = SharedMethods.getLineIntersectionWithRectangle(tracer,e.getGdxBounds());
                 if(p!=null){
                     shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                     shapeRenderer.setColor(1,1,1,1);
-                    shapeRenderer.rect(e.getX(), e.getY(), e.width, e.height);
+                    shapeRenderer.rect(e.getX(), e.getY(), e.getWidth(), e.getHeight());
                     shapeRenderer.end();
 
                     shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -1037,13 +1020,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private Network.FullEntityUpdate applyEntityPositionUpdate(Network.EntityPositionUpdate update){
         HashMap<Integer, Network.Position> changedEntityPositions = update.changedEntityPositions;
         HashMap<Integer,NetworkEntity> newEntityList = new HashMap<>();
-        HashMap<Integer,NetworkEntity> oldEntityList = authoritativeState.entities;
+        HashMap<Integer,? extends NetworkEntity> oldEntityList = authoritativeState.entities;
         for(int id: oldEntityList.keySet()){
             NetworkEntity e = oldEntityList.get(id);
             if(changedEntityPositions.containsKey(id)){
                 Network.Position pos = changedEntityPositions.get(id);
                 NetworkEntity movedEntity = new NetworkEntity(e);
-                movedEntity.moveTo(pos.x,pos.y);
+                movedEntity.x = pos.x;
+                movedEntity.y = pos.y;
                 newEntityList.put(id,movedEntity);
             }else{
                 newEntityList.put(id,e);
@@ -1068,19 +1052,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 for(Component component:components){
                     if(component instanceof Position){
                         Position pos = (Position) component;
-                        changedEntity.moveTo(pos.x,pos.y);
+                        changedEntity.x = pos.x;
+                        changedEntity.y = pos.y;
                     }
                     if(component instanceof Health) {
                         Health health = (Health) component;
-                        changedEntity.setHealth(health.health);
+                        changedEntity.health = health.health;
                     }
                     if(component instanceof Rotation){
                         Rotation rotation = (Rotation) component;
-                        changedEntity.setRotation(rotation.degrees);
+                        changedEntity.rotation=rotation.degrees;
                     }
                     if(component instanceof Team){
                         Team team = (Team) component;
-                        changedEntity.setTeam(team.team);
+                        changedEntity.team = team.team;
                     }
                 }
                 newEntityList.put(id,changedEntity);
@@ -1191,7 +1176,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             int totalEntitySize = 0;
 
-            s.write(client, buffer ,e.getHealth());
+            s.write(client, buffer ,e.health);
             totalEntitySize += buffer.position();
             showMessage("Health size is " + buffer.position() + " bytes");
             buffer.clear();
@@ -1201,12 +1186,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             showMessage("Maxhealth size is " + buffer.position() + " bytes");
             buffer.clear();
 
-            s.write(client, buffer ,e.getX());
+            s.write(client, buffer ,e.x);
             totalEntitySize += buffer.position();
             showMessage("X size is " + buffer.position() + " bytes");
             buffer.clear();
 
-            s.write(client, buffer ,e.getY());
+            s.write(client, buffer ,e.y);
             totalEntitySize += buffer.position();
             showMessage("Y size is " + buffer.position() + " bytes");
             buffer.clear();
@@ -1304,13 +1289,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void centerCameraOnPlayer(){
-        NetworkEntity player = null;
-        if(stateSnapshot!=null){
-            player = stateSnapshot.get(playerID);
-        }
         if(player != null) {
             //Cast values to int to avoid tile tearing
-            camera.position.set((int) (player.getX() + player.width / 2f), (int) (player.getY() + player.height / 2), 0);
+            camera.position.set((int) (player.getX() + player.getWidth() / 2f), (int) (player.getY() + player.getHeight() / 2), 0);
         }
         camera.update();
     }
@@ -1331,6 +1312,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void loadTextures(){
         showMessage("Loading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
+        GlobalVars.atlas = atlas;
         showMessage("Loading textures");
         Array<TextureAtlas.AtlasRegion> regions = atlas.getRegions();
 
@@ -1358,20 +1340,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(textures.containsKey(name)){
             return textures.get(name);
         }else if(animations.containsKey(name)){
-            if(entityAnimationStateTimes.containsKey(id)){
-                return animations.get(name).getKeyFrame(getAnimationState(id));
+            ClientEntity e = entities.get(id);
+            if(e!=null){
+                return animations.get(name).getKeyFrame(e.animationState);
             }else{
                 return animations.get(name).getKeyFrame(getClientTime());
             }
         }else{
             return textures.get("blank");
         }
-    }
-
-
-    private void setPlayerID(int id){
-        playerID = id;
-        Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+playerID+"]");
     }
 
     public void changeTeam(int team){
@@ -1406,7 +1383,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     public void selectWeapon(int weapon){
-        slot1Weapon = weapon;
+        player.slot1Weapon = weapon;
         Network.ChangeWeapon changeWeapon = new Network.ChangeWeapon();
         changeWeapon.weapon = weapon;
         sendTCP(changeWeapon);
@@ -1504,41 +1481,34 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         GlobalVars.collisionMap = SharedMethods.createCollisionMap(map,GlobalVars.mapWidthTiles,GlobalVars.mapHeightTiles);
     }
 
-    private void addEntity(Network.AddEntity addEntity){
-        //Entities added to latest state despite their add time
-        System.out.println("Adding entity: \n"+addEntity.entity);
-        authoritativeState.entities.put(addEntity.entity.id, addEntity.entity);
-        entityAdded(addEntity.entity.id);
-    }
-
-    private void entityAdded(int id){
-        entityAnimationStateTimes.put(id,0f);
-        fireAnimationTimers.put(id,0d);
-        aimingWeapon.put(id,false);
+    private void addEntity(NetworkEntity entity){
+        showMessage("Adding entity: "+entity);
+        //Entities added instantly but their position starts updating only once the interpolation catches up
+        authoritativeState.entities.put(entity.id,entity);
+        entities.put(entity.id,new ClientEntity(entity));
     }
 
     private void removeEntity(int id){
-        //Entities will be removed from all states despite their remove time
-        //TODO changed from only removing from latest state, might cause errors
-        for(Network.FullEntityUpdate state : stateHistory){
-            state.entities.remove(id);
-        }
-        NetworkEntity e = interpFrom.entities.get(id);
-        System.out.println("Removing entity:"+e);
-        fireAnimationTimers.remove(id);
-        entityAnimationStateTimes.remove(id);
-        aimingWeapon.remove(id);
 
-        projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bigbloodsplat"), e.getCenterX(), e.getCenterY()));
+        //TODO changed from only removing from latest state, might cause errors
+        ClientEntity e = entities.get(id);
+        showMessage("Removing entity:"+e);
+        for (int rotation = 0; rotation < 360; rotation += MathUtils.random(35,65)) {
+            particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80,120)));
+        }
+
+        //We are not removing it from older states, should not matter, they get removed once interpolation catches up to them
+        authoritativeState.entities.remove(id);
+        entities.remove(id);
 
         if(playerList.contains(id)){
             showMessage("PlayerID "+id+" removed.");
             playerList.remove(Integer.valueOf(id));
             score.removePlayer(id);
-            if(id==playerID){
-                setPlayerID(-1);
-                slot1Weapon = 0;
-                slot2Weapon = 1;
+            if(id==player.id){
+                player.id = -1;
+                player.slot1Weapon = 0;
+                player.slot2Weapon = 1;
             }
         }
     }
@@ -1550,9 +1520,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO Ignoring projectile team for now
         Weapon weapon = weaponList.get(attack.weapon);
         if(weapon!=null){
-            //PSEUDO Start timer for firing frame
-            fireAnimationTimers.put(attack.id,weapon.cooldown/2d);
-            if(weapon.projectile.hitscan){
+            entities.get(attack.id).fireAnimationTimer = weapon.cooldown/2d;
+            if(weapon.projectile.type == ProjectileDefinition.HITSCAN){
                 for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
                     Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
                     if(intersection!=null){
@@ -1560,43 +1529,43 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         hitscan.y2 = intersection.y;
                     }
                     ArrayList<Entity> targetsHit = new ArrayList<>();
-                    for(int targetId:stateSnapshot.keySet()) {
-                        Entity target = stateSnapshot.get(targetId);
-                        if(target.id == attack.id){
+                    for(int targetId:entities.keySet()) {
+                        if(targetId == attack.id){
                             continue;
                         }
+                        Entity target = entities.get(targetId);
                         if(target.getJavaBounds().intersectsLine(hitscan)) {
                             targetsHit.add(target);
                         }
-                        if(!targetsHit.isEmpty()){
-                            Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
-                            for(Entity t:targetsHit){
-                                float squaredDistance = Tools.getSquaredDistance(attack.x,attack.y,t.getCenterX(),t.getCenterY());
-                                if(closestTarget.y>squaredDistance){
-                                    closestTarget.set(t.id, squaredDistance);
-                                }
+                    }
+                    if(!targetsHit.isEmpty()){
+                        Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
+                        for(Entity t:targetsHit){
+                            float squaredDistance = Tools.getSquaredDistance(attack.x,attack.y,t.getCenterX(),t.getCenterY());
+                            if(closestTarget.y>squaredDistance){
+                                closestTarget.set(t.getID(), squaredDistance);
                             }
-                            Entity t = stateSnapshot.get((int)closestTarget.x);
-                            Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
-                            if(i!=null){ //TODO i should never be null but is in some cases
-                                hitscan.x2 = i.x;
-                                hitscan.y2 = i.y;
-                            }
-                            projectiles.add(SharedMethods.createProjectile(atlas, projectileList.get("bloodsplat"),hitscan.x2,hitscan.y2));
                         }
+                        Entity t = entities.get((int)closestTarget.x);
+                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
+                        //FIXME i should never be null
+                        if(i!=null){
+                            hitscan.x2 = i.x;
+                            hitscan.y2 = i.y;
+                        }
+                        particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),hitscan.x2,hitscan.y2,(int)Tools.getAngle(hitscan)+MathUtils.random(-10,10),MathUtils.random(60,100)));
                     }
                     if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
                         ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
-                        Projectile p = SharedMethods.createProjectile(atlas, def,hitscan.x2,hitscan.y2,attack.id,-1);
-                        p.ignoreMapCollision = true;
-                        projectiles.add(p);
+                        if(def.type == ProjectileDefinition.PARTICLE){
+                            particles.add(SharedMethods.createStationaryParticle(def,hitscan.x2,hitscan.y2));
+                        }
                     }
-                    if(weapon.projectile.duration>0){
-                        projectiles.add(SharedMethods.createProjectile(atlas, hitscan, weapon.projectile));
-                    }
+                    if(weapon.projectile.tracer!=null){
+                        particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));                    }
                 }
             }else{
-                projectiles.addAll(SharedMethods.createProjectile(atlas, weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
             }
 
             if(weapon.sound!=null){

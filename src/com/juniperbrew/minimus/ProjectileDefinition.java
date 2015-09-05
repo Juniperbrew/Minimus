@@ -7,7 +7,15 @@ import com.badlogic.gdx.graphics.Color;
  * Created by Juniperbrew on 3.8.2015.
  */
 public class ProjectileDefinition {
-    public boolean hitscan;
+
+    public static final byte PROJECTILE = 0;
+    public static final byte HITSCAN = 1;
+    public static final byte PARTICLE = 2;
+    public static final byte TRACER = 3;
+
+    public String name;
+    public String tracer;
+    public byte type;
     public float duration;
     public int damage;
     public int range;
@@ -28,6 +36,7 @@ public class ProjectileDefinition {
     public boolean friction;
     public boolean noCollision;
     public boolean networked;
+    public boolean looping;
 
     public ProjectileDefinition(){
 

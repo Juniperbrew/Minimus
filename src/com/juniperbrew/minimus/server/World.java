@@ -46,9 +46,9 @@ public class World implements EntityChangeListener{
     private final float KNOCKBACK_VELOCITY = 100;
 
     Set<Integer> playerList = new HashSet<>();
-    Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
-    Map<Integer,HashMap<Integer,Integer>> entityAmmo = new HashMap<>();
-    Map<Integer,HashMap<Integer,Boolean>> entityWeapons = new HashMap<>();
+    //Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
+    //Map<Integer,HashMap<Integer,Integer>> entityAmmo = new HashMap<>();
+    //Map<Integer,HashMap<Integer,Boolean>> entityWeapons = new HashMap<>();
     Map<Integer,Integer> playerLives = new HashMap<>();
 
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
@@ -66,6 +66,7 @@ public class World implements EntityChangeListener{
     private int networkIDCounter = 1;
 
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
 
     int mapWidth;
     int mapHeight;
@@ -96,7 +97,6 @@ public class World implements EntityChangeListener{
 
     TextureAtlas atlas;
     TmxMapLoader mapLoader;
-    String pendingMap;
 
     HashMap<String,TiledMap> mapList = new HashMap<>();
     HashMap<TiledMap,ArrayList<RectangleMapObject>> mapObjects = new HashMap<>();
@@ -122,6 +122,14 @@ public class World implements EntityChangeListener{
     private TiledMap loadMap(String mapName){
         listener.message("Loading map: "+mapName);
         return mapLoader.load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
+    }
+
+    public HashMap<Integer,NetworkEntity> getNetworkedEntities(){
+        HashMap<Integer,NetworkEntity> n = new HashMap<>();
+        for(int id : entities.keySet()){
+            n.put(id,entities.get(id).getNetworkEntity());
+        }
+        return n;
     }
 
     public void changeMap(String mapName){
@@ -214,9 +222,47 @@ public class World implements EntityChangeListener{
         updateGameState();
         updateEntities(delta);
         updateProjectiles(delta);
+        updateParticles(delta);
         //checkPlayerEntityCollisions();
         checkEntityCollisions();
         checkPowerupCollisions();
+    }
+
+    private void updateParticles(float delta){
+        Iterator<Particle> iter = particles.iterator();
+        while(iter.hasNext()){
+            Particle p = iter.next();
+            p.update(delta);
+            if(p.destroyed){
+                iter.remove();
+            }
+        }
+    }
+
+    private void updateEntities(float delta){
+        for(EntityAI ai:entityAIs.values()){
+            ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
+        }
+        Iterator<Knockback> iter = knockbacks.iterator();
+        while(iter.hasNext()){
+            Knockback k = iter.next();
+            //TODO Knockback
+            if(k.isExpired()){
+                iter.remove();
+            }else{
+                ServerEntity e = entities.get(k.id);
+                if(e==null){
+                    iter.remove();
+                }else{
+                    entities.get(k.id).addMovement(k.getMovement(delta));
+                }
+            }
+        }
+
+        for(ServerEntity e:entities.values()){
+            e.applyMovement();
+        }
+
     }
 
     private void updateGameState(){
@@ -256,9 +302,9 @@ public class World implements EntityChangeListener{
         Rectangle spawnZone = getSpawnZone(map);
         ServerEntity e = entities.get(id);
         if(spawnZone!=null){
-            e.moveTo(MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-e.width),MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-e.height));
+            e.moveTo(MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-e.getWidth()),MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-e.getHeight()));
         }else{
-            e.moveTo(MathUtils.random(mapWidth-e.width),MathUtils.random(mapHeight-e.height));
+            e.moveTo(MathUtils.random(mapWidth-e.getWidth()),MathUtils.random(mapHeight-e.getHeight()));
         }
     }
 
@@ -282,90 +328,53 @@ public class World implements EntityChangeListener{
         ArrayList<Rectangle> zones = new ArrayList<>();
         for(RectangleMapObject o : mapObjects.get(map)){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemySpawn")){
-                RectangleMapObject rect = (RectangleMapObject) o;
-                zones.add(rect.getRectangle());
+                zones.add(o.getRectangle());
             }
         }
         return zones;
-    }
-
-    private void updateEntities(float delta){
-        for(EntityAI ai:entityAIs.values()){
-            ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
-            if(attackCooldown.get(ai.entity.id)!=null){
-                Map<Integer,Double> cooldowns = attackCooldown.get(ai.entity.id);
-                for(int weaponslot : cooldowns.keySet()){
-                    double cd = cooldowns.get(weaponslot);
-                    cd -= (delta);
-                    cooldowns.put(weaponslot,cd);
-                }
-            }
-        }
-        Iterator<Knockback> iter = knockbacks.iterator();
-        while(iter.hasNext()){
-            Knockback k = iter.next();
-            //TODO Knockback
-            if(k.isExpired()){
-                iter.remove();
-            }else{
-                ServerEntity e = entities.get(k.id);
-                if(e==null){
-                    iter.remove();
-                }else{
-                    entities.get(k.id).addMovement(k.getMovement(delta));
-                }
-            }
-        }
-
-        for(ServerEntity e:entities.values()){
-            e.applyMovement();
-        }
-
     }
 
     private void updateProjectiles(float delta){
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.update(delta);
-            if(!projectile.hitscan) {
-                //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
-                for(int id:entities.keySet()){
-                    if(projectile.ownerID==id&&!projectile.explosionKnockback){
-                        continue;
-                    }
-                    if(projectile.entitiesHit.contains(id)){
-                        continue;
-                    }
-                    ServerEntity target = entities.get(id);
-                    if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(), target.getGdxBounds())){
-                        if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
-                            if(!projectile.dontDestroyOnCollision){
-                                projectile.destroyed = true;
+            //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
+            for(int id:entities.keySet()){
+                if(projectile.ownerID==id&&!projectile.explosionKnockback){
+                    continue;
+                }
+                if(projectile.entitiesHit.contains(id)){
+                    continue;
+                }
+                ServerEntity target = entities.get(id);
+                if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(), target.getGdxBounds())){
+                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
+                        if(!projectile.dontDestroyOnCollision){
+                            projectile.destroyed = true;
+                        }
+                        //Explosion self knockbacks apply on player but dont damage him
+                        if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
+                            Vector2 knockback = new Vector2(projectile.knockback,0);
+                            if(projectile.explosionKnockback){
+                                Vector2 projectileCenter = new Vector2();
+                                projectile.getHitbox().getBoundingRectangle().getCenter(projectileCenter);
+                                float angle = Tools.getAngle(projectileCenter.x,projectileCenter.y,target.getCenterX(),target.getCenterY());
+                                knockback.setAngle(angle);
+                            }else{
+                                knockback.setAngle(projectile.rotation);
                             }
-                            //Explosion self knockbacks apply on player but dont damage him
-                            if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
-                                Vector2 knockback = new Vector2(projectile.knockback,0);
-                                if(projectile.explosionKnockback){
-                                    Vector2 projectileCenter = new Vector2();
-                                    projectile.getHitbox().getBoundingRectangle().getCenter(projectileCenter);
-                                    float angle = Tools.getAngle(projectileCenter.x,projectileCenter.y,target.getCenterX(),target.getCenterY());
-                                    knockback.setAngle(angle);
-                                }else{
-                                    knockback.setAngle(projectile.rotation);
-                                }
-                                knockbacks.add(new Knockback(target.id, knockback));
-                                if(projectile.ownerID!=id){
-                                    target.reduceHealth(projectile.damage,projectile.ownerID);
-                                }
+                            knockbacks.add(new Knockback(target.getID(), knockback));
+                            if(projectile.ownerID!=id){
+                                target.reduceHealth(projectile.damage,projectile.ownerID);
                             }
                         }
-                        projectile.entitiesHit.add(target.id);
                     }
+                    projectile.entitiesHit.add(target.getID());
                 }
-                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
-                    if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
-                        projectile.destroyed = true;
-                    }
+            }
+            if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
+                    projectile.destroyed = true;
                 }
             }
 
@@ -375,11 +384,7 @@ public class World implements EntityChangeListener{
                     ProjectileDefinition def = projectileList.get(projectile.onDestroy);
                     Vector2 center = new Vector2();
                     projectile.getHitbox().getBoundingRectangle().getCenter(center);
-                    Projectile p = SharedMethods.createProjectile(atlas, def,center.x,center.y,projectile.ownerID,projectile.team);
-                    projectiles.add(p);
-                    if(def.networked){
-                        listener.networkedProjectileSpawned(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
-                    }
+                    createStationaryThing(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
                 }
             }
         }
@@ -390,26 +395,26 @@ public class World implements EntityChangeListener{
 
         for(ServerEntity e1 : entities.values()){
             for(ServerEntity e2: entities.values()){
-                if(e1.id == e2.id){
+                if(e1.getID() == e2.getID()){
                     continue;
                 }
                 Rectangle bounds1 = e1.getGdxBounds();
                 Rectangle bounds2 = e2.getGdxBounds();
                 //if(bounds1.overlaps(bounds2)){
-                    Rectangle intersection = new Rectangle();
-                    if(Intersector.intersectRectangles(bounds1,bounds2,intersection)){
-                        float scale = intersection.area()/bounds1.area();
-                        Vector2 i = new Vector2(e1.getCenterX()-e2.getCenterX(),e1.getCenterY()-e2.getCenterY());
-                        Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
-                        knockback.setAngle(i.angle());
-                        knockbacks.add(new Knockback(e1.id, knockback));
-                        if(playerList.contains(e1.id)&&!isInvulnerable(e1)) {
-                            if(e1.getTeam()!=e2.getTeam()) {
-                                e1.lastContactDamageTaken = System.nanoTime();
-                                e1.reduceHealth(ConVars.getInt("sv_contact_damage"), e2.id);
-                            }
+                Rectangle intersection = new Rectangle();
+                if(Intersector.intersectRectangles(bounds1,bounds2,intersection)){
+                    float scale = intersection.area()/bounds1.area();
+                    Vector2 i = new Vector2(e1.getCenterX()-e2.getCenterX(),e1.getCenterY()-e2.getCenterY());
+                    Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
+                    knockback.setAngle(i.angle());
+                    knockbacks.add(new Knockback(e1.getID(), knockback));
+                    if(playerList.contains(e1.getID())&&!isInvulnerable(e1)) {
+                        if(e1.getTeam()!=e2.getTeam()) {
+                            e1.lastContactDamageTaken = System.nanoTime();
+                            e1.reduceHealth(ConVars.getInt("sv_contact_damage"), e2.getID());
                         }
                     }
+                }
                 //}
             }
         }
@@ -423,7 +428,7 @@ public class World implements EntityChangeListener{
             Iterator<ServerEntity> iter = entities.values().iterator();
             while(iter.hasNext()){
                 ServerEntity e = iter.next();
-                if(e.id == playerID){
+                if(e.getID() == playerID){
                     continue;
                 }
                 if(e.getTeam()!=player.getTeam()) {
@@ -433,10 +438,10 @@ public class World implements EntityChangeListener{
                         Vector2 i = new Vector2(player.getCenterX()-e.getCenterX(),player.getCenterY()-e.getCenterY());
                         Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
                         knockback.setAngle(i.angle());
-                        knockbacks.add(new Knockback(player.id, knockback));
+                        knockbacks.add(new Knockback(player.getID(), knockback));
                         if(!isInvulnerable(player)) {
                             player.lastContactDamageTaken = System.nanoTime();
-                            player.reduceHealth(ConVars.getInt("sv_contact_damage"), e.id);
+                            player.reduceHealth(ConVars.getInt("sv_contact_damage"), e.getID());
                         }
                     }
                 }
@@ -452,22 +457,18 @@ public class World implements EntityChangeListener{
                 Powerup p = powerups.get(powerupID);
                 if(player.getGdxBounds().overlaps(p.bounds)){
                     if(p.type == Powerup.HEALTH){
-                        if(player.getHealth()<player.maxHealth){
+                        if(player.getHealth()<player.getMaxHealth()){
                             player.addHealth(p.value);
                             despawnPowerup(powerupID);
                         }
                     }else if(p.type == Powerup.AMMO){
-                        if(entityAmmo.get(playerID).get(p.typeModifier)!=null){
-                            int ammo = entityAmmo.get(playerID).get(p.typeModifier);
-                            ammo += p.value;
-                            entityAmmo.get(playerID).put(p.typeModifier,ammo);
-                            listener.ammoAddedChanged(playerID, p.typeModifier, p.value);
-                            despawnPowerup(powerupID);
-                        }
+                        entities.get(playerID).addAmmo(p.typeModifier,p.value);
+                        listener.ammoAddedChanged(playerID, p.typeModifier, p.value);
+                        despawnPowerup(powerupID);
                     }else if(p.type == Powerup.WEAPON){
                         int weapon = p.typeModifier;
-                        if(entityWeapons.get(playerID).get(weapon)!=null&& entityWeapons.get(playerID).get(weapon)==false){
-                            entityWeapons.get(playerID).put(weapon,true);
+                        if(!entities.get(playerID).hasWeapon(weapon)){
+                            entities.get(playerID).setWeapon(weapon,true);
                             listener.weaponAdded(playerID,weapon);
                             despawnPowerup(powerupID);
                         }
@@ -477,181 +478,184 @@ public class World implements EntityChangeListener{
         }
     }
 
-    public void processInput(int id, Network.UserInput input){
-        ServerEntity e = entities.get(id);
+    public void processInput(ServerEntity e, Network.UserInput input){
         if(e.invulnerable&&input.buttons.size()>0){
             e.invulnerable = false;
         }
         SharedMethods.applyInput(e, input);
         if(input.buttons.contains(Enums.Buttons.NUM1)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 0;
+                e.setSlot2Weapon(0);
             }else{
-                e.slot1Weapon = 0;
+                e.setSlot1Weapon(0);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM2)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 1;
+                e.setSlot2Weapon(1);
             }else{
-                e.slot1Weapon = 1;
+                e.setSlot1Weapon(1);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM3)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 2;
+                e.setSlot2Weapon(2);
             }else{
-                e.slot1Weapon = 2;
+                e.setSlot1Weapon(2);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM4)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 3;
+                e.setSlot2Weapon(3);
             }else{
-                e.slot1Weapon = 3;
+                e.setSlot1Weapon(3);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM5)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 4;
+                e.setSlot2Weapon(4);
             }else{
-                e.slot1Weapon = 4;
+                e.setSlot1Weapon(4);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM6)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 5;
+                e.setSlot2Weapon(5);
             }else{
-                e.slot1Weapon = 5;
+                e.setSlot1Weapon(5);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM7)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 6;
+                e.setSlot2Weapon(6);
             }else{
-                e.slot1Weapon = 6;
+                e.setSlot1Weapon(6);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM8)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 7;
+                e.setSlot2Weapon(7);
             }else{
-                e.slot1Weapon = 7;
+                e.setSlot1Weapon(7);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM9)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 8;
+                e.setSlot2Weapon(8);
             }else{
-                e.slot1Weapon = 8;
+                e.setSlot1Weapon(8);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM0)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.slot2Weapon = 9;
+                e.setSlot2Weapon(9);
             }else{
-                e.slot1Weapon = 9;
+                e.setSlot1Weapon(9);
             }
         }
 
         if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-            attackWithEntity(id, e.slot1Weapon);
+            attackWithEntity(e, e.getSlot1Weapon());
         }
         if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-            attackWithEntity(id, e.slot2Weapon);
+            attackWithEntity(e, e.getSlot2Weapon());
         }
 
-        if(attackCooldown.get(id)!=null){
-            Map<Integer,Double> cooldowns = attackCooldown.get(id);
-            for(int weaponslot : cooldowns.keySet()){
-                double cd = cooldowns.get(weaponslot);
-                cd -= (input.msec/1000d);
-                cooldowns.put(weaponslot,cd);
-            }
-        }
+        e.updateCooldowns(input.msec/1000d);
     }
 
-    public void attackWithEntity(int id, int weaponSlot){
+    public void attackWithEntity(ServerEntity e, int weaponID){
 
-        if(weaponList.get(weaponSlot)==null){
+        if(weaponList.get(weaponID)==null){
             return;
         }
-        if(attackCooldown.get(id).get(weaponSlot) > 0 || entityAmmo.get(id).get(weaponSlot) <= 0 || !entityWeapons.get(id).get(weaponSlot)){
+        if(e.weaponCooldown(weaponID) || !e.hasAmmo(weaponID) || !e.hasWeapon(weaponID)){
             return;
         }else{
-            attackCooldown.get(id).put(weaponSlot, weaponList.get(weaponSlot).cooldown);
-            entityAmmo.get(id).put(weaponSlot, entityAmmo.get(id).get(weaponSlot)-1);
-            createAttack(id, weaponSlot);
+            e.setWeaponCooldown(weaponID,weaponList.get(weaponID).cooldown);
+            e.addAmmo(weaponID,-1);
+            createAttack(e, weaponID);
         }
     }
 
-    public void createAttack(int id, int weaponSlot){
+    public void createAttack(ServerEntity e, int weaponID){
 
-        ServerEntity e = entities.get(id);
         Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
         entityAttacking.x = e.getCenterX();
         entityAttacking.y = e.getCenterY();
         entityAttacking.deg = e.getRotation();
-        entityAttacking.id = e.id;
-        entityAttacking.weapon = weaponSlot;
+        entityAttacking.id = e.getID();
+        entityAttacking.weapon = weaponID;
         listener.attackCreated(entityAttacking);
 
-        Weapon weapon = weaponList.get(weaponSlot);
+        Weapon weapon = weaponList.get(weaponID);
         ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon==null){
             return;
         }
-        if(projectileDefinition.hitscan){
+        if(projectileDefinition.type == ProjectileDefinition.HITSCAN){
             for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,e.getCenterX(),e.getCenterY(),e.getRotation())){
                 Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
                 if(intersection!=null){
                     hitscan.x2 = intersection.x;
                     hitscan.y2 = intersection.y;
                 }
+                ArrayList<ServerEntity> targetsHit = new ArrayList<>();
                 for(int targetId:entities.keySet()) {
+                    if(targetId==e.getID()){
+                        continue;
+                    }
                     ServerEntity target = entities.get(targetId);
-                    ArrayList<ServerEntity> targetsHit = new ArrayList<>();
                     if(target.getJavaBounds().intersectsLine(hitscan)) {
                         targetsHit.add(target);
                     }
-                    if(!targetsHit.isEmpty()){
-                        Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
-                        for(ServerEntity t:targetsHit){
-                            float squaredDistance = Tools.getSquaredDistance(e.getCenterX(),e.getCenterY(),t.getCenterX(),t.getCenterY());
-                            if(closestTarget.y>squaredDistance){
-                                closestTarget.set(t.id, squaredDistance);
-                            }
+                }
+                if(!targetsHit.isEmpty()){
+                    Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
+                    for(ServerEntity t:targetsHit){
+                        float squaredDistance = Tools.getSquaredDistance(e.getCenterX(),e.getCenterY(),t.getCenterX(),t.getCenterY());
+                        if(closestTarget.y>squaredDistance){
+                            closestTarget.set(t.getID(), squaredDistance);
                         }
-                        ServerEntity t = entities.get((int)closestTarget.x);
-                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
-                        if(i!=null){ //TODO i should never be null but is in some cases
-                            hitscan.x2 = i.x;
-                            hitscan.y2 = i.y;
-                            if(projectileDefinition.knockback>0){
-                                float angle = Tools.getAngle(e.getCenterX(), e.getCenterY(), t.getCenterX(), t.getCenterY());
-                                Vector2 knockback = new Vector2(weapon.projectile.knockback,0);
-                                knockback.setAngle(angle);
-                                knockbacks.add(new Knockback(targetId, knockback));
-                            }
-                            if(t.getTeam() != e.getTeam()){
-                                t.reduceHealth(projectileDefinition.damage,e.id);
-                            }
-                        }
+                    }
+                    ServerEntity t = entities.get((int)closestTarget.x);
+                    Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
+                    //FIXME i should never be null
+                    if(i!=null) {
+                        hitscan.x2 = i.x;
+                        hitscan.y2 = i.y;
+                    }
+                    if(projectileDefinition.knockback>0){
+                        float angle = Tools.getAngle(e.getCenterX(), e.getCenterY(), t.getCenterX(), t.getCenterY());
+                        Vector2 knockback = new Vector2(weapon.projectile.knockback,0);
+                        knockback.setAngle(angle);
+                        knockbacks.add(new Knockback(t.getID(), knockback));
+                    }
+                    if(t.getTeam() != e.getTeam()){
+                        t.reduceHealth(projectileDefinition.damage, e.getID());
                     }
                 }
                 if(projectileDefinition.onDestroy!=null){
-                    Projectile p = SharedMethods.createProjectile(atlas, projectileList.get(projectileDefinition.onDestroy),hitscan.x2,hitscan.y2,e.id,e.getTeam());
-                    p.ignoreMapCollision = true;
-                    projectiles.add(p);
+                    createStationaryThing(projectileDefinition.onDestroy,hitscan.x2,hitscan.y2,e.getID(),e.getTeam());
                 }
-                if(weapon.projectile.duration>0){
-                    projectiles.add(SharedMethods.createProjectile(atlas, hitscan, weapon.projectile));
+                if(weapon.projectile.tracer !=null){
+                    particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));
                 }
             }
-        }else{
+        }else if (projectileDefinition.type == ProjectileDefinition.PROJECTILE){
             //TODO projectiles with no duration or range will never get removed
-            ArrayList<Projectile> newProjectiles = SharedMethods.createProjectile(atlas, weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.id, e.getTeam());
+            ArrayList<Projectile> newProjectiles = SharedMethods.createProjectiles(weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.getID(), e.getTeam());
             projectiles.addAll(newProjectiles);
+        }
+    }
+
+    private void createStationaryThing(String name, float x, float y, int id, int team){
+        ProjectileDefinition def = projectileList.get(name);
+        if(def.type==ProjectileDefinition.PROJECTILE){
+            projectiles.add(SharedMethods.createStationaryProjectile(def, x, y, id, team));
+            listener.networkedProjectileSpawned(def.name,x,y,id,team);
+        }else if(def.type==ProjectileDefinition.PARTICLE){
+            particles.add(SharedMethods.createStationaryParticle(def,x,y));
         }
     }
 
@@ -729,10 +733,17 @@ public class World implements EntityChangeListener{
                 String[] splits = line.split("=");
                 if(splits[0].equals("name")){
                     projectileName = splits[1];
+                    projectileDefinition.name = splits[1];
                 }
                 if(splits[0].equals("type")){
                     if(splits[1].equals("hitscan")){
-                        projectileDefinition.hitscan = true;
+                        projectileDefinition.type = ProjectileDefinition.HITSCAN;
+                    }else if(splits[1].equals("projectile")){
+                        projectileDefinition.type = ProjectileDefinition.PROJECTILE;
+                    }else if(splits[1].equals("particle")){
+                        projectileDefinition.type = ProjectileDefinition.PARTICLE;
+                    }else if(splits[1].equals("tracer")){
+                        projectileDefinition.type = ProjectileDefinition.TRACER;
                     }
                 }
                 if(splits[0].equals("damage")){
@@ -796,6 +807,15 @@ public class World implements EntityChangeListener{
                 }
                 if (splits[0].equals("networked")) {
                     projectileDefinition.networked = true;
+                }
+                if (splits[0].equals("friction")) {
+                    projectileDefinition.friction = true;
+                }
+                if(splits[0].equals("tracer")){
+                    projectileDefinition.tracer = splits[1];
+                }
+                if(splits[0].equals("looping")){
+                    projectileDefinition.looping = true;
                 }
             }
         } catch (FileNotFoundException e) {
@@ -875,10 +895,11 @@ public class World implements EntityChangeListener{
     private void loadImages() {
         listener.message("Loading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
+        GlobalVars.atlas = atlas;
     }
 
     private void addEntity(ServerEntity e){
-        entities.put(e.id, e);
+        entities.put(e.getID(), e);
         listener.entityAdded(e.getNetworkEntity());
     }
 
@@ -899,32 +920,23 @@ public class World implements EntityChangeListener{
             y = MathUtils.random(mapHeight-height);
         }
 
-        attackCooldown.put(networkID,new HashMap<Integer, Double>());
-        entityAmmo.put(networkID, new HashMap<Integer, Integer>());
-        entityWeapons.put(networkID, new HashMap<Integer, Boolean>());
-
-        for(int weaponslot: weaponList.keySet()){
-            attackCooldown.get(networkID).put(weaponslot,-1d);
-            entityAmmo.get(networkID).put(weaponslot,0);
-            entityWeapons.get(networkID).put(weaponslot,false);
-
-        }
+        HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
+        HashMap<Integer,Integer> entityAmmo = new HashMap<>();
         //Lots of ammo for primary weapon
-        entityWeapons.get(networkID).put(0,true);
-        entityAmmo.get(networkID).put(0,999999999);
+        entityWeapons.put(0, true);
+        entityAmmo.put(0, 999999999);
         if(ConVars.getBool("sv_idkfa")){
             for(int weaponID : weaponList.keySet()){
-                entityWeapons.get(networkID).put(weaponID,true);
-                entityAmmo.get(networkID).put(weaponID,999999999);
+                entityWeapons.put(weaponID, true);
+                entityAmmo.put(weaponID, 999999999);
             }
         }
 
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
-        ServerEntity newPlayer = new ServerEntity(networkID,x,y,ConVars.getInt("sv_player_default_team"),ConVars.getInt("sv_player_max_health"),this);
+        ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
+                ConVars.getInt("sv_player_max_health"),ConVars.getInt("sv_player_default_team"),
+                "rambo_pistol",entityWeapons,entityAmmo,this);
         newPlayer.invulnerable = true;
-        newPlayer.width = width;
-        newPlayer.height = height;
-        newPlayer.image = "player";
         addEntity(newPlayer);
 
         Network.AssignEntity assign = new Network.AssignEntity();
@@ -937,8 +949,8 @@ public class World implements EntityChangeListener{
         assign.wave = wave;
         assign.weaponList = new HashMap<>(weaponList);
         assign.projectileList = new HashMap<>(projectileList);
-        assign.ammo = entityAmmo.get(networkID);
-        assign.weapons = entityWeapons.get(networkID);
+        assign.ammo = entityAmmo;
+        assign.weapons = entityWeapons;
 
         listener.playerAdded(c,assign);
     }
@@ -980,24 +992,23 @@ public class World implements EntityChangeListener{
     public void addNPC(EnemyDefinition def, Rectangle bounds){
         System.out.println("Adding npc:"+def);
         int networkID = getNextNetworkID();
-        ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,-1,def.health,this);
-        npc.height = bounds.height;
-        npc.width = bounds.width;
-        npc.image = def.image;
-        entityAIs.put(networkID, new EntityAI(npc, EntityAI.FOLLOWING_AND_SHOOTING, def.weapon, this));
 
-        attackCooldown.put(networkID,new HashMap<Integer, Double>());
-        entityAmmo.put(networkID, new HashMap<Integer, Integer>());
-        entityWeapons.put(networkID, new HashMap<Integer, Boolean>());
+        HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
+        HashMap<Integer,Integer> entityAmmo = new HashMap<>();
 
         for(int weaponslot: weaponList.keySet()){
-            attackCooldown.get(networkID).put(weaponslot,-1d);
-            entityAmmo.get(networkID).put(weaponslot,0);
-            entityWeapons.get(networkID).put(weaponslot,false);
+            entityAmmo.put(weaponslot, 0);
+            entityWeapons.put(weaponslot, false);
         }
+
         //Lots of ammo for weapon
-        entityWeapons.get(networkID).put(def.weapon,true);
-        entityAmmo.get(networkID).put(def.weapon,999999999);
+        entityWeapons.put(def.weapon, true);
+        entityAmmo.put(def.weapon, 999999999);
+
+        ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,bounds.width,bounds.height,def.health,-1,
+                def.image,entityWeapons,entityAmmo,this);
+        entityAIs.put(networkID, new EntityAI(npc, EntityAI.FOLLOWING_AND_SHOOTING, def.weapon, this));
+
 
         addEntity(npc);
     }
@@ -1167,14 +1178,6 @@ public class World implements EntityChangeListener{
         return changedComponents;
     }
 
-    public HashMap<Integer,NetworkEntity> getNetworkedEntityList(){
-        HashMap<Integer,NetworkEntity> networkedEntities = new HashMap<>();
-        for(int id:entities.keySet()){
-            networkedEntities.put(id, entities.get(id).getNetworkEntity());
-        }
-        return networkedEntities;
-    }
-
     private int getNextNetworkID(){
         return networkIDCounter++;
     }
@@ -1199,16 +1202,15 @@ public class World implements EntityChangeListener{
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
         for(ServerEntity e : entities.values()) {
-            if(playerList.contains(e.id)){
+            if(playerList.contains(e.getID())){
                 shapeRenderer.setColor(0,0,1,1);
             }else{
                 shapeRenderer.setColor(1,1,1,1);
             }
-            shapeRenderer.rect(e.getX(), e.getY(), e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.getRotation());
-            float health = 1-((float)e.getHealth()/e.maxHealth);
-            int healthWidth = (int) (e.width*health);
+            shapeRenderer.rect(e.getX(), e.getY(), e.getWidth() / 2, e.getHeight() / 2, e.getWidth(), e.getHeight(), 1, 1, e.getRotation());
+            int healthWidth = (int) (e.getWidth()*e.getHealthPercent());
             shapeRenderer.setColor(1, 0, 0, 1); //red
-            shapeRenderer.rect(e.getX(),e.getY(),e.width/2,e.height/2,healthWidth,e.height,1,1,e.getRotation());
+            shapeRenderer.rect(e.getX(),e.getY(),e.getWidth()/2,e.getHeight()/2,healthWidth,e.getHeight(),1,1,e.getRotation());
         }
         shapeRenderer.end();
         batch.begin();
@@ -1218,7 +1220,9 @@ public class World implements EntityChangeListener{
         }
         batch.end();
 
-        SharedMethods.renderAttack(delta, batch, projectiles);
+        SharedMethods.renderParticles(delta, batch, projectiles);
+        SharedMethods.renderParticles(delta, batch, particles);
+
     }
 
     private void removeEntity(int networkID) {
@@ -1229,10 +1233,6 @@ public class World implements EntityChangeListener{
         posChangedEntities.remove(networkID);
         teamChangedEntities.remove(networkID);
         rotationChangedEntities.remove(networkID);
-
-        attackCooldown.remove(networkID);
-        entityWeapons.remove(networkID);
-        entityAmmo.remove(networkID);
 
         if(playerList.remove(networkID)){
             listener.playerRemoved(networkID);

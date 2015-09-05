@@ -31,11 +31,8 @@ public class EntityAI {
     public boolean hasDestination;
     ServerEntity entity;
     long lastAttackDone;
-    final float MIN_ATTACK_DELAY = 1;
-    final float MAX_ATTACK_DELAY = 6;
     int aiType;
     int weapon;
-    float attackDelay;
     Vector2 targetLocation;
     float destinationTimer;
     float destinationTimeLimit;
@@ -45,29 +42,29 @@ public class EntityAI {
         this.entity = entity;
         this.world = world;
         this.aiType = aiType;
-        attackDelay = MathUtils.random(MIN_ATTACK_DELAY,MAX_ATTACK_DELAY);
         this.weapon = weapon;
         lastAttackDone = System.nanoTime();
     }
 
     public void act(double velocity, double delta){
         if(aiType == MOVING){
-            setRandomDestination(world.mapWidth, world.mapHeight);
+            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             move(velocity,delta);
         }else if(aiType == MOVING_AND_SHOOTING){
-            setRandomDestination(world.mapWidth, world.mapHeight);
+            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             move(velocity,delta);
             shoot();
         }else if(aiType == FOLLOWING){
-            setRandomDestination(world.mapWidth, world.mapHeight);
+            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             lookForTarget();
             move(velocity,delta);
         }else if(aiType == FOLLOWING_AND_SHOOTING){
-            setRandomDestination(world.mapWidth, world.mapHeight);
+            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             lookForTarget();
             move(velocity,delta);
             shoot();
         }
+        entity.updateCooldowns(delta);
     }
 
     private void lookForTarget(){
@@ -126,26 +123,12 @@ public class EntityAI {
             }
 
             entity.addMovement(new Vector2((float) deltaX, (float) deltaY));
-
-            /*
-            Rectangle bounds = entity.getGdxBounds();
-            bounds.setX((float) (bounds.getX()+deltaX));
-            if(SharedMethods.checkMapCollision(bounds)){
-                bounds.setX((float) (bounds.getX()-deltaX));
-                deltaX = 0;
-            }
-            bounds.setY((float) (bounds.getY()+deltaY));
-            if(SharedMethods.checkMapCollision(bounds)){
-                deltaY = 0;
-            }
-            entity.move(deltaX,deltaY);
-            */
         }
     }
 
     private void shoot(){
         if(targetUpdated){
-            world.attackWithEntity(entity.id, weapon);
+            world.attackWithEntity(entity, weapon);
             targetUpdated = false;
         }
     }
@@ -175,10 +158,10 @@ public class EntityAI {
             return;
         }
 
-        double minX = Math.max(entity.getCenterX()-MAX_RANGE,entity.width/2);
-        double maxX = Math.min(entity.getCenterX()+MAX_RANGE,mapWidth-(entity.width/2));
-        double minY = Math.max(entity.getCenterY()-MAX_RANGE,entity.height/2);
-        double maxY = Math.min(entity.getCenterY()+MAX_RANGE,mapHeight-(entity.height/2));
+        double minX = Math.max(entity.getCenterX()-MAX_RANGE,entity.getWidth()/2);
+        double maxX = Math.min(entity.getCenterX()+MAX_RANGE,mapWidth-(entity.getWidth()/2));
+        double minY = Math.max(entity.getCenterY()-MAX_RANGE,entity.getHeight()/2);
+        double maxY = Math.min(entity.getCenterY()+MAX_RANGE,mapHeight-(entity.getHeight()/2));
         destinationX = MathUtils.random((float)minX,(float)maxX);
         destinationY = MathUtils.random((float)minY,(float)maxY);
 
@@ -190,18 +173,18 @@ public class EntityAI {
         float destinationYTileCheck = destinationY;
         Vector2 tile = null;
         if(destinationX-entity.getCenterX()>=0){
-            offsetX -= (entity.width/2) + margin;
-            destinationXTileCheck += (entity.width/2);
+            offsetX -= (entity.getWidth()/2) + margin;
+            destinationXTileCheck += (entity.getWidth()/2);
         }else{
-            offsetX += GlobalVars.tileWidth + (entity.width/2) + margin;
-            destinationXTileCheck -= (entity.width/2);
+            offsetX += GlobalVars.tileWidth + (entity.getWidth()/2) + margin;
+            destinationXTileCheck -= (entity.getWidth()/2);
         }
         if(destinationY-entity.getCenterY()>=0){
-            offsetY -= (entity.height/2) + margin;
-            destinationYTileCheck += (entity.height/2);
+            offsetY -= (entity.getHeight()/2) + margin;
+            destinationYTileCheck += (entity.getHeight()/2);
         }else{
-            offsetY += GlobalVars.tileHeight +(entity.height/2)+ margin;
-            destinationYTileCheck -= (entity.height/2);
+            offsetY += GlobalVars.tileHeight +(entity.getHeight()/2)+ margin;
+            destinationYTileCheck -= (entity.getHeight()/2);
         }
         tile = SharedMethods.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
         if(tile!=null) {

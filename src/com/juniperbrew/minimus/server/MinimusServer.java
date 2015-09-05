@@ -16,6 +16,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.esotericsoftware.minlog.Log;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.ConsoleReader;
 import com.juniperbrew.minimus.GlobalVars;
@@ -87,7 +88,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
 
     int pendingRandomNpcAdds = 0;
-    int pendingFollowingNpcAdds = 0;
     int pendingRandomNpcRemovals = 0;
 
     private ConcurrentLinkedQueue<Packet> pendingPackets = new ConcurrentLinkedQueue<>();
@@ -99,6 +99,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void create() {
+        //Log.TRACE();
         ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
@@ -152,7 +153,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                 connectionStatus.put(connection, dataUsage);
                 serverStatusFrame.addConnection(connection.toString(),dataUsage);
                 Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
-                fullUpdate.entities = world.getNetworkedEntityList();
+                fullUpdate.entities = world.getNetworkedEntities();
                 fullUpdate.serverTime = getServerTime();
                 connection.sendTCP(fullUpdate);
                 connections.add(connection);
@@ -211,13 +212,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                 inputQueue.put(connection, list);
             }
         }else if (object instanceof Network.SpawnRequest){
+            if(world.playerList.contains(playerList.getKey(connection))){
+                world.removePlayer(playerList.getKey(connection));
+            }
             world.addPlayer(connection);
         }else if (object instanceof Network.TeamChangeRequest){
             Network.TeamChangeRequest teamChangeRequest = (Network.TeamChangeRequest) object;
             world.getEntity(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
         }else if (object instanceof Network.ChangeWeapon){
             Network.ChangeWeapon changeWeapon = (Network.ChangeWeapon) object;
-            world.entities.get(playerList.getKey(connection)).slot1Weapon = changeWeapon.weapon;
+            world.entities.get(playerList.getKey(connection)).setSlot1Weapon(changeWeapon.weapon);
         }else if(object instanceof Disconnect){
             connectionStatus.get(connection).disconnected();
             if(playerList.containsValue(connection)){
@@ -270,7 +274,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             int id = playerList.getKey(connection);
 
             for(Network.UserInput input : inputList){
-                world.processInput(id, input);
+                world.processInput(world.entities.get(id), input);
                 lastInputIDProcessed.put(connection,input.inputID);
             }
             inputList.clear();
@@ -281,7 +285,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if(ConVars.getInt("sv_update_type")==0){
             Network.FullEntityUpdate update = new Network.FullEntityUpdate();
             update.serverTime = getServerTime();
-            update.entities = world.getNetworkedEntityList();
+            update.entities = world.getNetworkedEntities();
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -392,7 +396,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         world.render(delta, shapeRenderer,batch,camera);
-
     }
 
     public void startWaves(){
@@ -406,15 +409,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     public void addAmmo(int id, int weapon, int amount){
-        int ammo = world.entityAmmo.get(id).get(weapon);
-        ammo += amount;
-        world.entityAmmo.get(id).put(weapon,ammo);
+        world.entities.get(id).addAmmo(weapon,amount);
         Network.AddAmmo addAmmo = new Network.AddAmmo();
         addAmmo.weapon = weapon;
         addAmmo.amount = amount;
         sendTCP(playerList.get(id),addAmmo);
+        world.entities.get(id).setWeapon(weapon,true);
         Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
-        world.entityWeapons.get(id).put(weapon,true);
         weaponAdded.weapon = weapon;
         sendTCP(playerList.get(id),weaponAdded);
     }

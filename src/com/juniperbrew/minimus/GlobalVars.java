@@ -1,5 +1,7 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+
 import java.io.File;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -20,4 +22,5 @@ public class GlobalVars {
     public static int mapHeight;
     public static float mapScale;
     public static boolean[][] collisionMap;
+    public static TextureAtlas atlas;
 }

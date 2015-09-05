@@ -56,67 +56,34 @@ public class SharedMethods {
         return hitscans;
     }
 
-    public static Projectile createProjectile(TextureAtlas atlas,Line2D.Float line, ProjectileDefinition def){
+    public static Particle createTracer(ProjectileDefinition def, Line2D.Float line){
         int rotation = (int)Tools.getAngle(line);
         int length = (int) Tools.getLength(line);
         Rectangle bounds = new Rectangle(line.x1,line.y1,length,def.width);
-        Projectile p = new Projectile(bounds,rotation,line.x1,line.y1,0,0,-1,-1,0);
-        setProjectileAttributes(atlas,p,def,bounds);
-        return p;
+        return new Particle(def,bounds,rotation,line.x1,line.y1);
     }
 
-    private static void setProjectileAttributes(TextureAtlas atlas,Projectile p, ProjectileDefinition def, Rectangle bounds){
-        if (def.image != null) {
-            TextureRegion texture = atlas.findRegion(def.image);
-            p.setTexture(texture,bounds);
-        } else if (def.animation != null) {
-            Animation animation = new Animation(def.frameDuration, atlas.findRegions(def.animation));
-            p.setAnimation(animation,bounds);
-        } else {
-            TextureRegion texture = atlas.findRegion("blank");
-            Color color;
-            if (def.color == null) {
-                color = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
-            } else {
-                color = def.color;
-            }
-            p.setTexture(texture,bounds,color);
-        }
-
-        if (def.duration > 0) {
-            p.setDuration(def.duration);
-        }
-
-        p.knockback = def.knockback;
-        p.hitscan = def.hitscan;
-        p.onDestroy = def.onDestroy;
-        p.ignoreMapCollision = def.ignoreMapCollision;
-        p.explosionKnockback = def.explosionKnockback;
-        p.dontDestroyOnCollision = def.dontDestroyOnCollision;
-        p.noCollision = def.noCollision;
-    }
-
-    public static Projectile createProjectile(TextureAtlas atlas, ProjectileDefinition def, float x, float y) {
+    public static Particle createStationaryParticle(ProjectileDefinition def, float x, float y) {
         Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
-
-        Projectile p = new Projectile(bounds, -1, -1, def.damage);
-
-        setProjectileAttributes(atlas,p,def,bounds);
-
-        return p;
+        return new Particle(def,bounds);
     }
 
-    public static Projectile createProjectile(TextureAtlas atlas, ProjectileDefinition def, float x, float y, int entityId, int team) {
+    public static Particle createRotatedParticle(ProjectileDefinition def, float x, float y, int rotation) {
         Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
-
-        Projectile p = new Projectile(bounds, entityId, team, def.damage);
-
-        setProjectileAttributes(atlas,p,def,bounds);
-
-        return p;
+        return new Particle(def,bounds,rotation,x,y,0);
     }
 
-    public static ArrayList<Projectile> createProjectile(TextureAtlas atlas, Weapon weapon, float centerX, float centerY, int deg, int entityId, int team) {
+    public static Particle createMovingParticle(ProjectileDefinition def, float x, float y, int rotation, float velocity) {
+        Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
+        return new Particle(def,bounds,rotation,x,y, velocity);
+    }
+
+    public static Projectile createStationaryProjectile(ProjectileDefinition def, float x, float y, int entityId, int team) {
+        Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
+        return new Projectile(def, bounds, entityId, team);
+    }
+
+    public static ArrayList<Projectile> createProjectiles(Weapon weapon, float centerX, float centerY, int deg, int entityId, int team) {
         ProjectileDefinition def = weapon.projectile;
         final ArrayList<Projectile> projectiles = new ArrayList<>();
         int length = def.length;
@@ -128,9 +95,8 @@ public class SharedMethods {
 
             Rectangle bounds = new Rectangle(centerX + startDistanceX, centerY - width / 2, length, width);
 
-            Projectile p = new Projectile(bounds, deg, centerX, centerY, def.range, def.velocity, entityId, team, def.damage);
+            Projectile p = new Projectile(def, bounds, deg, centerX, centerY, entityId, team);
 
-            setProjectileAttributes(atlas,p,def,bounds);
             projectiles.add(p);
 
             if (weapon.projectileCount > 1) {
@@ -171,14 +137,14 @@ public class SharedMethods {
 
 
         if (ConVars.getBool("sv_check_map_collisions")) {
-            if (e.getX() + e.width + deltaX > GlobalVars.mapWidth) {
-                deltaX = GlobalVars.mapWidth - e.getX() - e.width;
+            if (e.getX() + e.getWidth() + deltaX > GlobalVars.mapWidth) {
+                deltaX = GlobalVars.mapWidth - e.getX() - e.getWidth();
             }
             if (e.getX() + deltaX < 0) {
                 deltaX = 0 - e.getX();
             }
-            if (e.getY() + e.height + deltaY > GlobalVars.mapHeight) {
-                deltaY = GlobalVars.mapHeight - e.getY() - e.height;
+            if (e.getY() + e.getHeight() + deltaY > GlobalVars.mapHeight) {
+                deltaY = GlobalVars.mapHeight - e.getY() - e.getHeight();
             }
             if (e.getY() + deltaY < 0) {
                 deltaY = 0 - e.getY();
@@ -554,11 +520,11 @@ public class SharedMethods {
         return collisions;
     }
 
-    public static void setRotation(NetworkEntity e, Network.UserInput input) {
+    public static void setRotation(Entity e, Network.UserInput input) {
         float mouseX = input.mouseX;
         float mouseY = input.mouseY;
-        float playerX = e.getX() + e.width / 2;
-        float playerY = e.getY() + e.height / 2;
+        float playerX = e.getX() + e.getWidth() / 2;
+        float playerY = e.getY() + e.getHeight() / 2;
         float deltaX = mouseX - playerX;
         float deltaY = mouseY - playerY;
         int degrees = (int) (MathUtils.radiansToDegrees * MathUtils.atan2(deltaY, deltaX));
@@ -582,10 +548,10 @@ public class SharedMethods {
         renderer.end();
     }
 
-    public static void renderAttack(float delta, SpriteBatch batch, ConcurrentLinkedQueue<Projectile> projectiles) {
+    public static void renderParticles(float delta, SpriteBatch batch, ConcurrentLinkedQueue<? extends Particle> particles) {
         batch.begin();
-        for (Projectile projectile : projectiles) {
-            projectile.render(batch, delta);
+        for (Particle particle : particles) {
+            particle.render(batch, delta);
         }
         batch.end();
     }
@@ -610,14 +576,14 @@ public class SharedMethods {
         return -1;
     }
 
-    public static ArrayList<Integer> getEntitiesWithinRange(Collection<? extends NetworkEntity> entities, NetworkEntity origin, float range){
+    public static ArrayList<Integer> getEntitiesWithinRange(Collection<? extends Entity> entities, Entity origin, float range){
         double squaredDistance = Math.pow(range,2);
         ArrayList<Integer> entityIDs = new ArrayList<>();
-        for(NetworkEntity e:entities){
+        for(Entity e:entities){
             float distance = Tools.getSquaredDistance(origin.getCenterX(),origin.getCenterY(),e.getCenterX(),e.getCenterY());
             if(distance<squaredDistance){
-                if(origin.id != e.id){
-                    entityIDs.add(e.id);
+                if(origin.getID() != e.getID()){
+                    entityIDs.add(e.getID());
                 }
             }
         }
