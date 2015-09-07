@@ -495,7 +495,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         String fileName = sendFile.fileName;
         byte[] data = sendFile.data;
         String dateStamp = sendFile.dateStamp;
-        consoleFrame.addLine("Received file: "+fileName);
+        showMessage("Received file: "+fileName);
         String folderName = Tools.getUserDataDirectory()+ File.separator+"receivedfiles"+File.separator+c.getRemoteAddressUDP().getHostName()+File.separator+dateStamp+File.separator;
         File folder = new File(folderName);
         folder.mkdirs();
