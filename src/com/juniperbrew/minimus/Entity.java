@@ -11,7 +11,7 @@ import java.awt.geom.Rectangle2D;
  */
 public class Entity {
 
-    private NetworkEntity networkEntity;
+    protected NetworkEntity networkEntity;
     Vector2 movement = new Vector2();
 
     public Entity() {
@@ -74,7 +74,7 @@ public class Entity {
         movement.setZero();
     }
 
-    protected void move(double deltaX, double deltaY) {
+    public void move(double deltaX, double deltaY) {
         networkEntity.x += deltaX;
         networkEntity.y += deltaY;
     }

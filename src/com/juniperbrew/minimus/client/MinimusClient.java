@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -79,10 +80,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     //System.nanoTime() for when authoritativeState is changed
     long lastAuthoritativeStateReceived;
 
+
+    long lastUpdateDelay = 1;
+
     //This is what we render
-    //private HashMap<Integer,ClientEntity> stateSnapshot = new HashMap<>();
+    private HashMap<Integer,NetworkEntity> stateSnapshot = new HashMap<>();
     private HashMap<Integer,ClientEntity> entities = new HashMap<>();
     private PlayerClientEntity player;
+
+    private ClientEntity ghostPlayer;
+    private LinkedHashMap<Integer,Vector2> predictedPositions = new LinkedHashMap<>();
 
     //StateSnapshot is an interpolation between these two states
     private Network.FullEntityUpdate interpFrom;
@@ -265,6 +272,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             weaponList = assign.weaponList;
             projectileList = assign.projectileList;
             player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
+            ghostPlayer = new ClientEntity();
             for(int id : playerList){
                 showMessage("Adding entity " + id + " to score");
                 score.addPlayer(id);
@@ -373,6 +381,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 pollInput(delta);
             }
             createStateSnapshot(getClientTime());
+            updateNetworkedState(stateSnapshot);
+            correctPlayerPositionError();
+            runClientSidePrediction();
             statusData.setEntityCount(entities.size());
         }
         statusData.setFps(Gdx.graphics.getFramesPerSecond());
@@ -529,7 +540,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(player.cooldowns.get(weaponSlot)>0||player.ammo.get(weaponSlot)<=0||!player.weapons.get(weaponSlot)){
             return;
         }
-        player.cooldowns.put(weaponSlot,weaponList.get(weaponSlot).cooldown);
+        player.cooldowns.put(weaponSlot, weaponList.get(weaponSlot).cooldown);
         player.ammo.put(weaponSlot,player.ammo.get(weaponSlot)-1);
         //TODO Ignoring projectile team for now
 
@@ -543,7 +554,47 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         addAttack(attack);
     }
 
-    private void runClientSidePrediction(HashMap<Integer, ClientEntity> state){
+    private void correctPlayerPositionError(){
+        //Set player position to what we had earlier predicted for this inputID, effectively removing the client prediction
+        ArrayList<Integer> removePredictions = new ArrayList<>();
+        for(int inputID:predictedPositions.keySet()){
+            if(inputID<authoritativeState.lastProcessedInputID){
+                removePredictions.add(inputID);
+            }else if(inputID == authoritativeState.lastProcessedInputID){
+                player.setPosition(predictedPositions.get(authoritativeState.lastProcessedInputID));
+            }else{
+                break;
+            }
+        }
+        predictedPositions.keySet().removeAll(removePredictions);
+
+        //If predicted player position different than ghost player interpolate towards ghost player
+        float errorX = ghostPlayer.getX()-player.getX();
+        float errorY = ghostPlayer.getY()-player.getY();
+        float ghostDelay = Tools.nanoToSecondsFloat(System.nanoTime()-lastAuthoritativeStateReceived);
+        //I'm not sure why this works but it works
+        //Alpha will increase towards 1 and the error decrease for every frame until we get a new state update
+        //So we keep correcting a larger percent of the remaining error
+        //There is no guarantee that we reach alpha 1 before a new state update so it's possible there is some reminder error when we get a new state
+        //This error should be so small however that it doesn't matter
+        //TODO Optimally we would like to interpolate all error before next state update arrives
+        //FIXME This seems to work fine with 10 or less updaterate but stutters at higher rates
+        float alpha = ghostDelay/Tools.nanoToSecondsFloat(lastUpdateDelay);
+        if(alpha>1){
+            alpha=1;
+        }
+        float correctionX = errorX*alpha;
+        float correctionY = errorY*alpha;
+        if(Math.abs(errorX)<1){
+            correctionX = errorX;
+        }
+        if(Math.abs(errorY)<1){
+            correctionY = errorY;
+        }
+        player.move(correctionX,correctionY);
+    }
+
+    private void runClientSidePrediction(){
 
         if(player==null){
             inputQueue.clear();
@@ -564,29 +615,34 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            SharedMethods.applyInput(state.get(player.id),input);
+            SharedMethods.applyInput(player,input);
+            SharedMethods.applyInput(ghostPlayer,input);
+            predictedPositions.put(input.inputID,new Vector2(player.getX(),player.getY()));
         }
     }
 
     private void updateNetworkedState(HashMap<Integer,NetworkEntity> interpolatedStates){
         for(int id:entities.keySet()){
-            if(id==player.id) {
-                if (!(entities.get(id) instanceof PlayerClientEntity)) {
-                    showMessage("Took player control of entity " + id);
-                    entities.put(id, player);
-                }
-            }
             if(interpolatedStates.containsKey(id)){
-                entities.get(id).setNetworkedState(interpolatedStates.get(id));
+                if(id==player.id) {
+                    if (!(entities.get(id) instanceof PlayerClientEntity)) {
+                        showMessage("Took player control of entity " + id);
+                        entities.put(id, player);
+                        player.setNetworkedState(interpolatedStates.get(id));
+                    }
+                    ghostPlayer.setNetworkedState(interpolatedStates.get(id));
+                }else {
+                    entities.get(id).setNetworkedState(interpolatedStates.get(id));
+                }
+                NetworkEntity e= authoritativeState.entities.get(id);
+                if(e!=null){
+                    //Here we update the fields that are not interpolated
+                    ClientEntity old = entities.get(id);
+                    old.setHealth(e.health);
+                    old.setTeam(e.team);
+                }
             }else{
                 showMessage("Couldn't find entity "+id+" in state update");
-            }
-            NetworkEntity e= authoritativeState.entities.get(id);
-            if(e!=null){
-                //Here we update the fields that are not interpolated
-                ClientEntity old = entities.get(id);
-                old.setHealth(e.health);
-                old.setTeam(e.team);
             }
         }
     }
@@ -604,8 +660,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             //With no interpolation we dont need the state history
             stateHistory.clear();
-            updateNetworkedState(authoritativeStateEntities);
-            runClientSidePrediction(entities);
+            stateSnapshot = authoritativeStateEntities;
             return;
         }
 
@@ -651,8 +706,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             //System.out.println("Interp alpha:"+interpAlpha);
 
             HashMap<Integer, NetworkEntity> interpEntities = interpolateStates(interpFrom, interpTo, interpAlpha);
-            updateNetworkedState(interpEntities);
-            runClientSidePrediction(entities);
+            stateSnapshot = interpEntities;
         }
     }
 
@@ -783,8 +837,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
-                //TODO if projectile hits some entity the onDestroy projectile is never created probably want to change this at some point
-                //TODO server will create the onDestroy projectile in any case and send it to client if its networked
+                //FIXME if projectile hits some entity the onDestroy projectile is never created probably want to change this at some point
+                //server will create the onDestroy projectile in any case and send it to client if its networked
                 if(projectile.onDestroy!=null && projectile.entitiesHit.isEmpty()){
                     ProjectileDefinition def = projectileList.get(projectile.onDestroy);
                     if(def.type == ProjectileDefinition.PARTICLE){
@@ -852,6 +906,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             for (NetworkEntity e : authoritativeState.entities.values()) {
                 shapeRenderer.rect(e.x, e.y, e.width, e.height);
             }
+            shapeRenderer.end();
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0, 1, 1, 1);
+            Rectangle bounds = ghostPlayer.getGdxBounds();
+            shapeRenderer.rect(bounds.x,bounds.y,bounds.width,bounds.height);
             shapeRenderer.end();
         }
 
@@ -1459,8 +1518,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void addServerState(Network.FullEntityUpdate state){
         stateHistory.add(state);
         authoritativeState = state;
+        lastUpdateDelay = System.nanoTime()-lastAuthoritativeStateReceived;
         lastAuthoritativeStateReceived = System.nanoTime();
         lastServerTime = authoritativeState.serverTime;
+
+        if(player!=null){
+            float errorX = ghostPlayer.getX()-player.getX();
+            float errorY = ghostPlayer.getY()-player.getY();
+            if(Math.abs(errorX)>0||Math.abs(errorY)>0){
+                showMessage("["+state.serverTime+","+state.lastProcessedInputID+"] New state update, player position error remaining X:"+errorX+" Y:"+errorY);
+            }
+        }
     }
 
     private void loadMap(String mapName){
@@ -1481,7 +1549,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         GlobalVars.collisionMap = SharedMethods.createCollisionMap(map,GlobalVars.mapWidthTiles,GlobalVars.mapHeightTiles);
     }
 
-    private void addEntity(NetworkEntity entity){
+    private void addEntity(NetworkEntity entity) {
         showMessage("Adding entity: "+entity);
         //Entities added instantly but their position starts updating only once the interpolation catches up
         authoritativeState.entities.put(entity.id,entity);

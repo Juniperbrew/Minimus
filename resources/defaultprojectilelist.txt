@@ -92,7 +92,7 @@ length=200
 #duration=0.8
 animation=explosion
 frameDuration=0.1
-knockback=200
+knockback=300
 sound=explosion.wav
 explosionKnockback
 ignoreMapCollision

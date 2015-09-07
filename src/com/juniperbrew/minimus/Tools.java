@@ -31,6 +31,10 @@ public class Tools {
         return (int)(nano/1000000000l);
     }
 
+    public static float nanoToSecondsFloat(long nano){
+        return nano/1000000000f;
+    }
+
     public static String secondsToTimestamp(int seconds){
         //TODO Breaks after 24 hours?
         int millis = seconds*1000;

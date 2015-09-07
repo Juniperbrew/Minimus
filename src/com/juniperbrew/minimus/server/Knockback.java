@@ -16,7 +16,7 @@ public class Knockback {
     int updateCounter;
 
     private final float mass = 100;
-    private final float friction = 8f;
+    private final float friction = 20f;
     private final float g = 9.81f;
 
     boolean expired;

@@ -2643,7 +2643,7 @@
   </object>
   <object id="52" name="ammo_rifle (40)" type="powerup" x="580" y="180" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_rifle"/>
+    <property name="ammo" value="Hitscan_Rifle"/>
     <property name="value" value="40"/>
    </properties>
   </object>

@@ -43,7 +43,7 @@ public class ServerEntity extends Entity {
         listener.rotationChanged(getID());
     }
 
-    protected void move(double deltaX, double deltaY){
+    public void move(double deltaX, double deltaY){
         super.move(deltaX, deltaY);
         listener.positionChanged(getID());
     }

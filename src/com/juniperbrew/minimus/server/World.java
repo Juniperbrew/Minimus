@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class World implements EntityChangeListener{
 
-    private final float KNOCKBACK_VELOCITY = 100;
+    private final float KNOCKBACK_VELOCITY = 200;
 
     Set<Integer> playerList = new HashSet<>();
     //Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
@@ -336,7 +336,9 @@ public class World implements EntityChangeListener{
 
     private void updateProjectiles(float delta){
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
+        Rectangle intersection = new Rectangle();
         for(Projectile projectile:projectiles){
+            Rectangle projectileBounds = projectile.getHitbox().getBoundingRectangle();
             projectile.update(delta);
             //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
             for(int id:entities.keySet()){
@@ -347,20 +349,26 @@ public class World implements EntityChangeListener{
                     continue;
                 }
                 ServerEntity target = entities.get(id);
-                if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(), target.getGdxBounds())){
+                Rectangle entityBounds = target.getGdxBounds();
+                if(Intersector.intersectRectangles(projectileBounds, entityBounds, intersection)){
                     if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
                         if(!projectile.dontDestroyOnCollision){
                             projectile.destroyed = true;
                         }
                         //Explosion self knockbacks apply on player but dont damage him
                         if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
-                            Vector2 knockback = new Vector2(projectile.knockback,0);
+                            Vector2 knockback;
                             if(projectile.explosionKnockback){
                                 Vector2 projectileCenter = new Vector2();
-                                projectile.getHitbox().getBoundingRectangle().getCenter(projectileCenter);
-                                float angle = Tools.getAngle(projectileCenter.x,projectileCenter.y,target.getCenterX(),target.getCenterY());
-                                knockback.setAngle(angle);
+                                projectileBounds.getCenter(projectileCenter);
+                                //Knockback is scaled to how far into the explosion the entity is
+                                //Since you can only be hit once by an explosion if you walk into one you will only be hit with very minor knockback
+                                float scale = intersection.area()/entityBounds.area();
+                                Vector2 i = new Vector2(target.getCenterX()-projectileCenter.x,target.getCenterY()-projectileCenter.y);
+                                knockback = new Vector2(projectile.knockback*scale,0);
+                                knockback.setAngle(i.angle());
                             }else{
+                                knockback = new Vector2(projectile.knockback,0);
                                 knockback.setAngle(projectile.rotation);
                             }
                             knockbacks.add(new Knockback(target.getID(), knockback));
