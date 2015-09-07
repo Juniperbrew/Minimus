@@ -1,7 +1,5 @@
 package com.juniperbrew.minimus.client;
 
-import com.juniperbrew.minimus.NetworkEntity;
-
 import java.util.HashMap;
 import java.util.Map;
 

@@ -12,17 +12,20 @@ public class Weapon {
     public double cooldown;
     public String image;
     public String ammoImage;
+    public String sprite;
 
     @Override
     public String toString() {
-        StringBuilder b = new StringBuilder();
-        b.append("Name: "+name);
-        b.append(" Projectile: "+projectile);
-        b.append(" Spread: "+spread);
-        b.append(" ProjectileCount: "+projectileCount);
-        b.append(" Sound: "+sound);
-        b.append(" Image: "+image);
-        b.append(" AmmoImage: "+ammoImage);
-        return b.toString();
+        return "Weapon{" +
+                "name='" + name + '\'' +
+                ", spread=" + spread +
+                ", projectileCount=" + projectileCount +
+                ", sound='" + sound + '\'' +
+                ", projectile=" + projectile +
+                ", cooldown=" + cooldown +
+                ", image='" + image + '\'' +
+                ", ammoImage='" + ammoImage + '\'' +
+                ", sprite='" + sprite + '\'' +
+                '}';
     }
 }

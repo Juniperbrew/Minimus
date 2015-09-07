@@ -145,8 +145,8 @@ knockback=50
 {
 name=Laser
 type=hitscan
-tracer=Laser_Tracer
-length=100
+#tracer=Laser_Tracer
+length=50
 damage=35
 knockback=50
 }

@@ -8,6 +8,7 @@ sound=laser.ogg
 cooldown=0.5
 image=plasmaGun
 ammoImage=smallCell
+sprite=melee
 }
 
 ###################
@@ -24,6 +25,7 @@ cooldown=0.3
 image=pistol
 ammoImage=smallAmmo
 sound=pistol.wav
+sprite=pistol
 }
 
 #2
@@ -36,6 +38,7 @@ cooldown=0.5
 image=superShotgun
 ammoImage=smallShell
 sound=shotgun.wav
+sprite=pistol
 }
 
 #3
@@ -48,6 +51,7 @@ cooldown=0.15
 image=chainGun
 ammoImage=largeAmmo
 sound=uzi.wav
+sprite=pistol
 }
 
 #4
@@ -60,6 +64,7 @@ cooldown=0.2
 image=rifle
 ammoImage=rifleAmmo
 sound=rifle.wav
+sprite=rifle
 }
 
 #################

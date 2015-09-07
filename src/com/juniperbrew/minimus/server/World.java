@@ -883,6 +883,9 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("ammoImage")){
                     weapon.ammoImage = splits[1];
                 }
+                if(splits[0].equals("sprite")){
+                    weapon.sprite = splits[1];
+                }
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -943,7 +946,7 @@ public class World implements EntityChangeListener{
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
                 ConVars.getInt("sv_player_max_health"),ConVars.getInt("sv_player_default_team"),
-                "rambo_pistol",entityWeapons,entityAmmo,this);
+                "rambo",entityWeapons,entityAmmo,this);
         newPlayer.invulnerable = true;
         addEntity(newPlayer);
 

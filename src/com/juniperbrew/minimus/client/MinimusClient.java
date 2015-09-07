@@ -955,18 +955,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             float x = e.getX();
             float y = e.getY();
             batch.setColor(1,1,1,1);
+            StringBuilder textureName = new StringBuilder(e.getImage());
             if(e.getID()==player.id) {
                 //Cast player position to int because we are centering the camera using casted values too
                 x = (int) e.getX();
                 y = (int) e.getY();
+                textureName.append("_");
+                textureName.append(weaponList.get(player.slot1Weapon).sprite);
             }
             TextureRegion texture;
             if(e.fireAnimationTimer>0){
-                texture = getTexture(e.getImage()+"_attack_fire");
+                texture = getTexture(textureName+"_attack");
             }else if(e.aimingWeapon){
-                texture = getTexture(e.getImage()+"_attack_aim");
+                texture = getTexture(textureName+"_aim");
             }else{
-                texture = getTexture(e.getImage(),e.getID());
+                texture = getTexture(textureName.toString(),e.getID());
             }
             Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
             batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.getWidth()/2,e.getHeight()/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
