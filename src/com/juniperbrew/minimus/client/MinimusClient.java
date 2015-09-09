@@ -420,7 +420,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 && !autoWalk){
             player.animationState = 0;
         }
-        if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
+        //TODO We need to send every input packet because server counts cooldowns from the input durations
+        //if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
             int inputRequestID = getNextInputRequestID();
             Network.UserInput input = new Network.UserInput();
             input.msec = (short) (delta*1000);
@@ -439,7 +440,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             pendingInputPacket.add(input);
 
             processClientInput(input);
-        }
+        //}
     }
 
     private void processClientInput(Network.UserInput input){
