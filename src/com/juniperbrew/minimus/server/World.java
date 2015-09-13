@@ -933,15 +933,18 @@ public class World implements EntityChangeListener{
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
         HashMap<Integer,Integer> entityAmmo = new HashMap<>();
+        for(int weaponID : weaponList.keySet()){
+            if(ConVars.getBool("sv_idkfa")){
+                entityWeapons.put(weaponID, true);
+                entityAmmo.put(weaponID, 999999999);
+            }else{
+                entityWeapons.put(weaponID, false);
+                entityAmmo.put(weaponID, 0);
+            }
+        }
         //Lots of ammo for primary weapon
         entityWeapons.put(0, true);
         entityAmmo.put(0, 999999999);
-        if(ConVars.getBool("sv_idkfa")){
-            for(int weaponID : weaponList.keySet()){
-                entityWeapons.put(weaponID, true);
-                entityAmmo.put(weaponID, 999999999);
-            }
-        }
 
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
