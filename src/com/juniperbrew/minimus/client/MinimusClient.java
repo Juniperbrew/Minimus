@@ -961,6 +961,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 //Cast player position to int because we are centering the camera using casted values too
                 x = (int) e.getX();
                 y = (int) e.getY();
+            }
+            if(playerList.contains(e.getID())){
                 textureName.append("_");
                 textureName.append(weaponList.get(player.slot1Weapon).sprite);
             }
