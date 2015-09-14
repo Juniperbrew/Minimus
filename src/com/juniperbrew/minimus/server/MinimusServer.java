@@ -136,6 +136,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         showMessage("100 entity position update size:" + measureObject(createPositionList(100)) + "bytes");
     }
 
+    private void sendFullStateUpdate(Connection c){
+        Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
+        fullUpdate.entities = world.getNetworkedEntities();
+        fullUpdate.serverTime = getServerTime();
+        c.sendTCP(fullUpdate);
+    }
+
     private void startServer(){
         server = new Server(writeBuffer,objectBuffer);
         Network.register(server);
@@ -151,11 +158,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                 StatusData dataUsage = new StatusData(connection, System.nanoTime(),ConVars.getInt("cl_log_interval_seconds"));
                 connection.setTimeout(GlobalVars.TIMEOUT);
                 connectionStatus.put(connection, dataUsage);
-                serverStatusFrame.addConnection(connection.toString(),dataUsage);
-                Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
-                fullUpdate.entities = world.getNetworkedEntities();
-                fullUpdate.serverTime = getServerTime();
-                connection.sendTCP(fullUpdate);
+                serverStatusFrame.addConnection(connection.toString(), dataUsage);
+                sendFullStateUpdate(connection);
                 connections.add(connection);
             }
 
@@ -223,8 +227,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             Network.ChangeWeapon changeWeapon = (Network.ChangeWeapon) object;
             world.entities.get(playerList.getKey(connection)).setSlot1Weapon(changeWeapon.weapon);
         }else if(object instanceof Disconnect){
-            connectionStatus.get(connection).disconnected();
-            if(playerList.containsValue(connection)){
+            if(connectionStatus.containsKey(connection)){
+                connectionStatus.get(connection).disconnected();
+            }else{
+                showMessage(connection + " disconnected but is not in the connectionlist");
+            }
+            if(playerList.containsValue(connection)) {
                 world.removePlayer(playerList.getKey(connection));
             }
             connections.remove(connection);
@@ -400,6 +408,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     public void startWaves(){
         world.spawnWaves = true;
+    }
+
+    public void fillAllAmmo(){
+        for(int id : playerList.keySet()){
+            fillAmmo(id);
+        }
     }
 
     public void fillAmmo(int id){
@@ -664,6 +678,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
         if (character == 't') {
             pendingRandomNpcAdds += 10;
+        }
+        if (character == 'l') {
+            showMessage("Sending full update to all clients");
+            for(Connection c : server.getConnections()){
+                sendFullStateUpdate(c);
+            }
         }
         if (character == 'c') {
             Network.GameClockCompare gameClockCompare = new Network.GameClockCompare();

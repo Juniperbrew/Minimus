@@ -152,7 +152,7 @@ public class ConsoleFrame extends JFrame {
     }
 
     public void addLine(String line){
-        textArea.append(line+"\n");
+        textArea.append(line + "\n");
     }
 
     public void runAutoexec(){
@@ -242,7 +242,11 @@ public class ConsoleFrame extends JFrame {
         }
         if(splits[0].equals("idkfa")){
             if(minimusServer!=null){
-                minimusServer.fillAmmo(Integer.parseInt(splits[1]));
+                if(splits.length==1){
+                    minimusServer.fillAllAmmo();
+                }else{
+                    minimusServer.fillAmmo(Integer.parseInt(splits[1]));
+                }
             }else{
                 addLine("The " + splits[0] + " command can only be used on server");
             }

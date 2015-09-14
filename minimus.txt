@@ -1,7 +1,6 @@
 TODO add hitscan weapon sword with swinging line animation
 TODO auto reconnect if server restarts
 FIXME when individually clicking attack player attacks not always fired on server, happens because cooldown is only reduced when receiving input packets
-FIXME weapon pickups not working
 
 DONE server crashes when player killed by multiple things at once (probably only relevant to contact damage)
 DONE make npc store the location where player was last seen instead of actual location

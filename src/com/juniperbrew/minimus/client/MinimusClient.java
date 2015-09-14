@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -1318,7 +1319,37 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             @Override
             public void disconnected(Connection connection){
-                showMessage("Lost connection to server.");
+                showMessage("Lost connection to server. Trying to reconnect.");
+                for(int id: new HashSet<>(entities.keySet())){
+                    removeEntity(id);
+                }
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        int connectionAttempt = 1;
+                        while(!client.isConnected()){
+                            try {
+                                showMessage("Trying to reconnect " + connectionAttempt + "...");
+                                connectionAttempt++;
+                                client.reconnect();
+                            } catch (IOException e1) {
+                                showMessage("No response from server");
+                                try {
+                                    Thread.sleep(5000);
+                                } catch (InterruptedException e2) {
+                                    e2.printStackTrace();
+                                }
+                            }
+                        }
+                        requestRespawn();
+                    }
+                },"Reconnecting thread").start();
+
             }
         };
         double minPacketDelay = ConVars.getDouble("sv_min_packet_delay");

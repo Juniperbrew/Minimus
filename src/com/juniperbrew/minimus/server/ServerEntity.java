@@ -92,7 +92,7 @@ public class ServerEntity extends Entity {
     }
 
     public boolean hasWeapon(int weapon){
-        return weapons.containsKey(weapon);
+        return weapons.get(weapon);
     }
 
     public boolean weaponCooldown(int weapon){
