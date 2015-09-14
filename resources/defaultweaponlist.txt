@@ -38,7 +38,7 @@ cooldown=0.5
 image=superShotgun
 ammoImage=smallShell
 sound=shotgun.wav
-sprite=pistol
+sprite=rifle
 }
 
 #3
@@ -62,7 +62,7 @@ spread=0
 projectileCount=1
 cooldown=0.2
 image=rifle
-ammoImage=rifleAmmo
+ammoImage=largeAmmo
 sound=rifle.wav
 sprite=rifle
 }
@@ -81,6 +81,7 @@ sound=laser.ogg
 cooldown=1
 image=bfg
 ammoImage=largeCell
+sprite=rifle
 }
 
 #6
@@ -91,7 +92,8 @@ spread=90
 projectileCount=15
 cooldown=0
 image=fire
-ammoImage=yellowSkull
+ammoImage=fire
+sprite=rifle
 }
 
 #7
@@ -102,9 +104,10 @@ spread=0
 projectileCount=1
 sound=projectile.ogg
 cooldown=0.5
-image=rifle
+image=rocketLauncher
 ammoImage=largeAmmo
 sound=sinko.wav
+sprite=rifle
 }
  
 #8
@@ -116,6 +119,7 @@ projectileCount=5
 cooldown=0.5
 image=superShotgun
 ammoImage=smallShell
+sprite=rifle
 }
 
 #9
@@ -127,6 +131,7 @@ projectileCount=1
 cooldown=0.1
 image=chainGun
 ammoImage=smallAmmo
+sprite=pistol
 }
 
 
@@ -138,8 +143,9 @@ spread=75
 projectileCount=1
 sound=laser.ogg
 cooldown=0.5
-image=helmet
-ammoImage=goggles
+image=plasmaGun
+ammoImage=smallCell
+sprite=rifle
 }
 
 #11
@@ -150,7 +156,8 @@ spread=10
 projectileCount=3
 cooldown=0.1
 image=flame
-ammoImage=blueSkull
+ammoImage=flame
+sprite=rifle
 }
 
 #12
@@ -161,7 +168,8 @@ spread=0
 projectileCount=1
 cooldown=0.2
 image=fire
-ammoImage=redSkull
+ammoImage=fire
+sprite=rifle
 }
 
 

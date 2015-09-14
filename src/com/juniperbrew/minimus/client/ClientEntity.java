@@ -12,6 +12,7 @@ public class ClientEntity extends Entity {
     public float animationState;
     public double fireAnimationTimer;
     public boolean aimingWeapon;
+    public float bleedTimer;
 
     public ClientEntity(NetworkEntity e) {
         super(e);
@@ -26,6 +27,12 @@ public class ClientEntity extends Entity {
             animationState = 0;
         }
         super.setNetworkedState(e);
+    }
+
+    public void update(float delta){
+        fireAnimationTimer -= delta;
+        bleedTimer -= delta;
+        animationState += delta;
     }
 
     public void setPosition(Vector2 p){

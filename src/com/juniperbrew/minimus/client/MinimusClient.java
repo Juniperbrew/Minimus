@@ -146,9 +146,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     int windowWidth;
     int windowHeight;
 
-    boolean mouse1Pressed;
-    boolean mouse2Pressed;
-
     boolean autoWalk;
 
     int lives;
@@ -162,6 +159,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     float lastMouseY = -1;
 
     Line2D.Float tracer;
+
+    private final float TIMESTEP = (1/60f);
+    private float ackumulator;
+
+    int reconnectDots;
+    long lastDotAdded;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -236,7 +239,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }else if(object instanceof Network.EntityAttacking){
             Network.EntityAttacking attack = (Network.EntityAttacking) object;
-            addAttack(attack);
+            addAttack(attack,false);
         }else if(object instanceof Network.AddDeath){
             Network.AddDeath addDeath = (Network.AddDeath) object;
             score.addDeath(addDeath.id);
@@ -345,11 +348,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
 
         for(ClientEntity e : entities.values()) {
-            e.fireAnimationTimer -= delta;
-            e.animationState += delta;
-        }
+            e.update(delta);
 
-        player.updateCooldowns(delta);
+            if(e.getHealthPercent()>0.5f && e.bleedTimer < 0) {
+                particles.add(SharedMethods.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)));
+                e.bleedTimer = MathUtils.random(0.5f,2f);
+            }
+        }
 
         sendInputPackets();
         updateProjectiles(delta);
@@ -401,26 +406,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             player.animationState = 0;
         }
         //TODO We need to send every input packet because server counts cooldowns from the input durations
-        //if(buttons.size()>0||mouse1Pressed||mouse2Pressed||lastMouseX!=mouseX||lastMouseY!=mouseY||autoWalk){
-            int inputRequestID = getNextInputRequestID();
-            Network.UserInput input = new Network.UserInput();
-            input.msec = (short) (delta*1000);
-            input.buttons = buttons.clone();
-            if(mouse1Pressed) input.buttons.add(Enums.Buttons.MOUSE1);
-            if(mouse2Pressed) input.buttons.add(Enums.Buttons.MOUSE2);
+        int inputRequestID = getNextInputRequestID();
+        Network.UserInput input = new Network.UserInput();
+        input.msec = (short) (delta*1000);
+        input.buttons = buttons.clone();
 
-            if(autoWalk) input.buttons.add(Enums.Buttons.W);
+        if(autoWalk) input.buttons.add(Enums.Buttons.W);
 
-            input.inputID = inputRequestID;
-            input.mouseX = mouseX;
-            input.mouseY = mouseY;
-            lastMouseX = mouseX;
-            lastMouseY = mouseY;
-            inputQueue.add(input);
-            pendingInputPacket.add(input);
+        input.inputID = inputRequestID;
+        input.mouseX = mouseX;
+        input.mouseY = mouseY;
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        inputQueue.add(input);
+        pendingInputPacket.add(input);
 
-            processClientInput(input);
-        //}
+        processClientInput(input);
+        player.updateCooldowns(input.msec/1000f);
     }
 
     private void processClientInput(Network.UserInput input){
@@ -504,11 +506,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(buttons.contains(Enums.Buttons.MOUSE1)){
             playerAttack(player.slot1Weapon);
-            mouse1Pressed = false;
         }
         if(buttons.contains(Enums.Buttons.MOUSE2)){
             playerAttack(player.slot2Weapon);
-            mouse2Pressed = false;
         }
     }
 
@@ -532,7 +532,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attack.y = player.getCenterY();
         attack.weapon = weaponSlot;
 
-        addAttack(attack);
+        addAttack(attack, true);
     }
 
     private void correctPlayerPositionError(){
@@ -572,7 +572,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(Math.abs(errorY)<1){
             correctionY = errorY;
         }
-        player.move(correctionX,correctionY);
+        player.move(correctionX, correctionY);
     }
 
     private void runClientSidePrediction(){
@@ -844,11 +844,29 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
+    private Rectangle getCenteredScaledTextureSize(TextureRegion t, Rectangle bounds, float scale){
+        Rectangle r = getCenteredTextureSize(t,bounds);
+        float diff = bounds.width*scale-bounds.width;
+        r.setSize(r.width * scale, r.height * scale);
+        r.setPosition(r.x-diff/2,r.y-diff/2);
+        return r;
+    }
+
     @Override
     public void render() {
 
         float delta = Gdx.graphics.getDeltaTime();
-        doLogic(delta);
+        if(delta>0.25){
+            delta=0.25f;
+        }
+        ackumulator += delta;
+        while (ackumulator>=TIMESTEP){
+            ackumulator-=TIMESTEP;
+            doLogic(TIMESTEP);
+        }
+        if(authoritativeState==null||player==null){
+            return;
+        }
 
         renderStart = System.nanoTime();
 
@@ -945,6 +963,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(playerList.contains(e.getID())){
                 textureName.append("_");
                 textureName.append(weaponList.get(player.slot1Weapon).sprite);
+            }else if(e.getHealthPercent()>0.5f){
+                textureName.append("_");
+                textureName.append("hurt");
             }
             TextureRegion texture;
             if(e.fireAnimationTimer>0){
@@ -954,8 +975,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }else{
                 texture = getTexture(textureName.toString(),e.getID());
             }
-            Rectangle textureBounds = getCenteredTextureSize(texture,e.getGdxBounds());
-            batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,e.getWidth()/2,e.getHeight()/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
+            Rectangle textureBounds = getCenteredScaledTextureSize(texture, e.getGdxBounds(), 1.8125f);
+            batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,textureBounds.width/2,textureBounds.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
             e.aimingWeapon = false;
             batch.setColor(0,1,0,1);
             batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
@@ -993,6 +1014,22 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
         glyphLayout.setText(font, "Lives: "+lives);
         font.draw(batch, "Lives: "+lives,windowWidth-glyphLayout.width ,windowHeight-5);
+
+        if(!client.isConnected()){
+            if(System.nanoTime()-lastDotAdded > Tools.secondsToNano(2)){
+                lastDotAdded = System.nanoTime();
+                reconnectDots++;
+                if(reconnectDots>3){
+                    reconnectDots = 0;
+                }
+            }
+            StringBuilder b = new StringBuilder("Lost connection to server, reconnecting");
+            glyphLayout.setText(font, b);
+            for (int i = 0; i < reconnectDots; i++) {
+                b.append(".");
+            }
+            font.draw(batch, b, windowWidth / 2 - glyphLayout.width/2 ,windowHeight/2-glyphLayout.height/2);
+        }
         batch.end();
     }
 
@@ -1573,8 +1610,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void addEntity(NetworkEntity entity) {
         showMessage("Adding entity: "+entity);
         //Entities added instantly but their position starts updating only once the interpolation catches up
-        authoritativeState.entities.put(entity.id,entity);
-        entities.put(entity.id,new ClientEntity(entity));
+        authoritativeState.entities.put(entity.id, entity);
+        entities.put(entity.id, new ClientEntity(entity));
     }
 
     private void removeEntity(int id){
@@ -1602,7 +1639,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void addAttack(Network.EntityAttacking attack){
+    private void addAttack(Network.EntityAttacking attack, boolean predict){
         if(weaponList==null){
             return;
         }
@@ -1654,7 +1691,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));                    }
                 }
             }else{
-                projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                //Dont render projectiles spawned on client
+                if(!predict){
+                    projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                }
             }
 
             if(weapon.sound!=null){
@@ -1705,11 +1745,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if(button == 0){
             buttons.add(Enums.Buttons.MOUSE1);
-            mouse1Pressed = true;
         }
         if(button == 1){
             buttons.add(Enums.Buttons.MOUSE2);
-            mouse2Pressed = true;
         }
         return false;
     }

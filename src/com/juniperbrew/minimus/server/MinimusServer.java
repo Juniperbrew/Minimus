@@ -96,6 +96,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     World world;
 
+    private final float TIMESTEP = (1/60f);
+    private float ackumulator;
 
     @Override
     public void create() {
@@ -115,7 +117,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         serverData = new StatusData(serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
         serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
-        startSimulation();
         Gdx.input.setInputProcessor(this);
 
         serverData.entitySize = measureObject(new NetworkEntity(-1, 1000000, 1000000,-1));
@@ -263,7 +264,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     private void updatePing(){
         if(System.nanoTime()-lastPingUpdate>Tools.secondsToNano(ConVars.getDouble("cl_ping_update_delay"))){
-            for(Connection c:server.getConnections()){
+            for(Connection c:connectionStatus.keySet()){
                 connectionStatus.get(c).updatePing();
                 updateFakePing(c);
             }
@@ -351,7 +352,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
         pendingRandomNpcRemovals = 0;
     }
-
+/*
     private void startSimulation(){
         Thread thread = new Thread(new Runnable(){
             @Override
@@ -385,11 +386,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             }
         },"WorldSimulation");
         thread.start();
-    }
+    }*/
 
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
+        if(delta>0.25){
+            delta=0.25f;
+        }
+        ackumulator += delta;
+        while (ackumulator>=TIMESTEP){
+            ackumulator-=TIMESTEP;
+            doLogic(TIMESTEP);
+        }
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
             logIntervalElapsed();

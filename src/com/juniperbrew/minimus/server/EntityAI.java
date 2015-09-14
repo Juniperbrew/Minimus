@@ -25,6 +25,7 @@ public class EntityAI {
     public static final int FOLLOWING_AND_SHOOTING = 3;
 
     private static final int MAX_RANGE = 400; //Pixels
+    private static final float TARGET_UPDATE_DELAY = 0.1f;
 
     public float destinationX;
     public float destinationY;
@@ -37,6 +38,7 @@ public class EntityAI {
     float destinationTimer;
     float destinationTimeLimit;
     boolean targetUpdated;
+    float targetSearchTimer;
 
     public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
         this.entity = entity;
@@ -47,9 +49,11 @@ public class EntityAI {
     }
 
     public void act(double velocity, double delta){
+        entity.updateCooldowns(delta);
+        targetSearchTimer -= delta;
         if(aiType == MOVING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
-            move(velocity,delta);
+            move(velocity, delta);
         }else if(aiType == MOVING_AND_SHOOTING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             move(velocity,delta);
@@ -64,10 +68,13 @@ public class EntityAI {
             move(velocity,delta);
             shoot();
         }
-        entity.updateCooldowns(delta);
     }
 
     private void lookForTarget(){
+        if(targetSearchTimer>0){
+            return;
+        }
+        targetSearchTimer = TARGET_UPDATE_DELAY;
         float closestDistance = Float.POSITIVE_INFINITY;
         ServerEntity closestTarget = null;
         for(ServerEntity target : world.entities.values()){
