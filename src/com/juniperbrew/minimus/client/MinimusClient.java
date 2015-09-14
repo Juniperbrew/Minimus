@@ -348,27 +348,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             e.animationState += delta;
         }
 
-        /*
-        double squaredDistance = Math.pow(ConVars.getFloat("sv_npc_target_search_radius"),2);
-        ArrayList<ClientEntity> entitiesInRange = new ArrayList<>();
-        for(ClientEntity e : entities.values()){
-            e.fireAnimationTimer -= delta;
-            e.animationState += delta;
-            float distance = Tools.getSquaredDistance(player.getCenterX(),player.getCenterY(),e.getCenterX(),e.getCenterY());
-            if(distance<squaredDistance){
-                if(!playerList.contains(e.getID())){
-                    entitiesInRange.add(e);
-                }
-            }
-        }
-
-        //Make enemies ready their weapon when they get close
-        //FIXME this vision goes through walls
-        for(ClientEntity e: entitiesInRange){
-            e.aimingWeapon = true;
-        }
-        */
-
         player.updateCooldowns(delta);
 
         sendInputPackets();
@@ -377,7 +356,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         //Dont pollInput or create snapshot if we have no state from server
         if (authoritativeState != null){
-            if(player!=null){
+            if(player!=null&&playerList.contains(player.id)){
                 pollInput(delta);
             }
             createStateSnapshot(getClientTime());
@@ -1335,6 +1314,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
 
                 pendingPackets.add(object);
+            }
+
+            @Override
+            public void disconnected(Connection connection){
+                showMessage("Lost connection to server.");
             }
         };
         double minPacketDelay = ConVars.getDouble("sv_min_packet_delay");
