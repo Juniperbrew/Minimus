@@ -1,8 +1,8 @@
 TODO add hitscan weapon sword with swinging line animation
-TODO minimap
 TODO running
 FIXME when individually clicking attack player attacks not always fired on server, happens because cooldown is only reduced when receiving input packets
 
+DONE minimap
 DONE auto reconnect if server restarts
 DONE server crashes when player killed by multiple things at once (probably only relevant to contact damage)
 DONE make npc store the location where player was last seen instead of actual location

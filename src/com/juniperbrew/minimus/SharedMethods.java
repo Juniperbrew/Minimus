@@ -565,6 +565,19 @@ public class SharedMethods {
         return collisions;
     }
 
+    public static void printCollisionMap(){
+        for(int y = 0; y < GlobalVars.mapHeightTiles; y++){
+            for (int x = 0; x < GlobalVars.mapWidthTiles; x++) {
+                if(GlobalVars.collisionMap[x][GlobalVars.mapHeightTiles-y-1]){
+                    System.out.print("#");
+                }else{
+                    System.out.print("0");
+                }
+            }
+            System.out.println();
+        }
+    }
+
     public static void setRotation(Entity e, Network.UserInput input) {
         float mouseX = input.mouseX;
         float mouseY = input.mouseY;

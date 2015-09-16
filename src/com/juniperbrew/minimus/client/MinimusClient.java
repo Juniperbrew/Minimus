@@ -172,6 +172,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     boolean fadeOut;
     boolean fadeIn;
 
+    Texture minimap;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         ConVars.addListener(this);
@@ -332,12 +334,29 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void changeMap(Network.MapChange mapChange){
-        showMessage("Changing map to "+mapChange.mapName);
+        showMessage("Changing map to " + mapChange.mapName);
         fadeScreen();
+        SharedMethods.printCollisionMap();
         loadMap(mapChange.mapName);
         powerups = mapChange.powerups;
         projectiles.clear();
         particles.clear();
+    }
+
+    private void createMinimap(){
+        Pixmap pixmap = new Pixmap(GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles, Pixmap.Format.RGBA8888 );
+        for (int x = 0; x < GlobalVars.mapWidthTiles; x++) {
+            for (int y = 0; y < GlobalVars.mapHeightTiles; y++) {
+                //Pixmap coordinates are Y down
+                if(GlobalVars.collisionMap[x][GlobalVars.mapHeightTiles-y-1]){
+                    pixmap.drawPixel(x,y,Color.rgba8888(1, 1, 1, 1));
+                }else{
+                    pixmap.drawPixel(x,y,Color.rgba8888(1, 1, 1, 0));
+                }
+            }
+        }
+        minimap = new Texture(pixmap);
+        pixmap.dispose();
     }
 
     private void fadeScreen(){
@@ -443,7 +462,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         boolean attacked = false;
         //We need to move player here so we can spawn the potential projectiles at correct location
-        if(player != null){
+        if(player != null) {
             SharedMethods.applyInput(player,input);
         }
 
@@ -617,8 +636,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            SharedMethods.applyInput(player,input);
-            SharedMethods.applyInput(ghostPlayer,input);
+            SharedMethods.applyInput(player, input);
+            SharedMethods.applyInput(ghostPlayer, input);
             predictedPositions.put(input.inputID,new Vector2(player.getX(),player.getY()));
         }
     }
@@ -1075,6 +1094,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             font.draw(batch, b, windowWidth / 2 - glyphLayout.width/2 ,windowHeight/2-glyphLayout.height/2);
         }
+
+        if(buttons.contains(Enums.Buttons.TAB)&&minimap!=null){
+            batch.setColor(1, 1, 1, 1);
+            int scale = 4;
+            float mapX = windowWidth/2 - minimap.getWidth()*scale/2;
+            float mapY = windowHeight/2 - minimap.getHeight()*scale/2;
+            float mapWidth = minimap.getWidth()*scale;
+            float mapHeight = minimap.getHeight()*scale;
+            batch.draw(minimap, mapX, mapY, mapWidth, mapHeight);
+            TextureRegion blank = getTexture("blank");
+            for(ClientEntity e:entities.values()){
+                if(playerList.contains(e.getID())){
+                    batch.setColor(0,0,1,1);
+                }else{
+                    batch.setColor(1,0,0,1);
+                }
+                int x = (int) (e.getCenterX() / GlobalVars.tileWidth);
+                int y = (int) (e.getCenterY()/GlobalVars.tileHeight);
+                batch.draw(blank,mapX+x*scale,mapY+y*scale,scale,scale);
+            }
+        }
         batch.end();
     }
 
@@ -1232,6 +1272,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.A)buttons.add(Enums.Buttons.A);autoWalk=false;
         if(keycode == Input.Keys.S)buttons.add(Enums.Buttons.S);autoWalk=false;
         if(keycode == Input.Keys.D)buttons.add(Enums.Buttons.D);autoWalk=false;
+        if(keycode == Input.Keys.TAB)buttons.add(Enums.Buttons.TAB);
         return false;
     }
 
@@ -1257,6 +1298,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.A)buttons.remove(Enums.Buttons.A);
         if(keycode == Input.Keys.S)buttons.remove(Enums.Buttons.S);
         if(keycode == Input.Keys.D)buttons.remove(Enums.Buttons.D);
+        if(keycode == Input.Keys.TAB)buttons.remove(Enums.Buttons.TAB);
         return false;
     }
 
@@ -1650,6 +1692,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
         GlobalVars.collisionMap = SharedMethods.createCollisionMap(map,GlobalVars.mapWidthTiles,GlobalVars.mapHeightTiles);
+        createMinimap();
     }
 
     private void addEntity(NetworkEntity entity) {
