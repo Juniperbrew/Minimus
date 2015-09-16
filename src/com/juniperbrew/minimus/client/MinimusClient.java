@@ -1273,6 +1273,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.S)buttons.add(Enums.Buttons.S);autoWalk=false;
         if(keycode == Input.Keys.D)buttons.add(Enums.Buttons.D);autoWalk=false;
         if(keycode == Input.Keys.TAB)buttons.add(Enums.Buttons.TAB);
+        if(keycode == Input.Keys.CONTROL_LEFT)buttons.add(Enums.Buttons.LCTRL);
         return false;
     }
 
@@ -1299,6 +1300,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(keycode == Input.Keys.S)buttons.remove(Enums.Buttons.S);
         if(keycode == Input.Keys.D)buttons.remove(Enums.Buttons.D);
         if(keycode == Input.Keys.TAB)buttons.remove(Enums.Buttons.TAB);
+        if(keycode == Input.Keys.CONTROL_LEFT)buttons.remove(Enums.Buttons.LCTRL);
         return false;
     }
 

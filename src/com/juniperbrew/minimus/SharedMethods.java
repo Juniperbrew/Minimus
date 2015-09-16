@@ -111,6 +111,10 @@ public class SharedMethods {
         float deltaY = 0;
         float velocity = ConVars.getFloat("sv_player_velocity");
 
+        if(input.buttons.contains(Enums.Buttons.LCTRL)){
+            velocity *= 3;
+        }
+
         setRotation(e, input);
 
         float delta = input.msec / 1000f;
