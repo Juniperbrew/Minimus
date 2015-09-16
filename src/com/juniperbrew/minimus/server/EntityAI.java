@@ -27,14 +27,12 @@ public class EntityAI {
     private static final int MAX_RANGE = 400; //Pixels
     private static final float TARGET_UPDATE_DELAY = 0.1f;
 
-    public float destinationX;
-    public float destinationY;
     public boolean hasDestination;
     ServerEntity entity;
     long lastAttackDone;
     int aiType;
     int weapon;
-    Vector2 targetLocation;
+    Vector2 destination = new Vector2();
     float destinationTimer;
     float destinationTimeLimit;
     boolean targetUpdated;
@@ -90,25 +88,25 @@ public class EntityAI {
             }
         }
         if(closestTarget!=null && Math.sqrt(closestDistance) < ConVars.getFloat("sv_npc_target_search_radius")){
-            targetLocation = new Vector2(closestTarget.getCenterX(), closestTarget.getCenterY());
+            setTarget(closestTarget.getCenterX(), closestTarget.getCenterY());
             targetUpdated = true;
         }
 
-        if(targetLocation!=null){
-            setDestination(targetLocation.x,targetLocation.y);
-        }
+    }
+
+    public void setTarget(float x, float y){
+        setDestination(x,y);
     }
 
     private void move(double velocity,double delta){
         destinationTimer += delta;
         destinationTimeLimit -= delta;
         if(hasDestination) {
-            double distanceX = destinationX - entity.getCenterX();
-            double distanceY = destinationY - entity.getCenterY();
+            double distanceX = destination.x - entity.getCenterX();
+            double distanceY = destination.y - entity.getCenterY();
 
             if(destinationTimeLimit<0 || (Math.abs(distanceX) < 1 && Math.abs(distanceY) < 1)){
                 hasDestination = false;
-                targetLocation = null;
                 return;
             }
 
@@ -144,21 +142,21 @@ public class EntityAI {
         destinationTimer = 0;
         destinationTimeLimit = ConVars.getFloat("sv_npc_destination_time_limit");
         hasDestination = true;
-        destinationX = x;
-        destinationY = y;
+        destination.x = x;
+        destination.y = y;
         setRotation();
     }
 
     private void setRotation(){
-        float deltaX = destinationX - entity.getCenterX();
-        float deltaY = destinationY - entity.getCenterY();
+        float deltaX = destination.x - entity.getCenterX();
+        float deltaY = destination.y - entity.getCenterY();
         int degrees = (int) (MathUtils.radiansToDegrees*MathUtils.atan2(deltaY,deltaX));
         entity.setRotation(degrees);
     }
 
     private void setRandomDestination(int mapWidth,int mapHeight){
 
-        if(hasDestination||targetLocation!=null){
+        if(hasDestination){
             return;
         }
         if(world.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
@@ -169,35 +167,34 @@ public class EntityAI {
         double maxX = Math.min(entity.getCenterX()+MAX_RANGE,mapWidth-(entity.getWidth()/2));
         double minY = Math.max(entity.getCenterY()-MAX_RANGE,entity.getHeight()/2);
         double maxY = Math.min(entity.getCenterY()+MAX_RANGE,mapHeight-(entity.getHeight()/2));
-        destinationX = MathUtils.random((float)minX,(float)maxX);
-        destinationY = MathUtils.random((float)minY,(float)maxY);
+        destination.x = MathUtils.random((float)minX,(float)maxX);
+        destination.y = MathUtils.random((float)minY,(float)maxY);
 
         //TODO clean this up
         int margin = 5;
         int offsetX = 0;
         int offsetY = 0;
-        float destinationXTileCheck = destinationX;
-        float destinationYTileCheck = destinationY;
-        Vector2 tile = null;
-        if(destinationX-entity.getCenterX()>=0){
+        float destinationXTileCheck = destination.x;
+        float destinationYTileCheck = destination.y;
+        if(destination.x-entity.getCenterX()>=0){
             offsetX -= (entity.getWidth()/2) + margin;
             destinationXTileCheck += (entity.getWidth()/2);
         }else{
             offsetX += GlobalVars.tileWidth + (entity.getWidth()/2) + margin;
             destinationXTileCheck -= (entity.getWidth()/2);
         }
-        if(destinationY-entity.getCenterY()>=0){
+        if(destination.y-entity.getCenterY()>=0){
             offsetY -= (entity.getHeight()/2) + margin;
             destinationYTileCheck += (entity.getHeight()/2);
         }else{
             offsetY += GlobalVars.tileHeight +(entity.getHeight()/2)+ margin;
             destinationYTileCheck -= (entity.getHeight()/2);
         }
-        tile = SharedMethods.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
+        Vector2 tile = SharedMethods.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
         if(tile!=null) {
             setDestination(tile.x*GlobalVars.tileWidth+offsetX,tile.y*GlobalVars.tileHeight+offsetY);
         }else{
-            setDestination(destinationX, destinationY);
+            setDestination(destination.x, destination.y);
         }
     }
 }

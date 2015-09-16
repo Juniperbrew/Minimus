@@ -157,10 +157,15 @@ public class World implements EntityChangeListener{
 
         enemySpawnZones = getEnemySpawnZones(map);
         spawnMapPowerups(map);
+
+        Network.MapChange mapChange = new Network.MapChange();
+        mapChange.mapName=mapName;
+        mapChange.powerups = new HashMap<>(powerups);
+        listener.mapChanged(mapName);
+
         spawnMapEnemies(map);
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-        listener.mapChanged(mapName);
     }
 
     private void spawnMapPowerups(TiledMap map){
@@ -317,7 +322,7 @@ public class World implements EntityChangeListener{
     private Rectangle getSpawnZone(TiledMap map){
         for(RectangleMapObject o : mapObjects.get(map)){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
-                listener.message("Spawn at:"+o.getRectangle());
+                listener.message("Spawn at:" + o.getRectangle());
                 return o.getRectangle();
             }
         }
@@ -374,6 +379,12 @@ public class World implements EntityChangeListener{
                             knockbacks.add(new Knockback(target.getID(), knockback));
                             if(projectile.ownerID!=id){
                                 target.reduceHealth(projectile.damage,projectile.ownerID);
+                                if(entityAIs.containsKey(target.getID())){
+                                    ServerEntity attacker = entities.get(projectile.ownerID);
+                                    if(attacker!=null){
+                                        entityAIs.get(target.getID()).setTarget(attacker.getCenterX(),attacker.getCenterY());
+                                    }
+                                }
                             }
                         }
                     }
@@ -588,16 +599,17 @@ public class World implements EntityChangeListener{
 
     public void createAttack(ServerEntity e, int weaponID){
 
+        Weapon weapon = weaponList.get(weaponID);
+        ProjectileDefinition projectileDefinition = weapon.projectile;
+
         Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
         entityAttacking.x = e.getCenterX();
         entityAttacking.y = e.getCenterY();
         entityAttacking.deg = e.getRotation();
         entityAttacking.id = e.getID();
         entityAttacking.weapon = weaponID;
-        listener.attackCreated(entityAttacking);
+        listener.attackCreated(entityAttacking, weapon);
 
-        Weapon weapon = weaponList.get(weaponID);
-        ProjectileDefinition projectileDefinition = weapon.projectile;
         if(weapon==null){
             return;
         }
@@ -641,6 +653,9 @@ public class World implements EntityChangeListener{
                     }
                     if(t.getTeam() != e.getTeam()){
                         t.reduceHealth(projectileDefinition.damage, e.getID());
+                        if(entityAIs.containsKey(t.getID())){
+                            entityAIs.get(t.getID()).setTarget(e.getCenterX(),e.getCenterY());
+                        }
                     }
                 }
                 if(projectileDefinition.onDestroy!=null){
@@ -1318,7 +1333,7 @@ public class World implements EntityChangeListener{
         public void powerupAdded(int id, Powerup powerup);
         public void powerupRemoved(int id);
         public void waveChanged(int wave);
-        public void attackCreated(Network.EntityAttacking entityAttacking);
+        public void attackCreated(Network.EntityAttacking entityAttacking, Weapon weapon);
         public void message(String message);
         public void mapChanged(String mapName);
         public void ammoAddedChanged(int id, int weapon, int value);

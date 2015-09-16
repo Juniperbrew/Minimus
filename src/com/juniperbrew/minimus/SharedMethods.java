@@ -135,6 +135,9 @@ public class SharedMethods {
             deltaY += MathUtils.sinDeg(direction - 90) * distance;
         }
 
+        e.addMovement(new Vector2(deltaX,deltaY));
+        e.applyMovement();
+/*
 
         if (ConVars.getBool("sv_check_map_collisions")) {
             if (e.getX() + e.getWidth() + deltaX > GlobalVars.mapWidth) {
@@ -161,6 +164,7 @@ public class SharedMethods {
             deltaY = 0;
         }
         e.move(deltaX, deltaY);
+        */
     }
 
 
@@ -178,6 +182,47 @@ public class SharedMethods {
             }
         }
         return false;
+    }
+
+    public static float checkMapAxisCollision(Rectangle bounds, boolean xAxis) {
+
+        int minX = (int) Math.floor(bounds.x / GlobalVars.tileWidth);
+        int maxX = (int) Math.floor((bounds.x + bounds.width) / GlobalVars.tileWidth);
+        int minY = (int) Math.floor(bounds.y / GlobalVars.tileHeight);
+        int maxY = (int) Math.floor((bounds.y + bounds.height) / GlobalVars.tileHeight);
+
+        float correction = 0;
+        float tempCorrection;
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                if (isTileSolid(x, y)){
+                    Rectangle tile = getTileBounds(x,y);
+                    if(xAxis){
+                        tempCorrection = Math.min(tile.x + tile.width, bounds.x + bounds.width) - Math.max(tile.x, bounds.x);
+                    }else{
+                        tempCorrection = Math.min(tile.y + tile.height, bounds.y + bounds.height) - Math.max(tile.y, bounds.y);
+                    }
+                    if( tempCorrection>correction){
+                        correction =  tempCorrection;
+                    }
+                }
+            }
+        }
+        if(correction>0){
+            correction += 0.1f;
+            if(xAxis){
+                System.out.println("X axis correction:"+correction);
+            }else{
+                System.out.println("Y axis correction:"+correction);
+            }
+        }
+
+        return correction;
+    }
+
+    private static Rectangle getTileBounds(int x, int y){
+        return new Rectangle(x*GlobalVars.tileWidth,y*GlobalVars.tileHeight,GlobalVars.tileWidth,GlobalVars.tileHeight);
     }
 
     public static boolean isTileSolid(int x, int y) {

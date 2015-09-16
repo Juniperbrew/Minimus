@@ -25,8 +25,11 @@ import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.Powerup;
+import com.juniperbrew.minimus.Projectile;
+import com.juniperbrew.minimus.ProjectileDefinition;
 import com.juniperbrew.minimus.Score;
 import com.juniperbrew.minimus.Tools;
+import com.juniperbrew.minimus.Weapon;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
@@ -89,6 +92,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     int pendingRandomNpcAdds = 0;
     int pendingRandomNpcRemovals = 0;
+    boolean set200Entities;
 
     private ConcurrentLinkedQueue<Packet> pendingPackets = new ConcurrentLinkedQueue<>();
 
@@ -347,6 +351,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             world.addRandomNPC();
         }
         pendingRandomNpcAdds = 0;
+
+        if(set200Entities){
+            while(world.entities.size()<200){
+                world.addRandomNPC();
+            }
+            set200Entities = false;
+        }
+
         for (int i = 0; i < pendingRandomNpcRemovals; i++) {
             world.removeRandomNPC();
         }
@@ -688,6 +700,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if (character == 't') {
             pendingRandomNpcAdds += 10;
         }
+        if (character == 'y'){
+            set200Entities = true;
+        }
         if (character == 'l') {
             showMessage("Sending full update to all clients");
             for(Connection c : server.getConnections()){
@@ -954,8 +969,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void attackCreated(Network.EntityAttacking entityAttacking) {
-        if(playerList.keySet().contains(entityAttacking.id)){
+    public void attackCreated(Network.EntityAttacking entityAttacking, Weapon weapon) {
+        if(playerList.keySet().contains(entityAttacking.id)&&(weapon.projectile.type != ProjectileDefinition.PROJECTILE)){
             sendTCPtoAllExcept(playerList.get(entityAttacking.id),entityAttacking);
         }else{
             sendTCPtoAll(entityAttacking);

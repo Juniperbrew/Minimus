@@ -25,6 +25,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -165,6 +166,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     int reconnectDots;
     long lastDotAdded;
+
+    TextureRegion screenFade;
+    float screenFadeAlpha;
+    boolean fadeOut;
+    boolean fadeIn;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -326,10 +332,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void changeMap(Network.MapChange mapChange){
+        showMessage("Changing map to "+mapChange.mapName);
+        fadeScreen();
         loadMap(mapChange.mapName);
         powerups = mapChange.powerups;
         projectiles.clear();
         particles.clear();
+    }
+
+    private void fadeScreen(){
+        fadeOut = true;
+        screenFade = ScreenUtils.getFrameBufferTexture();
+        screenFadeAlpha = 0;
     }
 
     private void doLogic(float delta){
@@ -427,6 +441,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void processClientInput(Network.UserInput input){
 
+        boolean attacked = false;
         //We need to move player here so we can spawn the potential projectiles at correct location
         if(player != null){
             SharedMethods.applyInput(player,input);
@@ -506,14 +521,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(buttons.contains(Enums.Buttons.MOUSE1)){
             playerAttack(player.slot1Weapon);
+            attacked = true;
         }
         if(buttons.contains(Enums.Buttons.MOUSE2)){
             playerAttack(player.slot2Weapon);
+            attacked = true;
+        }
+        if(attacked){
+            player.aimingWeapon = true;
+        }else{
+            player.aimingWeapon = false;
         }
     }
 
     private void playerAttack(int weaponSlot){
-        player.aimingWeapon = true;
         if(weaponList.get(weaponSlot)==null){
             return;
         }
@@ -874,130 +895,154 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glLineWidth(3);
-        Gdx.gl.glScissor((int) (windowWidth/2-camera.position.x), (int) (windowHeight/2-camera.position.y), mapWidth, mapHeight);
+        Gdx.gl.glScissor((int) (windowWidth / 2 - camera.position.x), (int) (windowHeight / 2 - camera.position.y), mapWidth, mapHeight);
         Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+        batch.setColor(1, 1, 1, 1);
 
-        centerCameraOnPlayer();
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        batch.setProjectionMatrix(camera.combined);
+        if(fadeOut){
+            screenFadeAlpha += delta;
+            if(screenFadeAlpha>=1){
+                screenFadeAlpha=1;
+                fadeOut = false;
+                fadeIn = true;
+            }
+            batch.setProjectionMatrix(hudCamera.combined);
+            batch.begin();
+            batch.draw(screenFade, 0, 0);
+            batch.setColor(0, 0, 0, screenFadeAlpha);
+            batch.draw(getTexture("blank"), 0, 0, windowWidth, windowHeight);
+            batch.end();
+        }else{
+            centerCameraOnPlayer();
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            batch.setProjectionMatrix(camera.combined);
 
-        if(mapRenderer!=null){
-            batch.setColor(1,1,1,1);
-            mapRenderer.setView(camera);
-            mapRenderer.render();
-        }
+            if(mapRenderer!=null){
+                mapRenderer.setView(camera);
+                mapRenderer.render();
+            }
 
-        if(ConVars.getBool("cl_show_debug")) {
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(1, 0, 0, 1); //red
-            for (NetworkEntity e : interpFrom.entities.values()) {
-                shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
-            }
-            shapeRenderer.setColor(0, 1, 0, 1); //green
-            for (NetworkEntity e : interpTo.entities.values()) {
-                shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
-            }
-            shapeRenderer.setColor(0, 0, 1, 1); //blue
-            for (NetworkEntity e : authoritativeState.entities.values()) {
-                shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
-            }
-            shapeRenderer.setColor(1, 1, 1, 1); //white
-            for (NetworkEntity e : authoritativeState.entities.values()) {
-                shapeRenderer.rect(e.x, e.y, e.width, e.height);
-            }
-            shapeRenderer.end();
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(0, 1, 1, 1);
-            Rectangle bounds = ghostPlayer.getGdxBounds();
-            shapeRenderer.rect(bounds.x,bounds.y,bounds.width,bounds.height);
-            shapeRenderer.end();
-        }
-
-        batch.begin();
-        for(Powerup p : powerups.values()){
-            if(p.type==Powerup.HEALTH){
-                batch.setColor(1,1,1,1);
-                batch.draw(getTexture("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-            }else if(p.type==Powerup.AMMO){
-                //TODO clean up these nullchecks
-                if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
-                    TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
-                    Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
-                    batch.setColor(1, 1, 1, 1);
-                    batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
-                    continue;
+            if(ConVars.getBool("cl_show_debug")) {
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                shapeRenderer.setColor(1, 0, 0, 1); //red
+                for (NetworkEntity e : interpFrom.entities.values()) {
+                    shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
                 }
-                batch.setColor(1, 0, 0, 1);
-                batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-            }else if(p.type==Powerup.WEAPON){
-                //TODO clean up these nullchecks
-                if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
-                    TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
-                    Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
+                shapeRenderer.setColor(0, 1, 0, 1); //green
+                for (NetworkEntity e : interpTo.entities.values()) {
+                    shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
+                }
+                shapeRenderer.setColor(0, 0, 1, 1); //blue
+                for (NetworkEntity e : authoritativeState.entities.values()) {
+                    shapeRenderer.rect(e.x, e.y, e.width / 2, e.height / 2, e.width, e.height, 1, 1, e.rotation);
+                }
+                shapeRenderer.setColor(1, 1, 1, 1); //white
+                for (NetworkEntity e : authoritativeState.entities.values()) {
+                    shapeRenderer.rect(e.x, e.y, e.width, e.height);
+                }
+                shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
+                Rectangle bounds = ghostPlayer.getGdxBounds();
+                shapeRenderer.rect(bounds.x,bounds.y,bounds.width,bounds.height);
+                shapeRenderer.end();
+            }
+
+            batch.begin();
+            for(Powerup p : powerups.values()){
+                if(p.type==Powerup.HEALTH){
                     batch.setColor(1,1,1,1);
-                    batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
-                    continue;
+                    batch.draw(getTexture("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                }else if(p.type==Powerup.AMMO){
+                    //TODO clean up these nullchecks
+                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
+                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
+                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
+                        batch.setColor(1, 1, 1, 1);
+                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
+                        continue;
+                    }
+                    batch.setColor(1, 0, 0, 1);
+                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                }else if(p.type==Powerup.WEAPON){
+                    //TODO clean up these nullchecks
+                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
+                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
+                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
+                        batch.setColor(1,1,1,1);
+                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
+                        continue;
+                    }
+                    batch.setColor(0, 0, 1, 1);
+                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }
-                batch.setColor(0, 0, 1, 1);
-                batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
             }
+            batch.end();
+
+            //Render entities
+            batch.begin();
+            for(ClientEntity e: entities.values()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
+                float healthbarWidth = e.getWidth()+20;
+                float healthbarHeight = healthbarWidth/7;
+                float healthbarXOffset =- healthbarHeight;
+                float healthbarYOffset = e.getWidth()+10;
+                float x = e.getX();
+                float y = e.getY();
+                batch.setColor(1,1,1,1);
+                StringBuilder textureName = new StringBuilder(e.getImage());
+                if(e.getID()==player.id) {
+                    //Cast player position to int because we are centering the camera using casted values too
+                    x = (int) e.getX();
+                    y = (int) e.getY();
+                }
+                if(playerList.contains(e.getID())){
+                    textureName.append("_");
+                    textureName.append(weaponList.get(player.slot1Weapon).sprite);
+                }else if(e.getHealthPercent()>0.5f){
+                    textureName.append("_");
+                    textureName.append("hurt");
+                }
+                TextureRegion texture;
+                if(e.fireAnimationTimer>0){
+                    texture = getTexture(textureName+"_attack");
+                }else if(e.aimingWeapon){
+                    texture = getTexture(textureName+"_aim");
+                }else{
+                    texture = getTexture(textureName.toString(),e.getID());
+                }
+                Rectangle textureBounds = getCenteredScaledTextureSize(texture, e.getGdxBounds(), 1.8125f);
+                batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,textureBounds.width/2,textureBounds.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
+                batch.setColor(0,1,0,1);
+                batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
+                batch.setColor(1,0,0,1);
+                float healthWidth = healthbarWidth*e.getHealthPercent();
+                batch.draw(getTexture("blank",e.getID()), x+healthbarXOffset,y+healthbarYOffset,healthWidth,healthbarHeight);
+            }
+            batch.end();
+
+            SharedMethods.renderParticles(delta, batch, projectiles);
+            SharedMethods.renderParticles(delta, batch, particles);
+            if(ConVars.getBool("cl_show_debug")) {
+                shapeRenderer.setColor(1,1,1,1);
+                SharedMethods.renderAttackBoundingBox(shapeRenderer,projectiles);
+                shapeRenderer.setColor(1,1,0,1);
+                SharedMethods.renderAttackPolygon(shapeRenderer, projectiles);
+            }
+
+            drawTracer(shapeRenderer);
         }
-        batch.end();
-
-        //Render entities
-        batch.begin();
-        for(ClientEntity e: entities.values()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
-            float healthbarWidth = e.getWidth()+20;
-            float healthbarHeight = healthbarWidth/7;
-            float healthbarXOffset =- healthbarHeight;
-            float healthbarYOffset = e.getWidth()+10;
-            float x = e.getX();
-            float y = e.getY();
-            batch.setColor(1,1,1,1);
-            StringBuilder textureName = new StringBuilder(e.getImage());
-            if(e.getID()==player.id) {
-                //Cast player position to int because we are centering the camera using casted values too
-                x = (int) e.getX();
-                y = (int) e.getY();
-            }
-            if(playerList.contains(e.getID())){
-                textureName.append("_");
-                textureName.append(weaponList.get(player.slot1Weapon).sprite);
-            }else if(e.getHealthPercent()>0.5f){
-                textureName.append("_");
-                textureName.append("hurt");
-            }
-            TextureRegion texture;
-            if(e.fireAnimationTimer>0){
-                texture = getTexture(textureName+"_attack");
-            }else if(e.aimingWeapon){
-                texture = getTexture(textureName+"_aim");
-            }else{
-                texture = getTexture(textureName.toString(),e.getID());
-            }
-            Rectangle textureBounds = getCenteredScaledTextureSize(texture, e.getGdxBounds(), 1.8125f);
-            batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,textureBounds.width/2,textureBounds.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
-            e.aimingWeapon = false;
-            batch.setColor(0,1,0,1);
-            batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
-            batch.setColor(1,0,0,1);
-            float healthWidth = healthbarWidth*e.getHealthPercent();
-            batch.draw(getTexture("blank",e.getID()), x+healthbarXOffset,y+healthbarYOffset,healthWidth,healthbarHeight);
-        }
-        batch.end();
-
-        SharedMethods.renderParticles(delta, batch, projectiles);
-        SharedMethods.renderParticles(delta, batch, particles);
-        if(ConVars.getBool("cl_show_debug")) {
-            shapeRenderer.setColor(1,1,1,1);
-            SharedMethods.renderAttackBoundingBox(shapeRenderer,projectiles);
-            shapeRenderer.setColor(1,1,0,1);
-            SharedMethods.renderAttackPolygon(shapeRenderer,projectiles);
-        }
-
-        drawTracer(shapeRenderer);
-
         Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+
+        if(fadeIn){
+            screenFadeAlpha -= delta;
+            if(screenFadeAlpha<=0){
+                screenFadeAlpha=0;
+                fadeIn = false;
+            }
+            batch.setProjectionMatrix(hudCamera.combined);
+            batch.begin();
+            batch.setColor(0, 0, 0, screenFadeAlpha);
+            batch.draw(getTexture("blank"), 0, 0, windowWidth, windowHeight);
+            batch.end();
+        }
 
         //Draw HUD
         batch.begin();
@@ -1008,12 +1053,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
-        font.draw(batch, "Mouse 1: "+ getWeaponLine(player.slot1Weapon), 5, 40);
+        font.draw(batch, "Mouse 1: " + getWeaponLine(player.slot1Weapon), 5, 40);
         font.draw(batch, "Mouse 2: " + getWeaponLine(player.slot2Weapon), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);
-        font.draw(batch, "Wave "+currentWave,windowWidth/2-glyphLayout.width/2 ,windowHeight-5);
-        glyphLayout.setText(font, "Lives: "+lives);
-        font.draw(batch, "Lives: "+lives,windowWidth-glyphLayout.width ,windowHeight-5);
+        font.draw(batch, "Wave " + currentWave, windowWidth / 2 - glyphLayout.width / 2, windowHeight - 5);
+        glyphLayout.setText(font, "Lives: " + lives);
+        font.draw(batch, "Lives: " + lives, windowWidth - glyphLayout.width, windowHeight - 5);
 
         if(!client.isConnected()){
             if(System.nanoTime()-lastDotAdded > Tools.secondsToNano(2)){
@@ -1690,15 +1735,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if(weapon.projectile.tracer!=null){
                         particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));                    }
                 }
+                if(weapon.sound!=null){
+                    playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
+                }
             }else{
                 //Dont render projectiles spawned on client
                 if(!predict){
                     projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                }else{
+                    if(weapon.sound!=null){
+                        playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
+                    }
                 }
-            }
-
-            if(weapon.sound!=null){
-                playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
             }
         }
     }

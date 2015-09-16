@@ -56,7 +56,22 @@ public class Entity {
 
     public void applyMovement() {
 
+        if (getX() + getWidth() + movement.x > GlobalVars.mapWidth) {
+            movement.x = GlobalVars.mapWidth - getX() - getWidth();
+        }
+        if (getX() + movement.x < 0) {
+            movement.x = 0 - getX();
+        }
+        if (getY() + getHeight() + movement.y > GlobalVars.mapHeight) {
+            movement.y = GlobalVars.mapHeight - getY() - getHeight();
+        }
+        if (getY() + movement.y < 0) {
+            movement.y = 0 - getY();
+        }
+
         Rectangle bounds = getGdxBounds();
+
+        //less precise collision correction
         bounds.setX(bounds.getX() + movement.x);
         if (SharedMethods.checkMapCollision(bounds)) {
             bounds.setX(bounds.getX() - movement.x);
@@ -69,6 +84,25 @@ public class Entity {
             movement.y = 0;
             //TODO reduce movement so entity hits the wall
         }
+/*
+        //TODO compare performance to the less precise collision correction
+        //FIXME entities that start on tile borders will tunnel through walls, probably only N and W tileborder
+        bounds.setX(bounds.getX() + movement.x);
+        float correctionX = SharedMethods.checkMapAxisCollision(bounds, true);
+        if(movement.x>0){
+            correctionX *= -1;
+        }
+        bounds.setX(bounds.getX() + correctionX);
+        movement.x += correctionX;
+
+        bounds.setY(bounds.getY() + movement.y);
+        float correctionY = SharedMethods.checkMapAxisCollision(bounds,false);
+        if(movement.y>0){
+            correctionY *= -1;
+        }
+        bounds.setY(bounds.getY() + correctionY);
+        movement.y += correctionY;
+*/
 
         move(movement.x, movement.y);
         movement.setZero();
