@@ -106,6 +106,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Particle> blood = new ConcurrentLinkedQueue<>();
 
     long lastPingRequest;
     long renderStart;
@@ -341,6 +342,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         powerups = mapChange.powerups;
         projectiles.clear();
         particles.clear();
+        blood.clear();
     }
 
     private void createMinimap(){
@@ -384,7 +386,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             e.update(delta);
 
             if(e.getHealthPercent()>0.5f && e.bleedTimer < 0) {
-                particles.add(SharedMethods.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)));
+                blood.add(SharedMethods.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)));
                 e.bleedTimer = MathUtils.random(0.5f,2f);
             }
         }
@@ -414,6 +416,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void updateParticles(float delta){
         Iterator<Particle> iter = particles.iterator();
+        while(iter.hasNext()){
+            Particle p = iter.next();
+            p.update(delta);
+            if(p.destroyed){
+                iter.remove();
+            }
+        }
+        iter = blood.iterator();
         while(iter.hasNext()){
             Particle p = iter.next();
             p.update(delta);
@@ -633,7 +643,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                             hitscan.x2 = i.x;
                             hitscan.y2 = i.y;
                         }
-                        particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),hitscan.x2,hitscan.y2,(int)Tools.getAngle(hitscan)+MathUtils.random(-10,10),MathUtils.random(60,100)));
+                        blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"),hitscan.x2,hitscan.y2,(int)Tools.getAngle(hitscan)+MathUtils.random(-10,10),MathUtils.random(60,100)));
                     }
                     if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
                         ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
@@ -918,9 +928,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                             projectile.entitiesHit.add(target.getID());
                             particles.add(SharedMethods.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y));
                             if(projectile.explosionKnockback){
-                                particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x,center.y,target.getCenterX(),target.getCenterY())+MathUtils.random(-10,10)),MathUtils.random(60, 100)));
+                                blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"),target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x,center.y,target.getCenterX(),target.getCenterY())+MathUtils.random(-10,10)),MathUtils.random(60, 100)));
                             }else{
-                                particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),center.x, center.y,projectile.rotation+MathUtils.random(-10,10),MathUtils.random(60,100)));
+                                blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"),center.x, center.y,projectile.rotation+MathUtils.random(-10,10),MathUtils.random(60,100)));
                             }
                         }
                     }
@@ -1073,6 +1083,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
             }
             batch.end();
+
+            SharedMethods.renderParticles(delta, batch, blood);
 
             //Render entities
             batch.begin();
@@ -1788,7 +1800,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ClientEntity e = entities.get(id);
         showMessage("Removing entity:"+e);
         for (int rotation = 0; rotation < 360; rotation += MathUtils.random(35,65)) {
-            particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80,120)));
+            blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80,120)));
         }
 
         //We are not removing it from older states, should not matter, they get removed once interpolation catches up to them
