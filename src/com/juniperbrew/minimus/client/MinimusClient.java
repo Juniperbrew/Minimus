@@ -247,7 +247,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }else if(object instanceof Network.EntityAttacking){
             Network.EntityAttacking attack = (Network.EntityAttacking) object;
-            addAttack(attack,false);
+            addAttack(attack);
         }else if(object instanceof Network.AddDeath){
             Network.AddDeath addDeath = (Network.AddDeath) object;
             score.addDeath(addDeath.id);
@@ -572,7 +572,83 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attack.y = player.getCenterY();
         attack.weapon = weaponSlot;
 
-        addAttack(attack, true);
+        Weapon weapon = weaponList.get(weaponSlot);
+        player.fireAnimationTimer = weapon.cooldown/2d;
+        if(weapon.projectile.networked){
+            if(weapon.sound!=null){
+                playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
+            }
+        }else{
+            addAttack(attack);
+        }
+    }
+
+    private void addAttack(Network.EntityAttacking attack){
+        if(weaponList==null){
+            return;
+        }
+        //TODO Ignoring projectile team for now
+        Weapon weapon = weaponList.get(attack.weapon);
+        if(weapon!=null){
+
+            if(attack.id!=player.id||!weapon.projectile.networked){
+                if(weapon.sound!=null) {
+                    playSoundInLocation(sounds.get(weapon.sound), attack.x, attack.y);
+                }
+            }
+
+            if(attack.id!=player.id){
+                entities.get(attack.id).fireAnimationTimer = weapon.cooldown/2d;
+            }
+
+            if(weapon.projectile.type == ProjectileDefinition.HITSCAN){
+                for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
+                    Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
+                    if(intersection!=null){
+                        hitscan.x2 = intersection.x;
+                        hitscan.y2 = intersection.y;
+                    }
+                    ArrayList<Entity> targetsHit = new ArrayList<>();
+                    for(int targetId:entities.keySet()) {
+                        if(targetId == attack.id){
+                            continue;
+                        }
+                        Entity target = entities.get(targetId);
+                        if(target.getJavaBounds().intersectsLine(hitscan)) {
+                            targetsHit.add(target);
+                        }
+                    }
+                    if(!targetsHit.isEmpty()){
+                        Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
+                        for(Entity t:targetsHit){
+                            float squaredDistance = Tools.getSquaredDistance(attack.x,attack.y,t.getCenterX(),t.getCenterY());
+                            if(closestTarget.y>squaredDistance){
+                                closestTarget.set(t.getID(), squaredDistance);
+                            }
+                        }
+                        Entity t = entities.get((int)closestTarget.x);
+                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
+                        //FIXME i should never be null
+                        if(i!=null){
+                            hitscan.x2 = i.x;
+                            hitscan.y2 = i.y;
+                        }
+                        particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),hitscan.x2,hitscan.y2,(int)Tools.getAngle(hitscan)+MathUtils.random(-10,10),MathUtils.random(60,100)));
+                    }
+                    if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
+                        ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
+                        if(def.type == ProjectileDefinition.PARTICLE){
+                            particles.add(SharedMethods.createStationaryParticle(def,hitscan.x2,hitscan.y2));
+                        }
+                    }
+                    if(weapon.projectile.tracer!=null){
+                        particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));
+                    }
+                }
+            }else{
+                projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+            }
+        }
     }
 
     private void correctPlayerPositionError(){
@@ -818,7 +894,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         for(Projectile projectile:projectiles){
             projectile.update(delta);
-            if(!projectile.noCollision) {
+            if(!projectile.ignoreEntityCollision) {
                 for (int id : entities.keySet()) {
                     if (id == projectile.ownerID) {
                         continue;
@@ -849,6 +925,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         }
                     }
                 }
+            }
+            if(!projectile.ignoreMapCollision){
                 if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
                     if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
                         projectile.destroyed = true;
@@ -1402,7 +1480,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
 
         if(character == '+'){
-            ConVars.addToVar("cl_interp",0.05);
+            ConVars.addToVar("cl_interp", 0.05);
             showMessage("Interpolation delay now:" + ConVars.getDouble("cl_interp"));
         }
         if(character == '-'){
@@ -1725,73 +1803,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 player.id = -1;
                 player.slot1Weapon = 0;
                 player.slot2Weapon = 1;
-            }
-        }
-    }
-
-    private void addAttack(Network.EntityAttacking attack, boolean predict){
-        if(weaponList==null){
-            return;
-        }
-        //TODO Ignoring projectile team for now
-        Weapon weapon = weaponList.get(attack.weapon);
-        if(weapon!=null){
-            entities.get(attack.id).fireAnimationTimer = weapon.cooldown/2d;
-            if(weapon.projectile.type == ProjectileDefinition.HITSCAN){
-                for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
-                    Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
-                    if(intersection!=null){
-                        hitscan.x2 = intersection.x;
-                        hitscan.y2 = intersection.y;
-                    }
-                    ArrayList<Entity> targetsHit = new ArrayList<>();
-                    for(int targetId:entities.keySet()) {
-                        if(targetId == attack.id){
-                            continue;
-                        }
-                        Entity target = entities.get(targetId);
-                        if(target.getJavaBounds().intersectsLine(hitscan)) {
-                            targetsHit.add(target);
-                        }
-                    }
-                    if(!targetsHit.isEmpty()){
-                        Vector2 closestTarget = new Vector2(0,Float.POSITIVE_INFINITY);
-                        for(Entity t:targetsHit){
-                            float squaredDistance = Tools.getSquaredDistance(attack.x,attack.y,t.getCenterX(),t.getCenterY());
-                            if(closestTarget.y>squaredDistance){
-                                closestTarget.set(t.getID(), squaredDistance);
-                            }
-                        }
-                        Entity t = entities.get((int)closestTarget.x);
-                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
-                        //FIXME i should never be null
-                        if(i!=null){
-                            hitscan.x2 = i.x;
-                            hitscan.y2 = i.y;
-                        }
-                        particles.add(SharedMethods.createMovingParticle(projectileList.get("blood"),hitscan.x2,hitscan.y2,(int)Tools.getAngle(hitscan)+MathUtils.random(-10,10),MathUtils.random(60,100)));
-                    }
-                    if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
-                        ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
-                        if(def.type == ProjectileDefinition.PARTICLE){
-                            particles.add(SharedMethods.createStationaryParticle(def,hitscan.x2,hitscan.y2));
-                        }
-                    }
-                    if(weapon.projectile.tracer!=null){
-                        particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));                    }
-                }
-                if(weapon.sound!=null){
-                    playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
-                }
-            }else{
-                //Dont render projectiles spawned on client
-                if(!predict){
-                    projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
-                }else{
-                    if(weapon.sound!=null){
-                        playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
-                    }
-                }
             }
         }
     }

@@ -109,6 +109,34 @@ ammoImage=largeAmmo
 sound=sinko.wav
 sprite=rifle
 }
+
+#7
+{
+name=Bounce launcher
+projectile=Bounce_Rocket
+spread=0
+projectileCount=1
+sound=projectile.ogg
+cooldown=0.5
+image=rocketLauncher
+ammoImage=largeAmmo
+sound=sinko.wav
+sprite=rifle
+}
+
+#7
+{
+name=Grenade launcher
+projectile=Grenade
+spread=0
+projectileCount=1
+sound=projectile.ogg
+cooldown=0.5
+image=rocketLauncher
+ammoImage=largeAmmo
+sound=sinko.wav
+sprite=rifle
+}
  
 #8
 {

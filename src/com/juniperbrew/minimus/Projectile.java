@@ -28,10 +28,8 @@ public class Projectile extends Particle{
     public float knockback;
     public String onDestroy;
 
-    public boolean ignoreMapCollision;
+
     public boolean explosionKnockback;
-    public boolean dontDestroyOnCollision;
-    public boolean noCollision;
 
     public HashSet<Integer> entitiesHit = new HashSet<>();
 
@@ -48,13 +46,9 @@ public class Projectile extends Particle{
         this.ownerID = ownerID;
         this.team = team;
         this.damage = def.damage;
-
         knockback = def.knockback;
         onDestroy = def.onDestroy;
-        ignoreMapCollision = def.ignoreMapCollision;
         explosionKnockback = def.explosionKnockback;
-        dontDestroyOnCollision = def.dontDestroyOnCollision;
-        noCollision = def.noCollision;
     }
 
     public Polygon getHitbox(){

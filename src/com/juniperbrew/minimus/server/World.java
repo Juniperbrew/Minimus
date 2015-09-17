@@ -120,7 +120,7 @@ public class World implements EntityChangeListener{
     }
 
     private TiledMap loadMap(String mapName){
-        listener.message("Loading map: "+mapName);
+        listener.message("Loading map: " + mapName);
         return mapLoader.load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
     }
 
@@ -345,62 +345,58 @@ public class World implements EntityChangeListener{
         for(Projectile projectile:projectiles){
             Rectangle projectileBounds = projectile.getHitbox().getBoundingRectangle();
             projectile.update(delta);
-            //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
-            for(int id:entities.keySet()){
-                if(projectile.ownerID==id&&!projectile.explosionKnockback){
-                    continue;
-                }
-                if(projectile.entitiesHit.contains(id)){
-                    continue;
-                }
-                ServerEntity target = entities.get(id);
-                Rectangle entityBounds = target.getGdxBounds();
-                if(Intersector.intersectRectangles(projectileBounds, entityBounds, intersection)){
-                    if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
-                        if(!projectile.dontDestroyOnCollision){
-                            projectile.destroyed = true;
-                        }
-                        //Explosion self knockbacks apply on player but dont damage him
-                        if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
-                            Vector2 knockback;
-                            if(projectile.explosionKnockback){
-                                Vector2 projectileCenter = new Vector2();
-                                projectileBounds.getCenter(projectileCenter);
-                                //Knockback is scaled to how far into the explosion the entity is
-                                //Since you can only be hit once by an explosion if you walk into one you will only be hit with very minor knockback
-                                float scale = intersection.area()/entityBounds.area();
-                                Vector2 i = new Vector2(target.getCenterX()-projectileCenter.x,target.getCenterY()-projectileCenter.y);
-                                knockback = new Vector2(projectile.knockback*scale,0);
-                                knockback.setAngle(i.angle());
-                            }else{
-                                knockback = new Vector2(projectile.knockback,0);
-                                knockback.setAngle(projectile.rotation);
+            if(!projectile.ignoreEntityCollision){
+                //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
+                for(int id:entities.keySet()){
+                    if(projectile.ownerID==id&&!projectile.explosionKnockback){
+                        continue;
+                    }
+                    if(projectile.entitiesHit.contains(id)){
+                        continue;
+                    }
+                    ServerEntity target = entities.get(id);
+                    Rectangle entityBounds = target.getGdxBounds();
+                    if(Intersector.intersectRectangles(projectileBounds, entityBounds, intersection)){
+                        if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
+                            if(!projectile.dontDestroyOnCollision){
+                                projectile.destroyed = true;
                             }
-                            knockbacks.add(new Knockback(target.getID(), knockback));
-                            if(projectile.ownerID!=id){
-                                target.reduceHealth(projectile.damage,projectile.ownerID);
-                                if(entityAIs.containsKey(target.getID())){
-                                    ServerEntity attacker = entities.get(projectile.ownerID);
-                                    if(attacker!=null){
-                                        entityAIs.get(target.getID()).setTarget(attacker.getCenterX(),attacker.getCenterY());
+                            //Explosion self knockbacks apply on player but dont damage him
+                            if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
+                                Vector2 knockback;
+                                if(projectile.explosionKnockback){
+                                    Vector2 projectileCenter = new Vector2();
+                                    projectileBounds.getCenter(projectileCenter);
+                                    //Knockback is scaled to how far into the explosion the entity is
+                                    //Since you can only be hit once by an explosion if you walk into one you will only be hit with very minor knockback
+                                    float scale = intersection.area()/entityBounds.area();
+                                    Vector2 i = new Vector2(target.getCenterX()-projectileCenter.x,target.getCenterY()-projectileCenter.y);
+                                    knockback = new Vector2(projectile.knockback*scale,0);
+                                    knockback.setAngle(i.angle());
+                                }else{
+                                    knockback = new Vector2(projectile.knockback,0);
+                                    knockback.setAngle(projectile.rotation);
+                                }
+                                knockbacks.add(new Knockback(target.getID(), knockback));
+                                if(projectile.ownerID!=id){
+                                    target.reduceHealth(projectile.damage,projectile.ownerID);
+                                    if(entityAIs.containsKey(target.getID())){
+                                        ServerEntity attacker = entities.get(projectile.ownerID);
+                                        if(attacker!=null){
+                                            entityAIs.get(target.getID()).setTarget(attacker.getCenterX(),attacker.getCenterY());
+                                        }
                                     }
                                 }
                             }
                         }
+                        projectile.entitiesHit.add(target.getID());
                     }
-                    projectile.entitiesHit.add(target.getID());
-                }
-            }
-            if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
-                if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
-                    projectile.destroyed = true;
                 }
             }
 
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
                 if(projectile.onDestroy!=null){
-                    ProjectileDefinition def = projectileList.get(projectile.onDestroy);
                     Vector2 center = new Vector2();
                     projectile.getHitbox().getBoundingRectangle().getCenter(center);
                     createStationaryThing(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
@@ -678,7 +674,7 @@ public class World implements EntityChangeListener{
             projectiles.add(SharedMethods.createStationaryProjectile(def, x, y, id, team));
             listener.networkedProjectileSpawned(def.name,x,y,id,team);
         }else if(def.type==ProjectileDefinition.PARTICLE){
-            particles.add(SharedMethods.createStationaryParticle(def,x,y));
+            particles.add(SharedMethods.createStationaryParticle(def, x, y));
         }
     }
 
@@ -781,9 +777,6 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("duration")){
                     projectileDefinition.duration = Float.parseFloat(splits[1]);
                 }
-                if(splits[0].equals("shape")){
-                    projectileDefinition.shape = splits[1];
-                }
                 if(splits[0].equals("color")){
                     String strip = splits[1].substring(1,splits[1].length()-1);
                     String[] rgb = strip.split(",");
@@ -822,23 +815,23 @@ public class World implements EntityChangeListener{
                 if (splits[0].equals("sound")) {
                     projectileDefinition.sound = splits[1];
                 }
-                if (splits[0].equals("friction")) {
-                    projectileDefinition.friction = true;
-                }
-                if (splits[0].equals("noCollision")) {
-                    projectileDefinition.noCollision = true;
+                if (splits[0].equals("ignoreEntityCollision")) {
+                    projectileDefinition.ignoreEntityCollision = true;
                 }
                 if (splits[0].equals("networked")) {
                     projectileDefinition.networked = true;
                 }
                 if (splits[0].equals("friction")) {
-                    projectileDefinition.friction = true;
+                    projectileDefinition.friction = Float.parseFloat(splits[1]);
                 }
                 if(splits[0].equals("tracer")){
                     projectileDefinition.tracer = splits[1];
                 }
                 if(splits[0].equals("looping")){
                     projectileDefinition.looping = true;
+                }
+                if(splits[0].equals("bounce")){
+                    projectileDefinition.bounce = true;
                 }
             }
         } catch (FileNotFoundException e) {

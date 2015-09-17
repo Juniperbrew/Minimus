@@ -20,7 +20,6 @@ public class ProjectileDefinition {
     public int damage;
     public int range;
     public int velocity;
-    public String shape; //square,circle
     public Color color;
     public int width;
     public int length;
@@ -33,10 +32,11 @@ public class ProjectileDefinition {
     public boolean explosionKnockback;
     public boolean dontDestroyOnCollision;
     public String sound;
-    public boolean friction;
-    public boolean noCollision;
+    public float friction;
+    public boolean ignoreEntityCollision;
     public boolean networked;
     public boolean looping;
+    public boolean bounce;
 
     public ProjectileDefinition(){
 

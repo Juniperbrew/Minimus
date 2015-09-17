@@ -1,17 +1,34 @@
-#name=
-#type={hitscan,projectile}
-#(type=hitscan)duration=
-#damage=
-#range=
-#velocity=
+#name={String}
+#type={projectile,hitscan,particle,tracer}
+#width={int}
+#length={int}
+#color={[r,g,b]}
+#image={String}
+#sound={String}
+#tracer={String}
 
-#shape={square,circle}
-#color=[r,g,b](random?)
-#width=
-#length=
-#image=
-#animation=
-#(animation)frameDuration=
+#[Primary attributes]#
+#damage={int}
+#range={int}
+#velocity={int}
+#duration={float}
+#friction={float}
+#knockback={float}
+#onDestroy={String}
+
+#[Animation]#
+#animation={String}
+#frameDuration={float}
+#looping={flag}
+
+#[Flags]#
+#networked={flag}
+#bounce{flag}
+#ignoreMapCollision={flag}
+#ignoreEntityCollision={flag}
+#explosionKnockback={flag}
+#dontDestroyOnCollision{flag}
+
 
 ###############
 ##PROJECTILES##
@@ -23,12 +40,43 @@ type=projectile
 color=[190,190,190]
 width=5
 length=15
-radius=5
 range=600
 velocity=600
 damage=35
 onDestroy=Explosion
 knockback=200
+networked
+}
+
+{
+name=Bounce_Rocket
+type=projectile
+color=[190,190,190]
+width=5
+length=15
+range=6000
+velocity=600
+damage=35
+onDestroy=Explosion
+knockback=200
+bounce
+networked
+}
+
+{
+name=Grenade
+type=projectile
+color=[190,190,190]
+width=5
+length=5
+duration=5
+velocity=600
+onDestroy=Explosion
+knockback=200
+bounce
+friction=300
+dontDestroyOnCollision
+networked
 }
  
 {
@@ -42,6 +90,7 @@ velocity=400
 damage=10
 knockback=50
 onDestroy=Bullet_puff
+networked
 }
 
 {
@@ -55,6 +104,7 @@ velocity=400
 damage=5
 knockback=50
 onDestroy=Bullet_puff
+networked
 }
 
 {
@@ -67,6 +117,7 @@ range=400
 velocity=200
 damage=10
 knockback=50
+networked
 }
 
 {
@@ -81,6 +132,7 @@ velocity=150
 damage=35
 knockback=50
 looping
+networked
 }
 
 {
@@ -193,7 +245,8 @@ width=20
 length=20
 animation=blood
 frameDuration=0.5
-friction
+friction=100
+bounce
 }
 
 {
@@ -226,6 +279,9 @@ type=tracer
 color=[255,0,0]
 width=3
 duration=0.5
+ignoreMapCollision
+ignoreEntityCollision
+dontDestroyOnCollision
 }
 
 {
@@ -233,6 +289,9 @@ name=OP_Laser_Tracer
 type=tracer
 duration=0.5
 width=3
+ignoreMapCollision
+ignoreEntityCollision
+dontDestroyOnCollision
 }
 
 

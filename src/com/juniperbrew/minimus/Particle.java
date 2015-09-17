@@ -28,9 +28,13 @@ public class Particle {
     public boolean destroyed;
     float range;
     float velocity;
-    boolean friction;
+    float friction;
+    public boolean bounce;
+    public boolean ignoreMapCollision;
+    public boolean ignoreEntityCollision;
+    public boolean dontDestroyOnCollision;
 
-    private final float frictionAcceleration = 100;
+    //private final float frictionAcceleration = 100;
 
 
     public Particle(ProjectileDefinition def, Rectangle rect){
@@ -49,6 +53,10 @@ public class Particle {
         this.velocity = velocity;
         this.range = def.range;
         this.friction = def.friction;
+        this.bounce = def.bounce;
+        this.ignoreMapCollision = def.ignoreMapCollision;
+        this.ignoreEntityCollision = def.ignoreEntityCollision;
+        this.dontDestroyOnCollision = def.dontDestroyOnCollision;
         setImage(def, rect);
         bounds = Tools.getRotatedRectangle(rect, rotation, originX, originY);
         setDuration(def.duration);
@@ -110,8 +118,8 @@ public class Particle {
     }
 
     public void update(float delta) {
-        if(friction){
-            velocity -= frictionAcceleration*delta;
+        if(friction!=0){
+            velocity -= friction*delta;
             if(velocity<0){
                 velocity = 0;
             }
@@ -139,7 +147,32 @@ public class Particle {
     private void moveDistance(float distance){
         float x = MathUtils.cosDeg(rotation)*distance;
         float y = MathUtils.sinDeg(rotation)*distance;
+        if(!ignoreMapCollision){
+            Rectangle r = bounds.getBoundingRectangle();
+            r.setPosition(r.x + x, r.y);
+            if(SharedMethods.checkMapCollision(r)){
+                if(bounce){
+                    rotation = 180 - rotation;
+                    sprite.setRotation(rotation);
+                    return;
+                }else if(!dontDestroyOnCollision){
+                    destroyed = true;
+                    return;
+                }
+            }
+            r.setPosition(r.x, r.y+y);
+            if(SharedMethods.checkMapCollision(r)){
+                if(bounce){
+                    rotation = 0 - rotation;
+                    sprite.setRotation(rotation);
+                    return;
+                }else if(!dontDestroyOnCollision){
+                    destroyed = true;
+                    return;
+                }
+            }
+        }
         bounds.translate(x,y);
-        sprite.translate(x,y);
+        sprite.translate(x, y);
     }
 }
