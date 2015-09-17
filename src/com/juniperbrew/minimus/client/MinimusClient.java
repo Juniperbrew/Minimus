@@ -326,11 +326,45 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(def.sound!=null){
                 playSoundInLocation(sounds.get(def.sound),spawnProjectile.x,spawnProjectile.y);
             }
-        }
-
-        if(object instanceof String){
+        }else if(object instanceof String){
             String command = (String) object;
             consoleFrame.giveCommand(command);
+        }else if(object instanceof Packet){
+            Packet p = (Packet) object;
+            if(p.name.equals("Disconnected")){
+                showMessage("Lost connection to server. Trying to reconnect.");
+                for(int id: new HashSet<>(entities.keySet())){
+                    removeEntity(id);
+                }
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        int connectionAttempt = 1;
+                        while(!client.isConnected()){
+                            try {
+                                showMessage("Trying to reconnect " + connectionAttempt + "...");
+                                connectionAttempt++;
+                                client.reconnect();
+                            } catch (IOException e1) {
+                                showMessage("No response from server");
+                                try {
+                                    Thread.sleep(5000);
+                                } catch (InterruptedException e2) {
+                                    e2.printStackTrace();
+                                }
+                            }
+                        }
+                        requestRespawn();
+                    }
+                },"Reconnecting thread").start();
+            }else if(p.name.equals("Connected")){
+                showMessage("Connected to server");
+            }
         }
     }
 
@@ -1512,6 +1546,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             @Override
             public void connected(Connection connection){
+                pendingPackets.add(new Packet("Connected"));
                 connection.setTimeout(GlobalVars.TIMEOUT);
             }
 
@@ -1535,37 +1570,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             @Override
             public void disconnected(Connection connection){
-                showMessage("Lost connection to server. Trying to reconnect.");
-                for(int id: new HashSet<>(entities.keySet())){
-                    removeEntity(id);
-                }
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Thread.sleep(1000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        int connectionAttempt = 1;
-                        while(!client.isConnected()){
-                            try {
-                                showMessage("Trying to reconnect " + connectionAttempt + "...");
-                                connectionAttempt++;
-                                client.reconnect();
-                            } catch (IOException e1) {
-                                showMessage("No response from server");
-                                try {
-                                    Thread.sleep(5000);
-                                } catch (InterruptedException e2) {
-                                    e2.printStackTrace();
-                                }
-                            }
-                        }
-                        requestRespawn();
-                    }
-                },"Reconnecting thread").start();
-
+                pendingPackets.add(new Packet("Disconnected"));
             }
         };
         double minPacketDelay = ConVars.getDouble("sv_min_packet_delay");
@@ -1908,6 +1913,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(backgroundMusic!=null){
                 backgroundMusic.setVolume(musicVolume);
             }
+        }
+    }
+
+    class Packet{
+        public String name;
+        Packet(String name){
+            this.name = name;
         }
     }
 }
