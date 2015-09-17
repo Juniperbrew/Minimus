@@ -343,7 +343,7 @@ public class World implements EntityChangeListener{
         ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
         Rectangle intersection = new Rectangle();
         for(Projectile projectile:projectiles){
-            Rectangle projectileBounds = projectile.getHitbox().getBoundingRectangle();
+            Rectangle projectileBounds = projectile.getBoundingRectangle();
             projectile.update(delta);
             if(!projectile.ignoreEntityCollision){
                 //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
@@ -357,7 +357,7 @@ public class World implements EntityChangeListener{
                     ServerEntity target = entities.get(id);
                     Rectangle entityBounds = target.getGdxBounds();
                     if(Intersector.intersectRectangles(projectileBounds, entityBounds, intersection)){
-                        if(Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())){
+                        if(Intersector.overlapConvexPolygons(projectile.getBoundingPolygon(), target.getPolygonBounds())){
                             if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
@@ -398,7 +398,7 @@ public class World implements EntityChangeListener{
                 destroyedProjectiles.add(projectile);
                 if(projectile.onDestroy!=null){
                     Vector2 center = new Vector2();
-                    projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                    projectile.getBoundingRectangle().getCenter(center);
                     createStationaryThing(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
                 }
             }

@@ -1,18 +1,8 @@
 package com.juniperbrew.minimus;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
-import java.awt.geom.Line2D;
-import java.util.ArrayList;
 import java.util.HashSet;
 
 
@@ -51,8 +41,12 @@ public class Projectile extends Particle{
         explosionKnockback = def.explosionKnockback;
     }
 
-    public Polygon getHitbox(){
-        return bounds;
+    public Polygon getBoundingPolygon(){
+        return Tools.getBoundingPolygon(sprite);
+    }
+
+    public Rectangle getBoundingRectangle(){
+        return sprite.getBoundingRectangle();
     }
 
     @Override
@@ -66,7 +60,6 @@ public class Projectile extends Particle{
                 ", movement=" + velocity +
                 ", totalDistanceTraveled=" + totalDistanceTraveled +
                 ", rotation=" + rotation +
-                ", bounds=" + bounds +
                 ", sprite=" + sprite +
                 ", animation=" + animation +
                 ", stateTime=" + stateTime +

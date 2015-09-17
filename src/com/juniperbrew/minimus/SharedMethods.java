@@ -1,10 +1,6 @@
 package com.juniperbrew.minimus;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
@@ -12,17 +8,11 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.math.collision.BoundingBox;
-import com.badlogic.gdx.math.collision.Ray;
 
 import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.Timer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -596,7 +586,7 @@ public class SharedMethods {
     public static void renderAttackBoundingBox(ShapeRenderer renderer, ConcurrentLinkedQueue<Projectile> projectiles) {
         renderer.begin(ShapeRenderer.ShapeType.Line);
         for (Projectile projectile : projectiles) {
-            Rectangle rect = projectile.getHitbox().getBoundingRectangle();
+            Rectangle rect = projectile.getBoundingRectangle();
             renderer.rect(rect.x, rect.y, rect.width, rect.height);
         }
         renderer.end();
@@ -605,7 +595,7 @@ public class SharedMethods {
     public static void renderAttackPolygon(ShapeRenderer renderer, ConcurrentLinkedQueue<Projectile> projectiles) {
         renderer.begin(ShapeRenderer.ShapeType.Line);
         for (Projectile projectile : projectiles) {
-            renderer.polygon(projectile.getHitbox().getTransformedVertices());
+            renderer.polygon(projectile.getBoundingPolygon().getTransformedVertices());
         }
         renderer.end();
     }
@@ -642,7 +632,7 @@ public class SharedMethods {
         double squaredDistance = Math.pow(range,2);
         ArrayList<Integer> entityIDs = new ArrayList<>();
         for(Entity e:entities){
-            float distance = Tools.getSquaredDistance(origin.getCenterX(),origin.getCenterY(),e.getCenterX(),e.getCenterY());
+            float distance = Tools.getSquaredDistance(origin.getCenterX(), origin.getCenterY(), e.getCenterX(), e.getCenterY());
             if(distance<squaredDistance){
                 if(origin.getID() != e.getID()){
                     entityIDs.add(e.getID());

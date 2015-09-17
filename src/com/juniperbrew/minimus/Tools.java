@@ -1,9 +1,10 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.*;
 
 import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -91,10 +92,10 @@ public class Tools {
 
     public static Polygon getRotatedRectangle(Rectangle rectangle, int rotation, float originX, float originY){
         float[] vertices = new float[8];
-        Point2D.Float p1 = rotatePoint(rectangle.getX(),rectangle.getY(),originX,originY,rotation);
-        Point2D.Float p2 = rotatePoint(rectangle.getX()+rectangle.getWidth(),rectangle.getY(),originX,originY,rotation);
-        Point2D.Float p3 = rotatePoint(rectangle.getX()+rectangle.getWidth(),rectangle.getY()+rectangle.getHeight(),originX,originY,rotation);
-        Point2D.Float p4 = rotatePoint(rectangle.getX(),rectangle.getY()+rectangle.getHeight(),originX,originY,rotation);
+        Vector2 p1 = rotatePoint(rectangle.getX(), rectangle.getY(), originX, originY, rotation);
+        Vector2 p2 = rotatePoint(rectangle.getX()+rectangle.getWidth(),rectangle.getY(),originX,originY,rotation);
+        Vector2 p3 = rotatePoint(rectangle.getX()+rectangle.getWidth(),rectangle.getY()+rectangle.getHeight(),originX,originY,rotation);
+        Vector2 p4 = rotatePoint(rectangle.getX(),rectangle.getY()+rectangle.getHeight(),originX,originY,rotation);
         vertices[0] = p1.x;
         vertices[1] = p1.y;
         vertices[2] = p2.x;
@@ -104,7 +105,7 @@ public class Tools {
         vertices[6] = p4.x;
         vertices[7] = p4.y;
         Polygon polygon = new Polygon(vertices);
-        polygon.translate(originX,originY);
+        polygon.translate(originX, originY);
         return new Polygon(vertices);
     }
 
@@ -115,24 +116,25 @@ public class Tools {
         return v;
     }
 
-    /*public static boolean intersects(Polygon polygon, Rectangle rectangle){
-        Vector2 v1 = new Vector2(rectangle.x,rectangle.y);
-        Vector2 v2 = new Vector2(rectangle.x,rectangle.y+rectangle.height);
-        Vector2 v3 = new Vector2(rectangle.x+rectangle.width,rectangle.y+rectangle.height);
-        Vector2 v4 = new Vector2(rectangle.x+rectangle.width,rectangle.y);
 
-        if(Intersector.intersectLinePolygon(v1,v2,polygon)||Intersector.intersectLinePolygon(v2,v3,polygon)||
-                Intersector.intersectLinePolygon(v3,v4,polygon)||Intersector.intersectLinePolygon(v4,v1,polygon)){
-            return true;
-        }else{
-            return false;
-        }
-    }*/
+    public static Polygon getBoundingPolygon(Sprite sprite){
+        float[] vertices = sprite.getVertices();
+        float[] newVertices = new float[8];
+        newVertices[0] = vertices[Batch.X1];
+        newVertices[1] = vertices[Batch.Y1];
+        newVertices[2] = vertices[Batch.X2];
+        newVertices[3] = vertices[Batch.Y2];
+        newVertices[4] = vertices[Batch.X3];
+        newVertices[5] = vertices[Batch.Y3];
+        newVertices[6] = vertices[Batch.X4];
+        newVertices[7] = vertices[Batch.Y4];
+        return new Polygon(newVertices);
+    }
 
-    public static Point2D.Float rotatePoint(float x, float y, float originX, float originY,int rotation){
+    public static Vector2 rotatePoint(float x, float y, float originX, float originY,float rotation){
         float x1 = (x-originX) * MathUtils.cosDeg(rotation) - (y-originY) * MathUtils.sinDeg(rotation) + originX;
         float y1 = (y-originY) * MathUtils.cosDeg(rotation) + (x-originX) * MathUtils.sinDeg(rotation) + originY;
-        return new Point2D.Float(x1,y1);
+        return new Vector2(x1,y1);
     }
 
 

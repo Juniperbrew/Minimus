@@ -4,10 +4,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
 /**
@@ -16,7 +14,6 @@ import com.badlogic.gdx.math.Rectangle;
 public class Particle {
 
     public int rotation;
-    Polygon bounds;
     Sprite sprite;
     Animation animation;
     float stateTime;
@@ -33,9 +30,6 @@ public class Particle {
     public boolean ignoreMapCollision;
     public boolean ignoreEntityCollision;
     public boolean dontDestroyOnCollision;
-
-    //private final float frictionAcceleration = 100;
-
 
     public Particle(ProjectileDefinition def, Rectangle rect){
         this(def,rect,0,rect.x+rect.width/2,rect.y+rect.height/2,0);
@@ -58,7 +52,6 @@ public class Particle {
         this.ignoreEntityCollision = def.ignoreEntityCollision;
         this.dontDestroyOnCollision = def.dontDestroyOnCollision;
         setImage(def, rect);
-        bounds = Tools.getRotatedRectangle(rect, rotation, originX, originY);
         setDuration(def.duration);
     }
 
@@ -148,7 +141,7 @@ public class Particle {
         float x = MathUtils.cosDeg(rotation)*distance;
         float y = MathUtils.sinDeg(rotation)*distance;
         if(!ignoreMapCollision){
-            Rectangle r = bounds.getBoundingRectangle();
+            Rectangle r = sprite.getBoundingRectangle();
             r.setPosition(r.x + x, r.y);
             if(SharedMethods.checkMapCollision(r)){
                 if(bounce){
@@ -172,7 +165,6 @@ public class Particle {
                 }
             }
         }
-        bounds.translate(x,y);
         sprite.translate(x, y);
     }
 }

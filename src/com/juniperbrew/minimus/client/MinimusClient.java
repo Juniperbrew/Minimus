@@ -913,8 +913,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         continue;
                     }
                     ClientEntity target = entities.get(id);
-                    if(Intersector.overlaps(projectile.getHitbox().getBoundingRectangle(),target.getGdxBounds())){
-                        if (Intersector.overlapConvexPolygons(projectile.getHitbox(), target.getPolygonBounds())) {
+                    if(Intersector.overlaps(projectile.getBoundingRectangle(),target.getGdxBounds())){
+                        if (Intersector.overlapConvexPolygons(projectile.getBoundingPolygon(), target.getPolygonBounds())) {
                             if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
@@ -924,7 +924,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                                 playSoundInLocation(sounds.get("hit.ogg"),target.getCenterX(),target.getCenterY());
                             }
                             Vector2 center = new Vector2();
-                            projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                            projectile.getBoundingRectangle().getCenter(center);
                             projectile.entitiesHit.add(target.getID());
                             particles.add(SharedMethods.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y));
                             if(projectile.explosionKnockback){
@@ -937,7 +937,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
             }
             if(!projectile.ignoreMapCollision){
-                if (SharedMethods.checkMapCollision(projectile.getHitbox().getBoundingRectangle())) {
+                if (SharedMethods.checkMapCollision(projectile.getBoundingRectangle())) {
                     if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
                         projectile.destroyed = true;
                     }
@@ -952,7 +952,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     ProjectileDefinition def = projectileList.get(projectile.onDestroy);
                     if(def.type == ProjectileDefinition.PARTICLE){
                         Vector2 center = new Vector2();
-                        projectile.getHitbox().getBoundingRectangle().getCenter(center);
+                        projectile.getBoundingRectangle().getCenter(center);
                         particles.add(SharedMethods.createStationaryParticle(def, center.x, center.y));
                     }
                 }
