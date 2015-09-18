@@ -24,6 +24,14 @@ public class Tools {
         milliTimeStamp.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
+    public static int nanoToMilli(long nano){
+        return (int) (nano/1000000);
+    }
+
+    public static float nanoToMilliFloat(long nano){
+        return nano/1000000f;
+    }
+
     public static long secondsToNano(double seconds){
         return (long)(seconds*1000000000l);
     }

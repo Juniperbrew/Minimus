@@ -6,6 +6,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
@@ -16,7 +17,6 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
-import com.esotericsoftware.minlog.Log;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.ConsoleReader;
 import com.juniperbrew.minimus.GlobalVars;
@@ -25,9 +25,9 @@ import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
 import com.juniperbrew.minimus.Network;
 import com.juniperbrew.minimus.Powerup;
-import com.juniperbrew.minimus.Projectile;
 import com.juniperbrew.minimus.ProjectileDefinition;
 import com.juniperbrew.minimus.Score;
+import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.Weapon;
 import com.juniperbrew.minimus.components.Component;
@@ -38,6 +38,7 @@ import com.juniperbrew.minimus.windows.ServerStatusFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -47,6 +48,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 
@@ -88,6 +90,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     float cameraVelocity = 300f; //pix/s
 
     private OrthographicCamera camera;
+    private OrthographicCamera hudCamera;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
 
     int pendingRandomNpcAdds = 0;
@@ -103,6 +106,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     private final float TIMESTEP = (1/60f);
     private float ackumulator;
 
+    Queue<Float> fpsLog = new CircularFifoQueue<>(100);
+    Queue<Float> deltaLog = new CircularFifoQueue<>(100);
+    Queue<Float> logicLog = new CircularFifoQueue<>(100);
+    Queue<Float> renderLog = new CircularFifoQueue<>(100);
+    Queue<Float> frameTimeLog = new CircularFifoQueue<>(100);
+    private boolean showGraphs;
+
+    BitmapFont font;
+
     @Override
     public void create() {
         //Log.TRACE();
@@ -115,7 +127,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         world = new World(this, new TmxMapLoader(), batch);
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
-        resize(h,w);
+        hudCamera = new OrthographicCamera(windowWidth,windowHeight);
+        resize(h, w);
+        font = new BitmapFont();
 
         serverStartTime = System.nanoTime();
         serverData = new StatusData(serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
@@ -249,6 +263,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     private void doLogic(float delta){
 
+        long logicStart = System.nanoTime();
         updateStatusData();
 
         for(Packet p;(p = pendingPackets.poll())!=null;){
@@ -264,6 +279,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             updateClients();
             lastUpdateSent = System.nanoTime();
         }
+        logicLog.add(Tools.nanoToMilliFloat(System.nanoTime() - logicStart));
     }
 
     private void updatePing(){
@@ -402,7 +418,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void render() {
+        long frameStart = System.nanoTime();
         float delta = Gdx.graphics.getDeltaTime();
+        deltaLog.add(delta*1000);
         if(delta>0.25){
             delta=0.25f;
         }
@@ -420,11 +438,26 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         shapeRenderer.setProjectionMatrix(camera.combined);
         batch.setProjectionMatrix(camera.combined);
 
+        long renderStart = System.nanoTime();
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
+        Gdx.gl.glLineWidth(3);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        world.render(delta, shapeRenderer,batch,camera);
+        world.render(delta, shapeRenderer, batch, camera);
+
+        if(showGraphs) {
+            shapeRenderer.setProjectionMatrix(hudCamera.combined);
+            batch.setProjectionMatrix(hudCamera.combined);
+            SharedMethods.drawLog("Fps", "fps", fpsLog, shapeRenderer, batch, font, 50, 100, 150, 100, 1, 60, 20);
+            SharedMethods.drawLog("Delta", "ms", deltaLog, shapeRenderer,batch,font, 250, 100, 150, 100, 4, (1000/60f),(1000/20f));
+            SharedMethods.drawLog("Logic", "ms", logicLog, shapeRenderer,batch,font, 450, 100, 150, 100, 20, 3,10);
+            SharedMethods.drawLog("Render", "ms", renderLog, shapeRenderer,batch,font, 650, 100, 150, 100, 20, 5,(1000/60f));
+            SharedMethods.drawLog("FrameTime", "ms", frameTimeLog, shapeRenderer, batch, font, 850, 100, 150, 100, 20, 5, (1000 / 60f));
+        }
+
+        renderLog.add(Tools.nanoToMilliFloat(System.nanoTime() - renderStart));
+        frameTimeLog.add(Tools.nanoToMilliFloat(System.nanoTime() - frameStart));
     }
 
     public void fillAllAmmo(){
@@ -470,6 +503,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             connectionStatus.get(c).inputQueue = inputQueue.get(c).size();
         }
         serverData.fps = Gdx.graphics.getFramesPerSecond();
+        fpsLog.add((float) serverData.fps);
         serverData.setEntityCount(world.getEntityCount());
         serverData.currentTick = currentTick;
         serverData.setServerTime((System.nanoTime() - serverStartTime) / 1000000000f);
@@ -824,6 +858,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         viewPortY = mapHeight /2f;
         camera.position.set(viewPortX, viewPortY, 0);
         camera.update();
+
+        hudCamera.viewportWidth = w;
+        hudCamera.viewportHeight = h;
+        hudCamera.position.set(windowWidth/2,windowHeight / 2,0);
+        hudCamera.update();
     }
     @Override
     public void pause() {}
@@ -838,6 +877,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public boolean keyDown(int keycode) {
         if(keycode == Input.Keys.F1){
             consoleFrame.showHelp();
+        }
+        if(keycode == Input.Keys.F2){
+            showGraphs = !showGraphs;
         }
         if(keycode == Input.Keys.LEFT) buttons.add(Enums.Buttons.LEFT);
         if(keycode == Input.Keys.RIGHT) buttons.add(Enums.Buttons.RIGHT);

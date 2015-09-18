@@ -53,7 +53,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -176,6 +178,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     boolean fadeIn;
 
     Texture minimap;
+
+    Queue<Float> fpsLog = new CircularFifoQueue<>(100);
+    Queue<Float> deltaLog = new CircularFifoQueue<>(100);
+    Queue<Float> logicLog = new CircularFifoQueue<>(100);
+    Queue<Float> renderLog = new CircularFifoQueue<>(100);
+    Queue<Float> frameTimeLog = new CircularFifoQueue<>(100);
+    private boolean showGraphs;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -404,6 +413,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void doLogic(float delta){
+        long startTime = System.nanoTime();
 
         if(System.nanoTime()- logIntervalStarted > Tools.secondsToNano(ConVars.getInt("cl_log_interval_seconds"))){
             logIntervalStarted = System.nanoTime();
@@ -442,12 +452,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             runClientSidePrediction();
             statusData.setEntityCount(entities.size());
         }
-        statusData.setFps(Gdx.graphics.getFramesPerSecond());
+        statusData.fps = Gdx.graphics.getFramesPerSecond();
+        fpsLog.add((float) statusData.fps);
         statusData.setServerTime(lastServerTime);
         statusData.setClientTime(getClientTime());
         statusData.currentInputRequest = currentInputRequest;
         statusData.inputQueue = inputQueue.size();
         statusFrame.update();
+
+        logicLog.add(Tools.nanoToMilliFloat(System.nanoTime() - startTime));
     }
 
     private void updateParticles(float delta){
@@ -1019,7 +1032,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public void render() {
 
+        long frameStart = System.nanoTime();
         float delta = Gdx.graphics.getDeltaTime();
+        deltaLog.add(delta*1000);
         if(delta>0.25){
             delta=0.25f;
         }
@@ -1085,7 +1100,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
                 shapeRenderer.setColor(1, 0.4f, 0, 1); //safety orange
                 Rectangle bounds = ghostPlayer.getGdxBounds();
-                shapeRenderer.rect(bounds.x,bounds.y,bounds.width,bounds.height);
+                shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height);
+
                 shapeRenderer.end();
             }
 
@@ -1188,6 +1204,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         batch.begin();
         batch.setProjectionMatrix(hudCamera.combined);
         int offset = 0;
+        font.setColor(Color.RED);
         for(int id: playerList){
             font.draw(batch, id +" | Kills: "+ score.getPlayerKills(id)+ " Civilians killed: "+score.getNpcKills(id)
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
@@ -1237,6 +1254,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
         batch.end();
+
+        if(showGraphs) {
+            shapeRenderer.setProjectionMatrix(hudCamera.combined);
+            SharedMethods.drawLog("Fps", "fps", fpsLog, shapeRenderer, batch, font, 50, 100, 150, 100, 1, 60, 20);
+            SharedMethods.drawLog("Delta", "ms", deltaLog, shapeRenderer,batch,font, 250, 100, 150, 100, 4, (1000/60f),(1000/20f));
+            SharedMethods.drawLog("Logic", "ms", logicLog, shapeRenderer,batch,font, 450, 100, 150, 100, 20, 3,10);
+            SharedMethods.drawLog("Render", "ms", renderLog, shapeRenderer,batch,font, 650, 100, 150, 100, 20, 5,(1000/60f));
+            SharedMethods.drawLog("FrameTime", "ms", frameTimeLog, shapeRenderer,batch,font, 850, 100, 150, 100, 20, 5,(1000/60f));
+            shapeRenderer.setProjectionMatrix(camera.combined);
+        }
+
+        renderLog.add(Tools.nanoToMilliFloat(System.nanoTime()-renderStart));
+        frameTimeLog.add(Tools.nanoToMilliFloat(System.nanoTime()-frameStart));
     }
 
     private String getWeaponLine(int weaponSlot){
@@ -1372,6 +1402,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public boolean keyDown(int keycode) {
         if(keycode == Input.Keys.F1){
             consoleFrame.showHelp();
+        }
+        if(keycode == Input.Keys.F2){
+            showGraphs = !showGraphs;
         }
         if(keycode == Input.Keys.SHIFT_LEFT) buttons.add(Enums.Buttons.SHIFT);
         if(keycode == Input.Keys.NUM_1) buttons.add(Enums.Buttons.NUM1);

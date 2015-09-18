@@ -1,5 +1,7 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
@@ -13,6 +15,8 @@ import java.awt.geom.Line2D;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -641,4 +645,41 @@ public class SharedMethods {
         }
         return entityIDs;
     }
-}
+
+    public static void drawLog(String title, String unit, Queue<Float> log, ShapeRenderer shapeRenderer,SpriteBatch batch, BitmapFont font, float x, float y, float width, float height, float yScale, float targetY, float badY){
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(1, 1, 0, 1);
+        shapeRenderer.rect(x, y, width, height);
+        shapeRenderer.setColor(0, 1, 0, 1);
+        shapeRenderer.line(x, y + (targetY * yScale), x + width, y + (targetY * yScale));
+        shapeRenderer.setColor(1, 0, 0, 1);
+        shapeRenderer.line(x, y + (badY * yScale), x + width, y + (badY * yScale));
+        shapeRenderer.setColor(1, 1, 0, 1);
+        float xScale = width/log.size();
+        Iterator<Float> iter = log.iterator();
+        int i = 0;
+        float value = 0;
+        float sum = 0;
+        if(iter.hasNext()){
+            value = iter.next();
+            sum += value;
+        }
+        while(iter.hasNext()){
+            float oldValue = value;
+            value = iter.next();
+            sum += value;
+            shapeRenderer.line(x+(i*xScale),y+(oldValue*yScale),x+((i+1)*xScale),y+(value*yScale));
+            i++;
+        }
+        shapeRenderer.end();
+        batch.begin();
+        font.setColor(Color.GREEN);
+        font.draw(batch, String.format("%.2f", targetY), x + width + 5, y + (targetY * yScale));
+        font.setColor(Color.YELLOW);
+        font.draw(batch, String.format("Avg: %.2f %s", (sum / log.size()), unit), x, y - 10);
+        font.draw(batch, title, x, y + height + 15);
+        font.setColor(Color.RED);
+        font.draw(batch, String.format("%.2f", badY), x + width + 5, y + (badY * yScale));
+        batch.end();
+    }
+    }
