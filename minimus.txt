@@ -1,4 +1,5 @@
 TODO add hitscan weapon sword with swinging line animation
+TODO support for variable/random projectile velocity,rotation,range,size?,projectilecount?,damage?,knockback?,friction?
 FIXME when individually clicking attack player attacks not always fired on server, happens because cooldown is only reduced when receiving input packets
 
 DONE running

@@ -427,10 +427,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         world.render(delta, shapeRenderer,batch,camera);
     }
 
-    public void startWaves(){
-        world.spawnWaves = true;
-    }
-
     public void fillAllAmmo(){
         for(int id : playerList.keySet()){
             fillAmmo(id);
@@ -439,7 +435,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     public void fillAmmo(int id){
         for(int weapon:world.weaponList.keySet()){
-            addAmmo(id,weapon,999999);
+            addAmmo(id, weapon, 999999);
         }
     }
 
@@ -453,6 +449,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
         weaponAdded.weapon = weapon;
         sendTCP(playerList.get(id),weaponAdded);
+    }
+
+    public void startWaves(){
+        world.spawnWaves = true;
+    }
+
+    public void stopWaves(){
+        world.spawnWaves = false;
     }
 
     public void resetWaves(){

@@ -18,6 +18,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTile;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
@@ -1131,11 +1133,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 float y = e.getY();
                 batch.setColor(1,1,1,1);
                 StringBuilder textureName = new StringBuilder(e.getImage());
-                if(e.getID()==player.id) {
-                    //Cast player position to int because we are centering the camera using casted values too
-                    x = (int) e.getX();
-                    y = (int) e.getY();
-                }
                 if(playerList.contains(e.getID())){
                     textureName.append("_");
                     textureName.append(weaponList.get(player.slot1Weapon).sprite);
@@ -1592,7 +1589,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void centerCameraOnPlayer(){
         if(player != null) {
             //Cast values to int to avoid tile tearing
-            camera.position.set((int) (player.getX() + player.getWidth() / 2f), (int) (player.getY() + player.getHeight() / 2), 0);
+            camera.position.set(player.getX() + player.getWidth() / 2f, player.getY() + player.getHeight() / 2, 0);
         }
         camera.update();
     }
@@ -1775,6 +1772,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void loadMap(String mapName){
         map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
+        fixTextureBleeding(map);
         float mapScale = SharedMethods.getMapScale(map);
         MapProperties p = map.getProperties();
         GlobalVars.mapWidthTiles = p.get("width", Integer.class);
@@ -1788,8 +1786,31 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         GlobalVars.mapHeight = mapHeight;
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-        GlobalVars.collisionMap = SharedMethods.createCollisionMap(map,GlobalVars.mapWidthTiles,GlobalVars.mapHeightTiles);
+        GlobalVars.collisionMap = SharedMethods.createCollisionMap(map, GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles);
         createMinimap();
+    }
+
+    private void fixTextureBleeding(TiledMap map) {
+
+        float fix = 0.01f;
+        Iterator<TiledMapTileSet> iter1 = map.getTileSets().iterator();
+        while(iter1.hasNext()){
+            TiledMapTileSet tileset = iter1.next();
+            Iterator<TiledMapTile> iter2 = tileset.iterator();
+            while(iter2.hasNext()){
+                TiledMapTile tile = iter2.next();
+                TextureRegion region = tile.getTextureRegion();
+
+                float x = region.getRegionX();
+                float y = region.getRegionY();
+                float width = region.getRegionWidth();
+                float height = region.getRegionHeight();
+                float invTexWidth = 1f / region.getTexture().getWidth();
+                float invTexHeight = 1f / region.getTexture().getHeight();
+                region.setRegion((x + fix) * invTexWidth, (y + fix) * invTexHeight, (x + width - fix) * invTexWidth, (y + height - fix) * invTexHeight);
+            }
+
+        }
     }
 
     private void addEntity(NetworkEntity entity) {

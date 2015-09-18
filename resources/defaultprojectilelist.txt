@@ -13,17 +13,17 @@
 #velocity={int}
 #duration={float}
 #friction={float}
+#bounce{flag}
 #knockback={float}
 #onDestroy={String}
 
 #[Animation]#
 #animation={String}
 #frameDuration={float}
-#looping={flag}
+#looping={flag}		||If animation is not looping the projectile gets destroyed after animation finishes
 
 #[Flags]#
 #networked={flag}
-#bounce{flag}
 #ignoreMapCollision={flag}
 #ignoreEntityCollision={flag}
 #explosionKnockback={flag}
@@ -65,6 +65,22 @@ networked
 
 {
 name=Grenade
+type=projectile
+color=[190,190,190]
+width=5
+length=5
+duration=5
+velocity=600
+onDestroy=Explosion
+knockback=200
+bounce
+friction=300
+dontDestroyOnCollision
+networked
+}
+
+{
+name=Thrown_Grenade
 type=projectile
 color=[190,190,190]
 width=5

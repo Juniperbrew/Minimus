@@ -224,6 +224,14 @@ public class ConsoleFrame extends JFrame {
             }
             return;
         }
+        if(splits[0].equals("stop")){
+            if(minimusServer!=null){
+                minimusServer.stopWaves();
+            }else{
+                addLine("The "+splits[0]+" command can only be used on server");
+            }
+            return;
+        }
         if(splits[0].equals("team")){
             if(minimusClient!=null){
                 minimusClient.changeTeam(Integer.parseInt(splits[1]));
