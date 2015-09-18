@@ -450,10 +450,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
             batch.setProjectionMatrix(hudCamera.combined);
             SharedMethods.drawLog("Fps", "fps", fpsLog, shapeRenderer, batch, font, 50, 100, 150, 100, 1, 60, 20);
-            SharedMethods.drawLog("Delta", "ms", deltaLog, shapeRenderer,batch,font, 250, 100, 150, 100, 4, (1000/60f),(1000/20f));
+            SharedMethods.drawLog("Delta", "ms", deltaLog, shapeRenderer, batch, font, 250, 100, 150, 100, 4, (1000 / 60f), (1000 / 20f));
             SharedMethods.drawLog("Logic", "ms", logicLog, shapeRenderer,batch,font, 450, 100, 150, 100, 20, 3,10);
             SharedMethods.drawLog("Render", "ms", renderLog, shapeRenderer,batch,font, 650, 100, 150, 100, 20, 5,(1000/60f));
             SharedMethods.drawLog("FrameTime", "ms", frameTimeLog, shapeRenderer, batch, font, 850, 100, 150, 100, 20, 5, (1000 / 60f));
+            SharedMethods.drawLog("Download", "kB/s", serverData.kiloBytesPerSecondReceivedLog, shapeRenderer,batch,font, 1050, 100, 150, 100, 25, 2,10);
+            SharedMethods.drawLog("Upload", "kB/s", serverData.kiloBytesPerSecondSentLog, shapeRenderer,batch,font, 1250, 100, 150, 100, 2, 10,100);
         }
 
         renderLog.add(Tools.nanoToMilliFloat(System.nanoTime() - renderStart));
@@ -863,6 +865,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         hudCamera.viewportHeight = h;
         hudCamera.position.set(windowWidth/2,windowHeight / 2,0);
         hudCamera.update();
+
+        world.redrawMap = true;
     }
     @Override
     public void pause() {}

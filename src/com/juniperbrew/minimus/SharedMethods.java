@@ -676,7 +676,8 @@ public class SharedMethods {
         font.setColor(Color.GREEN);
         font.draw(batch, String.format("%.2f", targetY), x + width + 5, y + (targetY * yScale));
         font.setColor(Color.YELLOW);
-        font.draw(batch, String.format("Avg: %.2f %s", (sum / log.size()), unit), x, y - 10);
+        font.draw(batch, String.format("Cur: %.2f %s", value, unit), x, y - 5);
+        font.draw(batch, String.format("Avg: %.2f %s", (sum / log.size()), unit), x, y - 20);
         font.draw(batch, title, x, y + height + 15);
         font.setColor(Color.RED);
         font.draw(batch, String.format("%.2f", badY), x + width + 5, y + (badY * yScale));

@@ -2,6 +2,7 @@ package com.juniperbrew.minimus.windows;
 
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.Tools;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,10 +12,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
-import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
+import java.util.Queue;
 
 /**
  * Created by Juniperbrew on 20.6.2015.
@@ -68,6 +69,9 @@ public class StatusData {
 
     private int maxPing;
     private int maxFakePing;
+
+    public Queue<Float> kiloBytesPerSecondReceivedLog = new CircularFifoQueue<>(100);
+    public Queue<Float> kiloBytesPerSecondSentLog = new CircularFifoQueue<>(100);
 
     public int getEntityCount() {
         return entityCount;
@@ -258,6 +262,9 @@ public class StatusData {
         bytesReceivedInterval = bytesReceivedIntervalCounter;
         packetsSentInterval = packetsSentIntervalCounter;
         packetsReceivedInterval = packetsReceivedIntervalCounter;
+
+        kiloBytesPerSecondReceivedLog.add(((float) bytesReceivedInterval / logIntervalSeconds) / 1000f);
+        kiloBytesPerSecondSentLog.add(((float) bytesSentInterval / logIntervalSeconds) / 1000f);
 
         bytesSentIntervalCounter = 0;
         bytesReceivedIntervalCounter = 0;

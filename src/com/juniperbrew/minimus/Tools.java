@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.*;
@@ -145,8 +146,10 @@ public class Tools {
         return new Vector2(x1,y1);
     }
 
-
-    public static void main(String[] args) {
-        System.out.println(rotatePoint(5, 0, 1, 0, 360));
+    public static String printCamera(OrthographicCamera camera){
+        return "Position = "+camera.position+
+                ", width = "+camera.viewportWidth+
+                ", height = "+camera.viewportHeight+
+                ", zoom = "+camera.zoom;
     }
 }

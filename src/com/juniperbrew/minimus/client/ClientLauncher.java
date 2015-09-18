@@ -2,25 +2,16 @@ package com.juniperbrew.minimus.client;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.esotericsoftware.kryonet.Client;
-import com.esotericsoftware.kryonet.Connection;
-import com.esotericsoftware.kryonet.Listener;
-import com.juniperbrew.minimus.Network;
-import com.juniperbrew.minimus.SharedMethods;
+import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.windows.ServerSelector;
-import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -32,8 +23,8 @@ public class ClientLauncher {
     public boolean connect(String ip){
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
-        //cfg.foregroundFPS = 0;
-        //cfg.backgroundFPS = 0;
+        cfg.foregroundFPS = ConVars.getInt("cl_fps_max");
+        cfg.backgroundFPS = ConVars.getInt("cl_fps_background_max");
 
         MinimusClient client = null;
         try{

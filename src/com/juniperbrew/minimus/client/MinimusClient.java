@@ -1262,6 +1262,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             SharedMethods.drawLog("Logic", "ms", logicLog, shapeRenderer,batch,font, 450, 100, 150, 100, 20, 3,10);
             SharedMethods.drawLog("Render", "ms", renderLog, shapeRenderer,batch,font, 650, 100, 150, 100, 20, 5,(1000/60f));
             SharedMethods.drawLog("FrameTime", "ms", frameTimeLog, shapeRenderer,batch,font, 850, 100, 150, 100, 20, 5,(1000/60f));
+            SharedMethods.drawLog("Download", "kB/s", statusData.kiloBytesPerSecondReceivedLog, shapeRenderer,batch,font, 1050, 100, 150, 100, 2, 10,100);
+            SharedMethods.drawLog("Upload", "kB/s", statusData.kiloBytesPerSecondSentLog, shapeRenderer,batch,font, 1250, 100, 150, 100, 50, 1,5);
             shapeRenderer.setProjectionMatrix(camera.combined);
         }
 

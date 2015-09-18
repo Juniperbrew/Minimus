@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
@@ -13,6 +14,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
@@ -105,6 +107,9 @@ public class World implements EntityChangeListener{
 
     ArrayList<Rectangle> enemySpawnZones;
 
+    TextureRegion cachedMap;
+    boolean redrawMap;
+
     public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
         this.mapLoader = mapLoader;
@@ -134,6 +139,7 @@ public class World implements EntityChangeListener{
 
     public void changeMap(String mapName){
         map = mapList.get(mapName);
+        cachedMap = null;
         this.mapName = mapName;
         float mapScale = SharedMethods.getMapScale(map);
 
@@ -1218,8 +1224,19 @@ public class World implements EntityChangeListener{
     public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch, OrthographicCamera camera){
 
         batch.setColor(1, 1, 1, 1);
-        mapRenderer.setView(camera);
-        mapRenderer.render();
+        if(cachedMap==null||redrawMap){
+            mapRenderer.setView(camera);
+            mapRenderer.render();
+            cachedMap = ScreenUtils.getFrameBufferTexture();
+            redrawMap = false;
+        }else{
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            //FIXME why cant i just draw the map at (0,0) this probably has something to do with how i center the map to window
+            //FIXME if window height is greater than width the map is no longer centered
+            batch.draw(cachedMap, -(camera.viewportWidth - GlobalVars.mapWidth) / 2f, 0, camera.viewportWidth, camera.viewportHeight);
+            batch.end();
+        }
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
