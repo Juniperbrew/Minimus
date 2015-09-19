@@ -7,6 +7,9 @@ public class Weapon {
     public String name;
     public int spread;
     public int projectileCount;
+    public float chargeDuration;
+    public float minChargeVelocity;
+    public float maxChargeVelocity;
     public String sound;
     public ProjectileDefinition projectile;
     public double cooldown;
@@ -20,6 +23,9 @@ public class Weapon {
                 "name='" + name + '\'' +
                 ", spread=" + spread +
                 ", projectileCount=" + projectileCount +
+                ", chargeDuration=" + chargeDuration +
+                ", minChargeVelocity=" + minChargeVelocity +
+                ", maxChargeVelocity=" + maxChargeVelocity +
                 ", sound='" + sound + '\'' +
                 ", projectile=" + projectile +
                 ", cooldown=" + cooldown +

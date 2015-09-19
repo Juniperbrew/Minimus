@@ -18,6 +18,8 @@ public class ServerEntity extends Entity {
     HashMap<Integer,Double> weaponCooldowns = new HashMap<>();
     HashMap<Integer,Boolean> weapons = new HashMap<>();
     HashMap<Integer,Integer> ammo = new HashMap<>();
+    public float chargeMeter;
+    public int chargeWeapon;
 
     public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<Integer,Integer> ammo, EntityChangeListener listener){
         super(id, x, y, width, height, maxHealth, team, image);

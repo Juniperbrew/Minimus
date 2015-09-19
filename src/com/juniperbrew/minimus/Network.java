@@ -132,7 +132,7 @@ public class Network {
         public int deg;
         public float x;
         public float y;
-        //TODO HashMap<String,String> projectileModifiers;
+        public HashMap<String,Float> projectileModifiers;
     }
 
     public static class AddPlayerKill {

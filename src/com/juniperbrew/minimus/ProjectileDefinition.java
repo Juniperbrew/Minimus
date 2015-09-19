@@ -38,6 +38,36 @@ public class ProjectileDefinition {
     public boolean looping;
     public boolean bounce;
 
+    @Override
+    public String toString() {
+        return "ProjectileDefinition{" +
+                "name='" + name + '\'' +
+                ", tracer='" + tracer + '\'' +
+                ", type=" + type +
+                ", duration=" + duration +
+                ", damage=" + damage +
+                ", range=" + range +
+                ", velocity=" + velocity +
+                ", color=" + color +
+                ", width=" + width +
+                ", length=" + length +
+                ", image='" + image + '\'' +
+                ", animation='" + animation + '\'' +
+                ", frameDuration=" + frameDuration +
+                ", onDestroy='" + onDestroy + '\'' +
+                ", knockback=" + knockback +
+                ", ignoreMapCollision=" + ignoreMapCollision +
+                ", explosionKnockback=" + explosionKnockback +
+                ", dontDestroyOnCollision=" + dontDestroyOnCollision +
+                ", sound='" + sound + '\'' +
+                ", friction=" + friction +
+                ", ignoreEntityCollision=" + ignoreEntityCollision +
+                ", networked=" + networked +
+                ", looping=" + looping +
+                ", bounce=" + bounce +
+                '}';
+    }
+
     public ProjectileDefinition(){
 
     }

@@ -284,7 +284,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.AssignEntity){
             Network.AssignEntity assign = (Network.AssignEntity) object;
             showMessage("Assigning entity "+assign.networkID+" for player.");
-            Gdx.graphics.setTitle(this.getClass().getSimpleName()+"["+assign.networkID+"]");
+            Gdx.graphics.setTitle(this.getClass().getSimpleName() + "[" + assign.networkID + "]");
             ConVars.set("sv_player_velocity", assign.velocity);
 
             loadMap(assign.mapName);
@@ -514,12 +514,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         pendingInputPacket.add(input);
 
         processClientInput(input);
-        player.updateCooldowns(input.msec/1000f);
+        player.updateCooldowns(input.msec / 1000f);
     }
 
     private void processClientInput(Network.UserInput input){
-
-        boolean attacked = false;
+        //TODO figure out some way to share this function with server
         //We need to move player here so we can spawn the potential projectiles at correct location
         if(player != null) {
             SharedMethods.applyInput(player,input);
@@ -597,29 +596,48 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 player.slot1Weapon = 9;
             }
         }
-        if(buttons.contains(Enums.Buttons.MOUSE1)){
-            playerAttack(player.slot1Weapon);
-            attacked = true;
-        }
-        if(buttons.contains(Enums.Buttons.MOUSE2)){
-            playerAttack(player.slot2Weapon);
-            attacked = true;
-        }
-        if(attacked){
-            player.aimingWeapon = true;
-        }else{
-            player.aimingWeapon = false;
+        player.aimingWeapon = false;
+        if(input.buttons.contains(Enums.Buttons.MOUSE1)){
+            attack(player.slot1Weapon,input.msec);
+        }else if(input.buttons.contains(Enums.Buttons.MOUSE2)){
+            attack(player.slot2Weapon,input.msec);
+        }else if(player.chargeMeter>0){
+            launchAttack(player.chargeWeapon);
         }
     }
 
-    private void playerAttack(int weaponSlot){
+    public void attack(int weaponID, short msec){
+        Weapon weapon = weaponList.get(weaponID);
+        if(weapon.chargeDuration>0&&player.chargeMeter<weapon.chargeDuration) {
+            chargeAttack(weaponID, msec);
+        }else{
+            //FIXME This weaponID parameter is a bit missleading because if we are firing due to full charge meter it will actually use player.chargeweapon but this should be same as weaponID in all cases
+            launchAttack(weaponID);
+        }
+    }
+
+    private void chargeAttack(int weaponSlot, short msec){
         if(weaponList.get(weaponSlot)==null){
             return;
         }
+        player.aimingWeapon = true;
+        if(player.cooldowns.get(weaponSlot) > 0 || player.ammo.get(weaponSlot)<=0||!player.weapons.get(weaponSlot)){
+            return;
+        }
+        player.chargeWeapon = weaponSlot;
+        player.chargeMeter += (msec/1000d);
+    }
 
+    private void launchAttack(int weaponSlot){
+
+        if(weaponList.get(weaponSlot)==null){
+            return;
+        }
+        player.aimingWeapon = true;
         if(player.cooldowns.get(weaponSlot)>0||player.ammo.get(weaponSlot)<=0||!player.weapons.get(weaponSlot)){
             return;
         }
+        Weapon weapon = weaponList.get(weaponSlot);
         player.cooldowns.put(weaponSlot, weaponList.get(weaponSlot).cooldown);
         player.ammo.put(weaponSlot,player.ammo.get(weaponSlot)-1);
         //TODO Ignoring projectile team for now
@@ -630,8 +648,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attack.x = player.getCenterX();
         attack.y = player.getCenterY();
         attack.weapon = weaponSlot;
+        if(player.chargeMeter>0){
+            attack.projectileModifiers = new HashMap<>();
+            float charge = player.chargeMeter/weapon.chargeDuration;
+            if(charge>1) charge = 1;
+            float velocity = weapon.minChargeVelocity+(weapon.maxChargeVelocity-weapon.minChargeVelocity)*charge;
+            attack.projectileModifiers.put("velocity",velocity);
+            if(weapon.projectile.duration>0){
+                attack.projectileModifiers.put("duration",weapon.projectile.duration-player.chargeMeter);
+            }
+            player.chargeMeter = 0;
+        }
 
-        Weapon weapon = weaponList.get(weaponSlot);
         player.fireAnimationTimer = weapon.cooldown/2d;
         if(weapon.projectile.networked){
             if(weapon.sound!=null){
@@ -705,7 +733,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
                 }
             }else{
-                projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1));
+                projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1,attack.projectileModifiers));
             }
         }
     }
@@ -1210,6 +1238,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
+        font.draw(batch, "Charge: " + player.chargeMeter, 5, 60);
         font.draw(batch, "Mouse 1: " + getWeaponLine(player.slot1Weapon), 5, 40);
         font.draw(batch, "Mouse 2: " + getWeaponLine(player.slot2Weapon), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);

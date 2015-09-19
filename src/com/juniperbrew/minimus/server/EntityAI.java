@@ -55,7 +55,7 @@ public class EntityAI {
         }else if(aiType == MOVING_AND_SHOOTING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             move(velocity,delta);
-            shoot();
+            shoot(delta);
         }else if(aiType == FOLLOWING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             lookForTarget();
@@ -64,7 +64,7 @@ public class EntityAI {
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             lookForTarget();
             move(velocity,delta);
-            shoot();
+            shoot(delta);
         }
     }
 
@@ -131,9 +131,9 @@ public class EntityAI {
         }
     }
 
-    private void shoot(){
+    private void shoot(double delta){
         if(targetUpdated){
-            world.attackWithEntity(entity, weapon);
+            world.attack(entity, weapon, (short) (delta*1000));
             targetUpdated = false;
         }
     }

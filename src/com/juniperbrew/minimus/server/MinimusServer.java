@@ -594,6 +594,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     public void showMessage(String message){
+        if(message.startsWith("\n")){
+            System.out.println();
+            consoleFrame.addLine("");
+            message = message.substring(1);
+        }
         String line = "["+Tools.secondsToMilliTimestamp(getServerTime())+ "] " + message;
         System.out.println(line);
         consoleFrame.addLine(line);

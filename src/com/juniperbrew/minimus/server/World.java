@@ -85,7 +85,6 @@ public class World implements EntityChangeListener{
     private final int HEALTHPACK_SPAWN_DELAY = 10;
     private final int ENEMY_SPAWN_DELAY = 1;
 
-    HashMap<Integer,WaveDefinition> waveList;
     HashMap<String,EnemyDefinition> enemyList;
     HashMap<Integer,Weapon> weaponList;
     HashMap<String,ProjectileDefinition> projectileList;
@@ -114,7 +113,6 @@ public class World implements EntityChangeListener{
         this.listener = listener;
         this.mapLoader = mapLoader;
         this.batch = batch;
-        waveList = readWaveList();
         loadMaps();
         projectileList = readProjectileList();
         weaponList = readWeaponList(projectileList);
@@ -500,6 +498,7 @@ public class World implements EntityChangeListener{
     }
 
     public void processInput(ServerEntity e, Network.UserInput input){
+        //TODO figure out some way to share this function with client
         if(e.invulnerable&&input.buttons.size()>0){
             e.invulnerable = false;
         }
@@ -576,33 +575,50 @@ public class World implements EntityChangeListener{
         }
 
         if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-            attackWithEntity(e, e.getSlot1Weapon());
-        }
-        if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-            attackWithEntity(e, e.getSlot2Weapon());
+            attack(e,e.getSlot1Weapon(),input.msec);
+        }else if(input.buttons.contains(Enums.Buttons.MOUSE2)){
+            attack(e,e.getSlot2Weapon(),input.msec);
+        }else if(e.chargeMeter>0){
+            launchAttack(e,e.chargeWeapon);
         }
 
-        e.updateCooldowns(input.msec/1000d);
+        e.updateCooldowns(input.msec / 1000d);
     }
 
-    public void attackWithEntity(ServerEntity e, int weaponID){
+    public void attack(ServerEntity e, int weaponID, short msec){
+        if(weaponList.get(weaponID)==null){
+            return;
+        }
+        Weapon weapon = weaponList.get(weaponID);
+        if(weapon.chargeDuration>0&&e.chargeMeter<weapon.chargeDuration) {
+            chargeAttack(e,weaponID, msec);
+        }else{
+            //FIXME This weaponID parameter is a bit missleading because if we are firing due to full charge meter it will actually use e.chargeweapon but this should be same as weaponID in all cases
+            launchAttack(e, weaponID);
+        }
+    }
 
+    private void chargeAttack(ServerEntity e, int weaponID, short msec){
         if(weaponList.get(weaponID)==null){
             return;
         }
         if(e.weaponCooldown(weaponID) || !e.hasAmmo(weaponID) || !e.hasWeapon(weaponID)){
             return;
-        }else{
-            e.setWeaponCooldown(weaponID,weaponList.get(weaponID).cooldown);
-            e.addAmmo(weaponID,-1);
-            createAttack(e, weaponID);
         }
+        e.chargeWeapon = weaponID;
+        e.chargeMeter += (msec/1000d);
     }
 
-    public void createAttack(ServerEntity e, int weaponID){
-
+    private void launchAttack(ServerEntity e, int weaponID){
+        if(weaponList.get(weaponID)==null){
+            return;
+        }
+        if(e.weaponCooldown(weaponID) || !e.hasAmmo(weaponID) || !e.hasWeapon(weaponID)){
+            return;
+        }
         Weapon weapon = weaponList.get(weaponID);
-        ProjectileDefinition projectileDefinition = weapon.projectile;
+        e.setWeaponCooldown(weaponID, weaponList.get(weaponID).cooldown);
+        e.addAmmo(weaponID,-1);
 
         Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
         entityAttacking.x = e.getCenterX();
@@ -610,7 +626,26 @@ public class World implements EntityChangeListener{
         entityAttacking.deg = e.getRotation();
         entityAttacking.id = e.getID();
         entityAttacking.weapon = weaponID;
+        if(e.chargeMeter>0){
+            entityAttacking.projectileModifiers = new HashMap<>();
+            float charge = e.chargeMeter/weapon.chargeDuration;
+            if(charge>1) charge = 1;
+            float velocity = weapon.minChargeVelocity+(weapon.maxChargeVelocity-weapon.minChargeVelocity)*charge;
+            entityAttacking.projectileModifiers.put("velocity", velocity);
+            if(weapon.projectile.duration>0){
+                entityAttacking.projectileModifiers.put("duration",weapon.projectile.duration-e.chargeMeter);
+            }
+            e.chargeMeter = 0;
+        }
+        createAttack(entityAttacking);
         listener.attackCreated(entityAttacking, weapon);
+    }
+
+    private void createAttack(Network.EntityAttacking attack){
+
+        Weapon weapon = weaponList.get(attack.weapon);
+        ProjectileDefinition projectileDefinition = weapon.projectile;
+        ServerEntity e = entities.get(attack.id);
 
         if(weapon==null){
             return;
@@ -669,7 +704,7 @@ public class World implements EntityChangeListener{
             }
         }else if (projectileDefinition.type == ProjectileDefinition.PROJECTILE){
             //TODO projectiles with no duration or range will never get removed
-            ArrayList<Projectile> newProjectiles = SharedMethods.createProjectiles(weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.getID(), e.getTeam());
+            ArrayList<Projectile> newProjectiles = SharedMethods.createProjectiles(weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.getID(), e.getTeam(),attack.projectileModifiers);
             projectiles.addAll(newProjectiles);
         }
     }
@@ -689,7 +724,7 @@ public class World implements EntityChangeListener{
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultenemylist.txt");
         }
-        System.out.println("Loading enemies from file:"+file);
+        listener.message("\nLoading enemies from file:"+file);
         HashMap<String,EnemyDefinition> enemies = new HashMap<>();
         EnemyDefinition enemyDefinition = null;
         String enemyName = null;
@@ -728,6 +763,10 @@ public class World implements EntityChangeListener{
         } catch (IOException e) {
             e.printStackTrace();
         }
+        for(EnemyDefinition e: enemies.values()){
+            listener.message(e.toString());
+        }
+
         return enemies;
     }
 
@@ -736,7 +775,7 @@ public class World implements EntityChangeListener{
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultprojectilelist.txt");
         }
-        System.out.println("Loading projectiles from file:"+file);
+        listener.message("\nLoading projectiles from file:"+file);
         HashMap<String,ProjectileDefinition> projectiles = new HashMap<>();
         ProjectileDefinition projectileDefinition = null;
         String projectileName = null;
@@ -845,6 +884,11 @@ public class World implements EntityChangeListener{
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        for(ProjectileDefinition def: projectiles.values()){
+            listener.message(def.toString());
+        }
+
         return projectiles;
     }
 
@@ -853,7 +897,7 @@ public class World implements EntityChangeListener{
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponlist.txt");
         }
-        System.out.println("Loading weapons from file:" + file);
+        listener.message("\nLoading weapons from file:" + file);
         HashMap<Integer,Weapon> weapons = new HashMap<>();
         Weapon weapon = null;
         int weaponSlot = 0;
@@ -882,6 +926,15 @@ public class World implements EntityChangeListener{
                 if(splits[0].equals("projectileCount")){
                     weapon.projectileCount = Integer.parseInt(splits[1]);
                 }
+                if(splits[0].equals("chargeDuration")){
+                    weapon.chargeDuration = Float.parseFloat(splits[1]);
+                }
+                if(splits[0].equals("minChargeVelocity")){
+                    weapon.minChargeVelocity = Float.parseFloat(splits[1]);
+                }
+                if(splits[0].equals("maxChargeVelocity")){
+                    weapon.maxChargeVelocity = Float.parseFloat(splits[1]);
+                }
                 if(splits[0].equals("sound")){
                     weapon.sound = splits[1];
                 }
@@ -909,16 +962,14 @@ public class World implements EntityChangeListener{
 
         for(int i: weapons.keySet()){
             Weapon w = weapons.get(i);
-            System.out.println("Slot: "+i);
-            System.out.println(w);
-            System.out.println();
+            listener.message("Slot: " + i + "|"+w);
         }
 
         return weapons;
     }
 
     private void loadImages() {
-        listener.message("Loading texture atlas");
+        listener.message("\nLoading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
         GlobalVars.atlas = atlas;
     }
@@ -1110,55 +1161,6 @@ public class World implements EntityChangeListener{
                 listener.message("Loaded: " + file.getName());
             }
         }
-    }
-
-    private HashMap<Integer,WaveDefinition> readWaveList(){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"wavelist.txt");
-        if(!file.exists()){
-            file = new File("resources"+ File.separator+"defaultwavelist.txt");
-        }
-        System.out.println("Loading custom wave from file:" + file);
-        HashMap<Integer,WaveDefinition> waves = new HashMap<>();
-        int waveNumber = 0;
-        String aiType;
-        int weapon;
-        int count;
-        WaveDefinition wave = new WaveDefinition();
-
-        try(BufferedReader reader = new BufferedReader(new FileReader(file))){
-            for(String line;(line = reader.readLine())!=null;){
-                if(line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' '){
-                    continue;
-                }
-                if(line.charAt(0) == '{'){
-                    wave = new WaveDefinition();
-                    continue;
-                }
-                if(line.charAt(0) == '}'){
-                    waveNumber++;
-                    waves.put(waveNumber,wave);
-                    continue;
-                }
-                String[] splits = line.split("=");
-                if(splits[0].equals("changeMap")){
-                    wave.map = splits[1];
-                    continue;
-                }
-                if(line.charAt(0) == '+'){
-                    wave.healthPackCount = Integer.parseInt(line.substring(2));
-                }
-                aiType = Character.toString(line.charAt(0));
-                weapon = Character.getNumericValue(line.charAt(1))-1;
-                count = Integer.parseInt(line.substring(3));
-                wave.addEnemy(aiType, weapon, count);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return waves;
     }
 
     public HashMap<Integer, Network.Position> getChangedEntityPositions(){

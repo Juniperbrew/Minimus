@@ -77,7 +77,7 @@ public class SharedMethods {
         return new Projectile(def, bounds, entityId, team);
     }
 
-    public static ArrayList<Projectile> createProjectiles(Weapon weapon, float centerX, float centerY, int deg, int entityId, int team) {
+    public static ArrayList<Projectile> createProjectiles(Weapon weapon, float centerX, float centerY, int deg, int entityId, int team, HashMap<String,Float> projectileModifiers) {
         ProjectileDefinition def = weapon.projectile;
         final ArrayList<Projectile> projectiles = new ArrayList<>();
         int length = def.length;
@@ -90,6 +90,15 @@ public class SharedMethods {
             Rectangle bounds = new Rectangle(centerX + startDistanceX, centerY - width / 2, length, width);
 
             Projectile p = new Projectile(def, bounds, deg, centerX, centerY, entityId, team);
+
+            if(projectileModifiers!=null){
+                if(projectileModifiers.containsKey("velocity")){
+                    p.velocity = projectileModifiers.get("velocity");
+                }
+                if(projectileModifiers.containsKey("duration")){
+                    p.duration = projectileModifiers.get("duration");
+                }
+            }
 
             projectiles.add(p);
 

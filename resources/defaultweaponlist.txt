@@ -11,11 +11,6 @@ ammoImage=smallCell
 sprite=melee
 }
 
-###################
-### NEW WEAPONS ###
-###################
-
-#1
 {
 name=Hitscan_Pistol
 projectile=Hitscan_Pistol_Bullet
@@ -28,7 +23,6 @@ sound=pistol.wav
 sprite=pistol
 }
 
-#2
 {
 name=Hitscan_Shotgun
 projectile=Hitscan_Shotgun_Bullet
@@ -41,7 +35,6 @@ sound=shotgun.wav
 sprite=rifle
 }
 
-#3
 {
 name=Hitscan_Uzi
 projectile=Hitscan_Uzi_Bullet
@@ -54,7 +47,6 @@ sound=uzi.wav
 sprite=pistol
 }
 
-#4
 {
 name=Hitscan_Rifle
 projectile=Hitscan_Rifle_Bullet
@@ -67,11 +59,6 @@ sound=rifle.wav
 sprite=rifle
 }
 
-#################
-## OLD WEAPONS ##
-#################
-
-#5
 {
 name=OP_Laser
 projectile=OP_Laser
@@ -84,7 +71,6 @@ ammoImage=largeCell
 sprite=rifle
 }
 
-#6
 {
 name=Animated Flamer
 projectile=Animated_Flame
@@ -96,7 +82,6 @@ ammoImage=fire
 sprite=rifle
 }
 
-#7
 {
 name=Rocket launcher
 projectile=Rocket
@@ -110,7 +95,6 @@ sound=sinko.wav
 sprite=rifle
 }
 
-#7
 {
 name=Bounce launcher
 projectile=Bounce_Rocket
@@ -124,7 +108,22 @@ sound=sinko.wav
 sprite=rifle
 }
 
-#7
+{
+name=Grenade
+projectile=Grenade
+spread=0
+projectileCount=1
+chargeDuration=1
+maxChargeVelocity=600
+minChargeVelocity=100
+sound=projectile.ogg
+cooldown=0.5
+image=rocketLauncher
+ammoImage=largeAmmo
+sound=sinko.wav
+sprite=rifle
+}
+
 {
 name=Grenade launcher
 projectile=Grenade
@@ -137,8 +136,11 @@ ammoImage=largeAmmo
 sound=sinko.wav
 sprite=rifle
 }
- 
-#8
+
+#################
+## OLD WEAPONS ##
+#################
+
 {
 name=Shotgun
 projectile=Shotgun_Bullet
@@ -150,7 +152,6 @@ ammoImage=smallShell
 sprite=rifle
 }
 
-#9
 {
 name=Uzi
 projectile=Uzi_Bullet
@@ -163,7 +164,6 @@ sprite=pistol
 }
 
 
-#10
 {
 name=Broken_Laser
 projectile=Broken_Laser
@@ -176,7 +176,6 @@ ammoImage=smallCell
 sprite=rifle
 }
 
-#11
 {
 name=Flamer
 projectile=Flame
@@ -188,7 +187,6 @@ ammoImage=flame
 sprite=rifle
 }
 
-#12
 {
 name=Flame
 projectile=Animated_Flame
