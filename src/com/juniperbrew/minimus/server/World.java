@@ -182,6 +182,7 @@ public class World implements EntityChangeListener{
                 MapProperties p = o.getProperties();
                 if(p.containsKey("weapon")){
                     String weaponName = p.get("weapon",String.class);
+                    System.out.println(weaponName);
                     int weaponID = SharedMethods.getWeaponID(weaponList,weaponName);
                     if(weaponID==-1){
                         GlobalVars.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);

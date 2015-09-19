@@ -7,21 +7,21 @@ health=50
 
 {
 name=uziRebel
-weapon=Hitscan_Uzi
+weapon=Uzi
 image=uziRebel
 health=150
 }
 
 {
 name=pistolBoy
-weapon=Hitscan_Pistol
+weapon=Pistol
 image=pistolBoy
 health=100
 }
 
 {
 name=shotgunManiac
-weapon=Hitscan_Shotgun
+weapon=Shotgun
 image=shotgunManiac
 health=100
 }
