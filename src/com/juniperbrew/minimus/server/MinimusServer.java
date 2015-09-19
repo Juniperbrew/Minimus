@@ -936,7 +936,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public void conVarChanged(String varName, String varValue) {
         if(varName.equals("sv_map")){
             if(world!=null){
-                world.changeMap(varValue);
+                Gdx.app.postRunnable(() -> world.changeMap(varValue));
             }
         }
     }

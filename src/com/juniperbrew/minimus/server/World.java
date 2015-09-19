@@ -397,12 +397,15 @@ public class World implements EntityChangeListener{
                                     Vector2 i = new Vector2(target.getCenterX()-projectileCenter.x,target.getCenterY()-projectileCenter.y);
                                     knockback = new Vector2(projectile.knockback*scale,0);
                                     knockback.setAngle(i.angle());
+                                    //Scale the damage too
+                                    projectile.damage *= scale;
+                                    GlobalVars.consoleLogger.log(target.getID()+" lost "+projectile.damage+" from explosion");
                                 }else{
                                     knockback = new Vector2(projectile.knockback,0);
                                     knockback.setAngle(projectile.rotation);
                                 }
                                 knockbacks.add(new Knockback(target.getID(), knockback));
-                                if(projectile.ownerID!=id){
+                                if(projectile.team!=target.getTeam()){
                                     target.reduceHealth(projectile.damage,projectile.ownerID);
                                     if(entityAIs.containsKey(target.getID())){
                                         ServerEntity attacker = entities.get(projectile.ownerID);

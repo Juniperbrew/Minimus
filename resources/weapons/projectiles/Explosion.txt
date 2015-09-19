@@ -1,6 +1,6 @@
 name=Explosion
 type=projectile
-damage=10
+damage=50
 width=200
 length=200
 animation=explosion
