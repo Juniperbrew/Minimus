@@ -1172,37 +1172,43 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             //Render entities
             batch.begin();
-            for(ClientEntity e: entities.values()){ //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
-                float healthbarWidth = e.getWidth()+20;
-                float healthbarHeight = healthbarWidth/7;
-                float healthbarXOffset =- healthbarHeight;
-                float healthbarYOffset = e.getWidth()+10;
+            for(ClientEntity e: entities.values()) { //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
+                float healthbarWidth = e.getWidth() + 20;
+                float healthbarHeight = healthbarWidth / 7;
+                float healthbarXOffset = -healthbarHeight;
+                float healthbarYOffset = e.getWidth() + 10;
                 float x = e.getX();
                 float y = e.getY();
-                batch.setColor(1,1,1,1);
+                batch.setColor(1, 1, 1, 1);
                 StringBuilder textureName = new StringBuilder(e.getImage());
-                if(playerList.contains(e.getID())){
+                if (playerList.contains(e.getID())) {
                     textureName.append("_");
                     textureName.append(weaponList.get(player.getSlot1Weapon()).sprite);
-                }else if(e.getHealthPercent()>0.5f){
+                } else if (e.getHealthPercent() > 0.5f) {
                     textureName.append("_");
                     textureName.append("hurt");
                 }
                 TextureRegion texture;
-                if(e.fireAnimationTimer>0){
-                    texture = getTexture(textureName+"_attack");
-                }else if(e.aimingWeapon){
-                    texture = getTexture(textureName+"_aim");
-                }else{
-                    texture = getTexture(textureName.toString(),e.getID());
+                if (e.fireAnimationTimer > 0) {
+                    texture = getTexture(textureName + "_attack");
+                } else if (e.aimingWeapon) {
+                    texture = getTexture(textureName + "_aim");
+                } else {
+                    texture = getTexture(textureName.toString(), e.getID());
                 }
                 Rectangle textureBounds = getCenteredScaledTextureSize(texture, e.getGdxBounds(), 1.8125f);
-                batch.draw(texture,(int)textureBounds.x,(int)textureBounds.y,textureBounds.width/2,textureBounds.height/2,textureBounds.width,textureBounds.height,1,1,e.getRotation()+180,true);
-                batch.setColor(0,1,0,1);
+                batch.draw(texture, (int) textureBounds.x, (int) textureBounds.y, textureBounds.width / 2, textureBounds.height / 2, textureBounds.width, textureBounds.height, 1, 1, e.getRotation() + 180, true);
+                batch.setColor(0, 1, 0, 1);
                 batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
-                batch.setColor(1,0,0,1);
-                float healthWidth = healthbarWidth*e.getHealthPercent();
-                batch.draw(getTexture("blank",e.getID()), x+healthbarXOffset,y+healthbarYOffset,healthWidth,healthbarHeight);
+                batch.setColor(1, 0, 0, 1);
+                float healthWidth = healthbarWidth * e.getHealthPercent();
+                batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthWidth, healthbarHeight);
+                if (e.getID() == player.id && player.chargeMeter > 0) {
+                    float charge = player.chargeMeter / weaponList.get(player.chargeWeapon).chargeDuration;
+                    if (charge > 1) charge = 1;
+                    batch.setColor(0, 0, 1, 1);
+                    batch.draw(getTexture("blank"), player.getX() + healthbarXOffset, player.getY() + healthbarYOffset + healthbarHeight, healthbarWidth * charge, 5);
+                }
             }
             batch.end();
 
@@ -1242,7 +1248,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
-        font.draw(batch, "Charge:", 5, 60);
         font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
         font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);
@@ -1287,22 +1292,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
         batch.end();
-        Gdx.gl.glLineWidth(1);
-        shapeRenderer.setProjectionMatrix(hudCamera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(1, 0, 0, 1);
-        shapeRenderer.rect(60, 45, 100, 15);
-        shapeRenderer.end();
-        if(player.chargeMeter>0){
-            float charge = player.chargeMeter/weaponList.get(player.chargeWeapon).chargeDuration;
-            if(charge>1)charge=1;
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.rect(60, 45, 100*charge, 15);
-            shapeRenderer.end();
-        }
 
         if(showGraphs) {
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
+            Gdx.gl.glLineWidth(1);
             SharedMethods.drawLog("Fps", "fps", fpsLog, shapeRenderer, batch, font, 50, 100, 150, 100, 1, 60, 20);
             SharedMethods.drawLog("Delta", "ms", deltaLog, shapeRenderer,batch,font, 250, 100, 150, 100, 4, (1000/60f),(1000/20f));
             SharedMethods.drawLog("Logic", "ms", logicLog, shapeRenderer,batch,font, 450, 100, 150, 100, 20, 3,10);
