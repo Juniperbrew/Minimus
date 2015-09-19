@@ -55,7 +55,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusServer implements ApplicationListener, InputProcessor, Score.ScoreChangeListener, ConVars.ConVarChangeListener, World.WorldChangeListener {
+public class MinimusServer implements ApplicationListener, InputProcessor, Score.ScoreChangeListener, ConVars.ConVarChangeListener, World.WorldChangeListener, GlobalVars.ConsoleLogger {
 
     Server server;
     ShapeRenderer shapeRenderer;
@@ -118,6 +118,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     @Override
     public void create() {
         //Log.TRACE();
+        GlobalVars.consoleLogger = this;
         ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
@@ -244,7 +245,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             world.getEntity(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
         }else if (object instanceof Network.ChangeWeapon){
             Network.ChangeWeapon changeWeapon = (Network.ChangeWeapon) object;
-            world.setPlayerWeapon(playerList.getKey(connection),changeWeapon.weapon);
+            world.setPlayerWeapon(playerList.getKey(connection), changeWeapon.weapon);
         }else if(object instanceof Disconnect){
             if(connectionStatus.containsKey(connection)){
                 connectionStatus.get(connection).disconnected();
@@ -635,7 +636,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     private int measureObject(Object o){
         KryoSerialization s = (KryoSerialization) server.getSerialization();
-        s.write(new Client(), buffer ,o);
+        s.write(new Client(), buffer, o);
         int size = buffer.position();
         buffer.clear();
         return size;
@@ -954,7 +955,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         score.addPlayer(assign.networkID);
         Network.AddPlayer addPlayer = new Network.AddPlayer();
         addPlayer.networkID = assign.networkID;
-        sendTCPtoAllExcept(connection,addPlayer);
+        sendTCPtoAllExcept(connection, addPlayer);
 
         connection.sendTCP(assign);
     }
@@ -997,7 +998,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void powerupAdded(int id, Powerup powerup) {
-        showMessage("Powerup("+powerup.type+") added at ("+powerup.bounds.x+","+powerup.bounds.y+"): "+id);
+        showMessage("Powerup(" + powerup.type + ") added at (" + powerup.bounds.x + "," + powerup.bounds.y + "): " + id);
         if(server!=null){
             Network.AddPowerup addPowerup = new Network.AddPowerup();
             addPowerup.networkID = id;
@@ -1032,11 +1033,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void message(String message) {
-        showMessage(message);
-    }
-
-    @Override
     public void mapChanged(String mapName) {
         if(server!=null){
             Network.MapChange mapChange = new Network.MapChange();
@@ -1059,7 +1055,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public void weaponAdded(int id, int weapon) {
         Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
         weaponAdded.weapon = weapon;
-        sendTCP(playerList.get(id),weaponAdded);
+        sendTCP(playerList.get(id), weaponAdded);
     }
 
     @Override
@@ -1088,6 +1084,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
     }
 
+    @Override
+    public void log(String message) {
+        showMessage(message);
+    }
+
     private class Packet{
         Connection connection;
         Object content;
@@ -1098,5 +1099,5 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }
     }
 
-    private class Disconnect{}
+    private class Disconnect{};
 }

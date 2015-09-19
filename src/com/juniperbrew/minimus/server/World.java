@@ -115,17 +115,17 @@ public class World implements EntityChangeListener{
         this.mapLoader = mapLoader;
         this.batch = batch;
         loadMaps();
-        projectileList = readProjectileList();
-        weaponList = readWeaponSlots(readWeaponList(projectileList));
+        projectileList = SharedMethods.readSeperatedProjectileList();
+        weaponList = readWeaponSlots(SharedMethods.readSeperatedWeaponList(projectileList));
         GlobalVars.weaponList = weaponList;
-        enemyList = readEnemyList(weaponList);
+        enemyList = SharedMethods.readEnemyList(weaponList);
         loadImages();
 
         changeMap(ConVars.get("sv_map"));
     }
 
     private TiledMap loadMap(String mapName){
-        listener.message("Loading map: " + mapName);
+        GlobalVars.consoleLogger.log("Loading map: " + mapName);
         return mapLoader.load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
     }
 
@@ -337,7 +337,7 @@ public class World implements EntityChangeListener{
     private Rectangle getSpawnZone(TiledMap map){
         for(RectangleMapObject o : mapObjects.get(map)){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
-                listener.message("Spawn at:" + o.getRectangle());
+                GlobalVars.consoleLogger.log("Spawn at:" + o.getRectangle());
                 return o.getRectangle();
             }
         }
@@ -432,7 +432,7 @@ public class World implements EntityChangeListener{
                 Rectangle bounds2 = e2.getGdxBounds();
                 //if(bounds1.overlaps(bounds2)){
                 Rectangle intersection = new Rectangle();
-                if(Intersector.intersectRectangles(bounds1,bounds2,intersection)){
+                if(Intersector.intersectRectangles(bounds1, bounds2, intersection)){
                     float scale = intersection.area()/bounds1.area();
                     Vector2 i = new Vector2(e1.getCenterX()-e2.getCenterX(),e1.getCenterY()-e2.getCenterY());
                     Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
@@ -602,7 +602,7 @@ public class World implements EntityChangeListener{
         }
         Weapon weapon = weaponList.get(weaponID);
         if(weapon.chargeDuration>0&&e.chargeMeter<weapon.chargeDuration) {
-            chargeAttack(e,weaponID, msec);
+            chargeAttack(e, weaponID, msec);
         }else{
             //FIXME This weaponID parameter is a bit missleading because if we are firing due to full charge meter it will actually use e.chargeweapon but this should be same as weaponID in all cases
             launchAttack(e, weaponID);
@@ -730,185 +730,14 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private HashMap<String,EnemyDefinition> readEnemyList(HashMap<Integer,Weapon> weaponList){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"enemylist.txt");
-        if(!file.exists()){
-            file = new File("resources"+File.separator+"defaultenemylist.txt");
-        }
-        listener.message("\nLoading enemies from file:"+file);
-        HashMap<String,EnemyDefinition> enemies = new HashMap<>();
-        EnemyDefinition enemyDefinition = null;
-        String enemyName = null;
 
-        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            for (String line; (line = reader.readLine()) != null; ) {
-                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
-                    continue;
-                }
-                if (line.charAt(0) == '{') {
-                    enemyDefinition = new EnemyDefinition();
-                    enemyDefinition.weapon = -1;
-                    continue;
-                }
-                if (line.charAt(0) == '}') {
-                    enemies.put(enemyName, enemyDefinition);
-                    enemyName = null;
-                    continue;
-                }
-                String[] splits = line.split("=");
-                if(splits[0].equals("name")){
-                    enemyName = splits[1];
-                }
-                if(splits[0].equals("weapon")){
-                    enemyDefinition.weapon = SharedMethods.getWeaponID(weaponList,splits[1]);
-                }
-                if(splits[0].equals("image")){
-                    enemyDefinition.image = splits[1];
-                }
-                if(splits[0].equals("health")){
-                    enemyDefinition.health = Integer.parseInt(splits[1]);
-                }
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        for(EnemyDefinition e: enemies.values()){
-            listener.message(e.toString());
-        }
-
-        return enemies;
-    }
-
-    private HashMap<String,ProjectileDefinition> readProjectileList(){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"projectilelist.txt");
-        if(!file.exists()){
-            file = new File("resources"+File.separator+"defaultprojectilelist.txt");
-        }
-        listener.message("\nLoading projectiles from file:"+file);
-        HashMap<String,ProjectileDefinition> projectiles = new HashMap<>();
-        ProjectileDefinition projectileDefinition = null;
-        String projectileName = null;
-
-        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            for (String line; (line = reader.readLine()) != null; ) {
-                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
-                    continue;
-                }
-                if (line.charAt(0) == '{') {
-                    projectileDefinition = new ProjectileDefinition();
-                    continue;
-                }
-                if (line.charAt(0) == '}') {
-                    projectiles.put(projectileName, projectileDefinition);
-                    projectileName=null;
-                    continue;
-                }
-                String[] splits = line.split("=");
-                if(splits[0].equals("name")){
-                    projectileName = splits[1];
-                    projectileDefinition.name = splits[1];
-                }
-                if(splits[0].equals("type")){
-                    if(splits[1].equals("hitscan")){
-                        projectileDefinition.type = ProjectileDefinition.HITSCAN;
-                    }else if(splits[1].equals("projectile")){
-                        projectileDefinition.type = ProjectileDefinition.PROJECTILE;
-                    }else if(splits[1].equals("particle")){
-                        projectileDefinition.type = ProjectileDefinition.PARTICLE;
-                    }else if(splits[1].equals("tracer")){
-                        projectileDefinition.type = ProjectileDefinition.TRACER;
-                    }
-                }
-                if(splits[0].equals("damage")){
-                    projectileDefinition.damage = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("range")){
-                    projectileDefinition.range = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("velocity")){
-                    projectileDefinition.velocity = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("duration")){
-                    projectileDefinition.duration = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("color")){
-                    String strip = splits[1].substring(1,splits[1].length()-1);
-                    String[] rgb = strip.split(",");
-                    projectileDefinition.color = new Color(Integer.parseInt(rgb[0])/255f,Integer.parseInt(rgb[1])/255f,Integer.parseInt(rgb[2])/255f,1f);
-                }
-                if(splits[0].equals("width")){
-                    projectileDefinition.width = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("length")){
-                    projectileDefinition.length = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("image")){
-                    projectileDefinition.image = splits[1];
-                }
-                if(splits[0].equals("animation")){
-                    projectileDefinition.animation = splits[1];
-                }
-                if(splits[0].equals("frameDuration")){
-                    projectileDefinition.frameDuration = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("onDestroy")){
-                    projectileDefinition.onDestroy = splits[1];
-                }
-                if(splits[0].equals("knockback")){
-                    projectileDefinition.knockback = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("ignoreMapCollision")){
-                    projectileDefinition.ignoreMapCollision = true;
-                }
-                if (splits[0].equals("explosionKnockback")) {
-                    projectileDefinition.explosionKnockback = true;
-                }
-                if (splits[0].equals("dontDestroyOnCollision")) {
-                    projectileDefinition.dontDestroyOnCollision = true;
-                }
-                if (splits[0].equals("sound")) {
-                    projectileDefinition.sound = splits[1];
-                }
-                if (splits[0].equals("ignoreEntityCollision")) {
-                    projectileDefinition.ignoreEntityCollision = true;
-                }
-                if (splits[0].equals("networked")) {
-                    projectileDefinition.networked = true;
-                }
-                if (splits[0].equals("friction")) {
-                    projectileDefinition.friction = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("tracer")){
-                    projectileDefinition.tracer = splits[1];
-                }
-                if(splits[0].equals("looping")){
-                    projectileDefinition.looping = true;
-                }
-                if(splits[0].equals("bounce")){
-                    projectileDefinition.bounce = true;
-                }
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        for(ProjectileDefinition def: projectiles.values()){
-            listener.message(def.toString());
-        }
-
-        return projectiles;
-    }
 
     private HashMap<Integer,Weapon> readWeaponSlots(HashMap<String,Weapon> weapons){
         File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponslots.txt");
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponslots.txt");
         }
-        listener.message("\nLoading weapon slots from file:" + file);
+        GlobalVars.consoleLogger.log("\nLoading weapon slots from file:" + file);
         HashMap<Integer,Weapon> weaponList = new HashMap<>();
         HashMap<Integer,String> primaries = new HashMap<>();
         HashMap<Integer,String> secondaries = new HashMap<>();
@@ -938,103 +767,28 @@ public class World implements EntityChangeListener{
             e.printStackTrace();
         }
 
-        listener.message("Populating weaponlist");
-        listener.message("Primary weapons");
+        GlobalVars.consoleLogger.log("Populating weaponlist");
+        GlobalVars.consoleLogger.log("Primary weapons");
         int id = 1;
         for(int slot: primaries.keySet()){
-            listener.message("ID:"+id+"| Slot "+slot+": "+weapons.get(primaries.get(slot)));
+            GlobalVars.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(primaries.get(slot)));
             weaponList.put(id,weapons.get(primaries.get(slot)));
             id++;
         }
-        listener.message("Secondary weapons");
+        GlobalVars.consoleLogger.log("Secondary weapons");
         for(int slot: secondaries.keySet()){
-            listener.message("ID:"+id+"| Slot "+slot+": "+weapons.get(secondaries.get(slot)));
+            GlobalVars.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(secondaries.get(slot)));
             weaponList.put(id,weapons.get(secondaries.get(slot)));
             id++;
         }
-        listener.message("Storing primary weapon count: "+primaries.size());
+        GlobalVars.consoleLogger.log("Storing primary weapon count: " + primaries.size());
         primaryWeaponCount = primaries.size();
         GlobalVars.primaryWeaponCount = primaryWeaponCount;
         return weaponList;
     }
 
-    private HashMap<String,Weapon> readWeaponList(HashMap<String,ProjectileDefinition> projectileList){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponlist.txt");
-        if(!file.exists()){
-            file = new File("resources"+File.separator+"defaultweaponlist.txt");
-        }
-        listener.message("\nLoading weapons from file:" + file);
-        HashMap<String,Weapon> weapons = new HashMap<>();
-        Weapon weapon = null;
-        String name = null;
-
-        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            for (String line; (line = reader.readLine()) != null; ) {
-                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
-                    continue;
-                }
-                if(line.charAt(0) == '{'){
-                    weapon = new Weapon();
-                    continue;
-                }
-                if(line.charAt(0) == '}'){
-                    weapons.put(name,weapon);
-                    continue;
-                }
-                String[] splits = line.split("=");
-                if(splits[0].equals("name")){
-                    weapon.name = splits[1];
-                    name = splits[1];
-                }
-                if(splits[0].equals("spread")){
-                    weapon.spread = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("projectileCount")){
-                    weapon.projectileCount = Integer.parseInt(splits[1]);
-                }
-                if(splits[0].equals("chargeDuration")){
-                    weapon.chargeDuration = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("minChargeVelocity")){
-                    weapon.minChargeVelocity = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("maxChargeVelocity")){
-                    weapon.maxChargeVelocity = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("sound")){
-                    weapon.sound = splits[1];
-                }
-                if(splits[0].equals("projectile")){
-                    weapon.projectile = projectileList.get(splits[1]);
-                }
-                if(splits[0].equals("cooldown")){
-                    weapon.cooldown = Float.parseFloat(splits[1]);
-                }
-                if(splits[0].equals("image")){
-                    weapon.image = splits[1];
-                }
-                if(splits[0].equals("ammoImage")){
-                    weapon.ammoImage = splits[1];
-                }
-                if(splits[0].equals("sprite")){
-                    weapon.sprite = splits[1];
-                }
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        for(Weapon w: weapons.values()){
-            listener.message(w.toString());
-        }
-
-        return weapons;
-    }
-
     private void loadImages() {
-        listener.message("\nLoading texture atlas");
+        GlobalVars.consoleLogger.log("\nLoading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
         GlobalVars.atlas = atlas;
     }
@@ -1218,13 +972,13 @@ public class World implements EntityChangeListener{
     private void loadMaps(){
 
         File mapFolder = new File("resources" + File.separator + "maps");
-        listener.message("Loading maps from: " + mapFolder);
+        GlobalVars.consoleLogger.log("Loading maps from: " + mapFolder);
         for (final File file : mapFolder.listFiles()) {
             if (file.isDirectory()) {
                 TiledMap map = loadMap(file.getName());
                 mapList.put(file.getName(), map);
                 mapObjects.put(map, getScaledMapobjects(map));
-                listener.message("Loaded: " + file.getName());
+                GlobalVars.consoleLogger.log("Loaded: " + file.getName());
             }
         }
     }
@@ -1412,7 +1166,6 @@ public class World implements EntityChangeListener{
         public void powerupRemoved(int id);
         public void waveChanged(int wave);
         public void attackCreated(Network.EntityAttacking entityAttacking, Weapon weapon);
-        public void message(String message);
         public void mapChanged(String mapName);
         public void ammoAddedChanged(int id, int weapon, int value);
         public void weaponAdded(int id, int weapon);

@@ -25,4 +25,9 @@ public class GlobalVars {
     public static TextureAtlas atlas;
     public static int primaryWeaponCount;
     public static HashMap<Integer,Weapon> weaponList;
+    public static ConsoleLogger consoleLogger;
+
+    public interface ConsoleLogger{
+        void log(String message);
+    }
 }
