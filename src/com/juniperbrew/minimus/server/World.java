@@ -948,7 +948,7 @@ public class World implements EntityChangeListener{
         }
         listener.message("Secondary weapons");
         for(int slot: secondaries.keySet()){
-            listener.message("ID:"+id+"| Slot "+slot+": "+weapons.get(primaries.get(slot)));
+            listener.message("ID:"+id+"| Slot "+slot+": "+weapons.get(secondaries.get(slot)));
             weaponList.put(id,weapons.get(secondaries.get(slot)));
             id++;
         }
