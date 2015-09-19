@@ -1,0 +1,10 @@
+name=Rocket launcher
+projectile=Rocket
+spread=0
+projectileCount=1
+sound=projectile.ogg
+cooldown=0.5
+image=rocketLauncher
+ammoImage=largeAmmo
+sound=sinko.wav
+sprite=rifle

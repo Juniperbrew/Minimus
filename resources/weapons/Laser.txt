@@ -1,0 +1,9 @@
+name=Laser
+projectile=Laser
+spread=0
+projectileCount=1
+sound=laser.ogg
+cooldown=0.5
+image=plasmaGun
+ammoImage=smallCell
+sprite=melee

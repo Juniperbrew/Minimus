@@ -1,0 +1,9 @@
+name=Hitscan_Uzi
+projectile=Hitscan_Uzi_Bullet
+spread=0
+projectileCount=1
+cooldown=0.15
+image=chainGun
+ammoImage=largeAmmo
+sound=uzi.wav
+sprite=pistol

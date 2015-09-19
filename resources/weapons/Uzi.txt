@@ -1,0 +1,8 @@
+name=Uzi
+projectile=Uzi_Bullet
+spread=0
+projectileCount=1
+cooldown=0.1
+image=chainGun
+ammoImage=smallAmmo
+sprite=pistol

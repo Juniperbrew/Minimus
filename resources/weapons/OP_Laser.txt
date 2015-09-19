@@ -1,0 +1,9 @@
+name=OP_Laser
+projectile=OP_Laser
+spread=20
+projectileCount=5
+sound=laser.ogg
+cooldown=1
+image=bfg
+ammoImage=largeCell
+sprite=rifle

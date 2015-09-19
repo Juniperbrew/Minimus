@@ -1,0 +1,8 @@
+name=Flame
+projectile=Animated_Flame
+spread=0
+projectileCount=1
+cooldown=0.2
+image=fire
+ammoImage=fire
+sprite=rifle

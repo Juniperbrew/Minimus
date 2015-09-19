@@ -1,0 +1,13 @@
+name=Grenade
+projectile=Grenade
+spread=0
+projectileCount=1
+chargeDuration=1
+maxChargeVelocity=600
+minChargeVelocity=100
+sound=projectile.ogg
+cooldown=0.5
+image=rocketLauncher
+ammoImage=largeAmmo
+sound=sinko.wav
+sprite=rifle

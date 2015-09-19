@@ -1,0 +1,6 @@
+name=Hitscan_Rifle_Bullet
+type=hitscan
+length=450
+damage=25
+onDestroy=Bullet_puff
+knockback=50

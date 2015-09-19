@@ -1,0 +1,10 @@
+name=Flame
+type=projectile
+image=flame
+width=20
+length=20
+range=400
+velocity=200
+damage=10
+knockback=50
+networked

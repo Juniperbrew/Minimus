@@ -1,0 +1,21 @@
+#The lines Primary and Secondary are necessary to read this file
+
+Primary
+1:Laser
+2:Hitscan_Pistol
+3:Hitscan_Shotgun
+4:Hitscan_Uzi
+5:Hitscan_Rifle
+6:Grenade launcher
+7:Rocket launcher
+8:Bounce launcher
+
+Secondary
+1:Grenade
+2:Shotgun
+3:Uzi
+4:Broken_Laser
+5:Flamer
+6:Flame
+7:Animated Flamer
+8:OP_Laser

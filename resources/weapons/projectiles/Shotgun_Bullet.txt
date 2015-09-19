@@ -1,0 +1,11 @@
+name=Shotgun_Bullet
+type=projectile
+color=[255,204,51]
+width=3
+length=3
+range=400
+velocity=400
+damage=10
+knockback=50
+onDestroy=Bullet_puff
+networked

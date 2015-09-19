@@ -1,0 +1,8 @@
+name=Animated Flamer
+projectile=Animated_Flame
+spread=90
+projectileCount=15
+cooldown=0
+image=fire
+ammoImage=fire
+sprite=rifle

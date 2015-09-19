@@ -1,0 +1,8 @@
+name=blood
+type=particle
+width=20
+length=20
+animation=blood
+frameDuration=0.5
+friction=100
+bounce

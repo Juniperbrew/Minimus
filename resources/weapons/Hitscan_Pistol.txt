@@ -1,0 +1,9 @@
+name=Hitscan_Pistol
+projectile=Hitscan_Pistol_Bullet
+spread=0
+projectileCount=1
+cooldown=0.3
+image=pistol
+ammoImage=smallAmmo
+sound=pistol.wav
+sprite=pistol

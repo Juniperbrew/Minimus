@@ -1,0 +1,9 @@
+name=Hitscan_Rifle
+projectile=Hitscan_Rifle_Bullet
+spread=0
+projectileCount=1
+cooldown=0.2
+image=rifle
+ammoImage=largeAmmo
+sound=rifle.wav
+sprite=rifle

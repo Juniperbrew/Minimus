@@ -1,0 +1,5 @@
+name=Laser
+type=hitscan
+length=50
+damage=35
+knockback=50
