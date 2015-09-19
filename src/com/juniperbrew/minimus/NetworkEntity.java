@@ -17,8 +17,8 @@ public class NetworkEntity {
     public int health;
     public int maxHealth;
     public int rotation;
-    public int slot1Weapon = 0;
-    public int slot2Weapon = 1;
+    public int slot1Weapon;
+    public int slot2Weapon;
     public int team;
     public String image;
 
@@ -51,6 +51,8 @@ public class NetworkEntity {
         this.maxHealth = maxHealth;
         this.team = team;
         this.image = image;
+        slot1Weapon = 1;
+        slot2Weapon = GlobalVars.primaryWeaponCount + 1;
     }
 
     public NetworkEntity(int id, float x, float y, int team) {
@@ -58,15 +60,7 @@ public class NetworkEntity {
     }
 
     public NetworkEntity(int id, float x, float y, int team, int health) {
-        this.id = id;
-        this.x = x;
-        this.y = y;
-        width = 50;
-        height = 50;
-        this.health = health;
-        maxHealth = health;
-        rotation = -90;
-        this.team = team;
+        this(id,x,y,50,50,health,health,team,null);
     }
 
 

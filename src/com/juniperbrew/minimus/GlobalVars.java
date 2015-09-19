@@ -3,7 +3,7 @@ package com.juniperbrew.minimus;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 
 import java.io.File;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.HashMap;
 
 /**
  * Created by Juniperbrew on 8.8.2015.
@@ -23,4 +23,6 @@ public class GlobalVars {
     public static float mapScale;
     public static boolean[][] collisionMap;
     public static TextureAtlas atlas;
+    public static int primaryWeaponCount;
+    public static HashMap<Integer,Weapon> weaponList;
 }

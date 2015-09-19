@@ -87,6 +87,7 @@ public class World implements EntityChangeListener{
 
     HashMap<String,EnemyDefinition> enemyList;
     HashMap<Integer,Weapon> weaponList;
+    int primaryWeaponCount;
     HashMap<String,ProjectileDefinition> projectileList;
 
     //This should not be more than 400 which is the max distance entities can look for a destination
@@ -115,7 +116,8 @@ public class World implements EntityChangeListener{
         this.batch = batch;
         loadMaps();
         projectileList = readProjectileList();
-        weaponList = readWeaponList(projectileList);
+        weaponList = readWeaponSlots(readWeaponList(projectileList));
+        GlobalVars.weaponList = weaponList;
         enemyList = readEnemyList(weaponList);
         loadImages();
 
@@ -219,6 +221,15 @@ public class World implements EntityChangeListener{
             }
         }
         return mapObjects;
+    }
+
+    public void setPlayerWeapon(int id, int weaponID){
+        ServerEntity player = entities.get(id);
+        if(weaponID<=GlobalVars.primaryWeaponCount){
+            player.setSlot1Weapon(weaponID);
+        }else{
+            player.setSlot2Weapon(weaponID);
+        }
     }
 
     public void updateWorld(float delta){
@@ -505,72 +516,72 @@ public class World implements EntityChangeListener{
         SharedMethods.applyInput(e, input);
         if(input.buttons.contains(Enums.Buttons.NUM1)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(0);
-            }else{
-                e.setSlot1Weapon(0);
-            }
-        }
-        if(input.buttons.contains(Enums.Buttons.NUM2)){
-            if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(1);
             }else{
                 e.setSlot1Weapon(1);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM3)){
+        if(input.buttons.contains(Enums.Buttons.NUM2)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(2);
             }else{
                 e.setSlot1Weapon(2);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM4)){
+        if(input.buttons.contains(Enums.Buttons.NUM3)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(3);
             }else{
                 e.setSlot1Weapon(3);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM5)){
+        if(input.buttons.contains(Enums.Buttons.NUM4)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(4);
             }else{
                 e.setSlot1Weapon(4);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM6)){
+        if(input.buttons.contains(Enums.Buttons.NUM5)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(5);
             }else{
                 e.setSlot1Weapon(5);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM7)){
+        if(input.buttons.contains(Enums.Buttons.NUM6)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(6);
             }else{
                 e.setSlot1Weapon(6);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM8)){
+        if(input.buttons.contains(Enums.Buttons.NUM7)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(7);
             }else{
                 e.setSlot1Weapon(7);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM9)){
+        if(input.buttons.contains(Enums.Buttons.NUM8)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(8);
             }else{
                 e.setSlot1Weapon(8);
             }
         }
-        if(input.buttons.contains(Enums.Buttons.NUM0)){
+        if(input.buttons.contains(Enums.Buttons.NUM9)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
                 e.setSlot2Weapon(9);
             }else{
                 e.setSlot1Weapon(9);
+            }
+        }
+        if(input.buttons.contains(Enums.Buttons.NUM0)){
+            if(input.buttons.contains(Enums.Buttons.SHIFT)){
+                e.setSlot2Weapon(10);
+            }else{
+                e.setSlot1Weapon(10);
             }
         }
 
@@ -892,15 +903,70 @@ public class World implements EntityChangeListener{
         return projectiles;
     }
 
-    private HashMap<Integer,Weapon> readWeaponList(HashMap<String,ProjectileDefinition> projectileList){
+    private HashMap<Integer,Weapon> readWeaponSlots(HashMap<String,Weapon> weapons){
+        File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponslots.txt");
+        if(!file.exists()){
+            file = new File("resources"+File.separator+"defaultweaponslots.txt");
+        }
+        listener.message("\nLoading weapon slots from file:" + file);
+        HashMap<Integer,Weapon> weaponList = new HashMap<>();
+        HashMap<Integer,String> primaries = new HashMap<>();
+        HashMap<Integer,String> secondaries = new HashMap<>();
+        String type = null;
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
+                    continue;
+                }
+                if(line.equals("Primary")){
+                    type = "Primary";
+                }else if(line.equals("Secondary")){
+                    type = "Secondary";
+                }else if(type != null){
+                    String[] splits = line.split(":");
+                    if(type.equals("Primary")){
+                        primaries.put(Integer.parseInt(splits[0]),splits[1]);
+                    }else if(type.equals("Secondary")){
+                        secondaries.put(Integer.parseInt(splits[0]),splits[1]);
+                    }
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        listener.message("Populating weaponlist");
+        listener.message("Primary weapons");
+        int id = 1;
+        for(int slot: primaries.keySet()){
+            listener.message("ID:"+id+"| Slot "+slot+": "+weapons.get(primaries.get(slot)));
+            weaponList.put(id,weapons.get(primaries.get(slot)));
+            id++;
+        }
+        listener.message("Secondary weapons");
+        for(int slot: secondaries.keySet()){
+            listener.message("ID:"+id+"| Slot "+slot+": "+weapons.get(primaries.get(slot)));
+            weaponList.put(id,weapons.get(secondaries.get(slot)));
+            id++;
+        }
+        listener.message("Storing primary weapon count: "+primaries.size());
+        primaryWeaponCount = primaries.size();
+        GlobalVars.primaryWeaponCount = primaryWeaponCount;
+        return weaponList;
+    }
+
+    private HashMap<String,Weapon> readWeaponList(HashMap<String,ProjectileDefinition> projectileList){
         File file = new File(Tools.getUserDataDirectory()+ File.separator+"weaponlist.txt");
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponlist.txt");
         }
         listener.message("\nLoading weapons from file:" + file);
-        HashMap<Integer,Weapon> weapons = new HashMap<>();
+        HashMap<String,Weapon> weapons = new HashMap<>();
         Weapon weapon = null;
-        int weaponSlot = 0;
+        String name = null;
 
         try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
             for (String line; (line = reader.readLine()) != null; ) {
@@ -912,13 +978,13 @@ public class World implements EntityChangeListener{
                     continue;
                 }
                 if(line.charAt(0) == '}'){
-                    weapons.put(weaponSlot,weapon);
-                    weaponSlot++;
+                    weapons.put(name,weapon);
                     continue;
                 }
                 String[] splits = line.split("=");
                 if(splits[0].equals("name")){
                     weapon.name = splits[1];
+                    name = splits[1];
                 }
                 if(splits[0].equals("spread")){
                     weapon.spread = Integer.parseInt(splits[1]);
@@ -960,9 +1026,8 @@ public class World implements EntityChangeListener{
             e.printStackTrace();
         }
 
-        for(int i: weapons.keySet()){
-            Weapon w = weapons.get(i);
-            listener.message("Slot: " + i + "|"+w);
+        for(Weapon w: weapons.values()){
+            listener.message(w.toString());
         }
 
         return weapons;
@@ -1027,6 +1092,7 @@ public class World implements EntityChangeListener{
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
         assign.weaponList = new HashMap<>(weaponList);
+        assign.primaryWeaponCount = primaryWeaponCount;
         assign.projectileList = new HashMap<>(projectileList);
         assign.ammo = entityAmmo;
         assign.weapons = entityWeapons;

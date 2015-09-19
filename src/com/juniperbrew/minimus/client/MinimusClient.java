@@ -159,6 +159,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     float musicVolume;
 
     HashMap<Integer,Weapon> weaponList;
+    int primaryWeaponCount;
     HashMap<String,ProjectileDefinition> projectileList;
 
     float lastMouseX = -1;
@@ -294,6 +295,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             powerups = assign.powerups;
             currentWave = assign.wave;
             weaponList = assign.weaponList;
+            GlobalVars.weaponList = weaponList;
+            primaryWeaponCount = assign.primaryWeaponCount;
+            GlobalVars.primaryWeaponCount = primaryWeaponCount;
             projectileList = assign.projectileList;
             player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
             ghostPlayer = new ClientEntity();
@@ -528,79 +532,79 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         if(buttons.contains(Enums.Buttons.NUM1)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 0;
+                player.setSlot2Weapon(1);
             }else{
-                player.slot1Weapon = 0;
+                player.setSlot1Weapon(1);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM2)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 1;
+                player.setSlot2Weapon(2);
             }else{
-                player.slot1Weapon = 1;
+                player.setSlot1Weapon(2);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM3)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 2;
+                player.setSlot2Weapon(3);
             }else{
-                player.slot1Weapon = 2;
+                player.setSlot1Weapon(3);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM4)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 3;
+                player.setSlot2Weapon(4);
             }else{
-                player.slot1Weapon = 3;
+                player.setSlot1Weapon(4);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM5)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 4;
+                player.setSlot2Weapon(5);
             }else{
-                player.slot1Weapon = 4;
+                player.setSlot1Weapon(5);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM6)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 5;
+                player.setSlot2Weapon(6);
             }else{
-                player.slot1Weapon = 5;
+                player.setSlot1Weapon(6);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM7)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 6;
+                player.setSlot2Weapon(7);
             }else{
-                player.slot1Weapon = 6;
+                player.setSlot1Weapon(7);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM8)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 7;
+                player.setSlot2Weapon(8);
             }else{
-                player.slot1Weapon = 7;
+                player.setSlot1Weapon(8);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM9)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 8;
+                player.setSlot2Weapon(9);
             }else{
-                player.slot1Weapon = 8;
+                player.setSlot1Weapon(9);
             }
         }
         if(buttons.contains(Enums.Buttons.NUM0)){
             if(buttons.contains(Enums.Buttons.SHIFT)){
-                player.slot2Weapon = 9;
+                player.setSlot2Weapon(10);
             }else{
-                player.slot1Weapon = 9;
+                player.setSlot1Weapon(10);
             }
         }
         player.aimingWeapon = false;
         if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-            attack(player.slot1Weapon,input.msec);
+            attack(player.getSlot1Weapon(),input.msec);
         }else if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-            attack(player.slot2Weapon,input.msec);
+            attack(player.getSlot2Weapon(),input.msec);
         }else if(player.chargeMeter>0){
             launchAttack(player.chargeWeapon);
         }
@@ -1179,7 +1183,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 StringBuilder textureName = new StringBuilder(e.getImage());
                 if(playerList.contains(e.getID())){
                     textureName.append("_");
-                    textureName.append(weaponList.get(player.slot1Weapon).sprite);
+                    textureName.append(weaponList.get(player.getSlot1Weapon()).sprite);
                 }else if(e.getHealthPercent()>0.5f){
                     textureName.append("_");
                     textureName.append("hurt");
@@ -1239,8 +1243,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             offset += 20;
         }
         font.draw(batch, "Charge: " + player.chargeMeter, 5, 60);
-        font.draw(batch, "Mouse 1: " + getWeaponLine(player.slot1Weapon), 5, 40);
-        font.draw(batch, "Mouse 2: " + getWeaponLine(player.slot2Weapon), 5, 20);
+        font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
+        font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);
         font.draw(batch, "Wave " + currentWave, windowWidth / 2 - glyphLayout.width / 2, windowHeight - 5);
         glyphLayout.setText(font, "Lives: " + lives);
@@ -1304,7 +1308,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(weaponList==null||weaponList.get(weaponSlot)==null){
             return "N/A";
         }
-        StringBuilder b = new StringBuilder(weaponSlot+".");
+        StringBuilder b = new StringBuilder();
         if(player.weapons.get(weaponSlot)){
             b.append(weaponList.get(weaponSlot).name);
         }else{
@@ -1745,7 +1749,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     public void selectWeapon(int weapon){
-        player.slot1Weapon = weapon;
+        if(weapon<=GlobalVars.primaryWeaponCount){
+            player.setSlot1Weapon(weapon);
+        }else{
+            player.setSlot2Weapon(weapon);
+        }
         Network.ChangeWeapon changeWeapon = new Network.ChangeWeapon();
         changeWeapon.weapon = weapon;
         sendTCP(changeWeapon);
@@ -1903,8 +1911,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             score.removePlayer(id);
             if(id==player.id){
                 player.id = -1;
-                player.slot1Weapon = 0;
-                player.slot2Weapon = 1;
+                player.setSlot1Weapon(1);
+                player.setSlot2Weapon(1);
             }
         }
     }

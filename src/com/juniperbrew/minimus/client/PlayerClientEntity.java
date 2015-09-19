@@ -12,8 +12,6 @@ public class PlayerClientEntity extends ClientEntity{
     public Map<Integer,Integer> ammo;
     public Map<Integer,Boolean> weapons;
     public int id;
-    public int slot1Weapon = 0;
-    public int slot2Weapon = 1;
     public float chargeMeter;
     public int chargeWeapon;
 

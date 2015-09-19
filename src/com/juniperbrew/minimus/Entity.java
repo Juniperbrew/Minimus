@@ -197,12 +197,19 @@ public class Entity {
         return networkEntity.id;
     }
 
-    public void setSlot1Weapon(int weapon){
-        networkEntity.slot1Weapon = weapon;
+    public void setSlot1Weapon(int weaponID){
+        if(weaponID>GlobalVars.primaryWeaponCount){
+            return;
+        }
+        networkEntity.slot1Weapon = weaponID;
     }
 
-    public void setSlot2Weapon(int weapon){
-        networkEntity.slot2Weapon = weapon;
+    public void setSlot2Weapon(int secondarySlot){
+        int weaponID = GlobalVars.primaryWeaponCount+secondarySlot;
+        if(weaponID>GlobalVars.weaponList.size()){
+            return;
+        }
+        networkEntity.slot2Weapon = weaponID;
     }
 
     public int getSlot1Weapon(){
