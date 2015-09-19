@@ -440,7 +440,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
         long renderStart = System.nanoTime();
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
-        Gdx.gl.glLineWidth(3);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 

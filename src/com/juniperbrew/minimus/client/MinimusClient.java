@@ -1242,7 +1242,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
-        font.draw(batch, "Charge: " + player.chargeMeter, 5, 60);
+        font.draw(batch, "Charge:", 5, 60);
         font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
         font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);
@@ -1287,6 +1287,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }
         batch.end();
+        Gdx.gl.glLineWidth(1);
+        shapeRenderer.setProjectionMatrix(hudCamera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(1, 0, 0, 1);
+        shapeRenderer.rect(60, 45, 100, 15);
+        shapeRenderer.end();
+        if(player.chargeMeter>0){
+            float charge = player.chargeMeter/weaponList.get(player.chargeWeapon).chargeDuration;
+            if(charge>1)charge=1;
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.rect(60, 45, 100*charge, 15);
+            shapeRenderer.end();
+        }
 
         if(showGraphs) {
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
