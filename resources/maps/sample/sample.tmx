@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="59">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="40" height="20" tilewidth="20" tileheight="20" nextobjectid="42">
  <properties>
   <property name="mapScale" value="4"/>
  </properties>
- <tileset firstgid="1" name="Floors" tilewidth="20" tileheight="20">
-  <image source="floor1.bmp" width="320" height="600"/>
- </tileset>
- <tileset firstgid="481" name="Walls" tilewidth="20" tileheight="20">
+ <tileset firstgid="1" name="Walls" tilewidth="20" tileheight="20">
   <image source="walls1.bmp" width="320" height="600"/>
   <tile id="0">
    <properties>
@@ -2409,277 +2406,229 @@
    </properties>
   </tile>
  </tileset>
- <layer name="Tile Layer 1" width="50" height="50">
+ <tileset firstgid="481" name="Floors" tilewidth="20" tileheight="20">
+  <image source="floor1.bmp" width="320" height="600"/>
+ </tileset>
+ <layer name="Tile Layer 1" width="40" height="20">
   <data encoding="base64" compression="zlib">
-   eJzFmEtvTVEUx88jQRFMUZQB6QwDDIyIajERTSSNdNREwqATI5UIQxL0C3h8Aa+5Qds5PgFGqiWY9CaqwVq5Z+Wsrrv22mufexJJ/7n7PPbu+u312Pvs0SLLRlvWWB7WaUUHoc+hFv//59xWvxwaA+oY9DkOOpy1x3G57I6Huld0he0UDs4Sst3SaFHb0IQNbb1arh8Ddb9oj+NSAk9TFrR1Z9EeR6ofTrXEIvOBj5GaI2THMrS/OvWt8PGm+kb2b8KxCu2RiE5U2lz6Wbw8IQ4PC+9DHJtAA6BncO9XUQufzeW1NBaqy01YJMdYA1+MCQ5kIIU45qo+Wl2W9ow5WcgmvgakMHAOzsBZOMdC9TtY2vEUWpNC9mgcnnWBv2dxoDR/bMl8Y1sssf6W/ZeU/7Gq2KlpPsKRutfpVzGOhTzO9EaZzxjHXejzuuiuEa+qdkrNl/otrreWPn+gzsC7I2VvnodigrPAX49Sar7UqrjGOprKvmZwhOLA4hiotDvrCuvLUqBW8pop78XmJDT/UufgvfNMFwo/BzGglgI1f97BsanSTN4dZ4nNiZdjAt77kteacHJwBi7LH4MsHxYEBzKQmnJsyGqFOIoWOPZkuj84A2cJcWi5wDk2GhzcH94aI+toCsdM7uOgvLiO41QsN6trypMQx3hCvZS1P7WP5JD1Fef9Adj1UNGjyi8hjinBEVu/eO2Xud8GxzL8fgU9yWrRPeIoBEes5u+G57Pw4h3QrrL5uqdxaPsNtPNsuZ6BhPdD/uhHWm5JX3JfjZdhDmLx+sPSjRY4LE05Of6nPyhnvHEV2gOm+ONi3muTPHfwcHhy6za8OJ3XubWm+IPX3n78we0/WdosoWd/YPy/WETKbtu779fWv+cwzAvBgNcvszAH2rRS1PYtGj6x/LUN7N8O2hH5To3pGlvvHlcMT7N6fbxicJD93Bcdg2NRebYX+u4DDZXddj8sqFvML+iHW8q+ZKWof1GLzA8dY85DkjFFbW6XPM+ZzpozctspnngcefNc1gkeU7zN4187z7HyxBKff5kLPEek3XIPEIspaltnA54zhNA5k5z/RcZG8sZSLKZC9nnOQmJnZnzOLdtT1hErpjQbLQ7v+R/Pi9DcexlojFhMNZGXIzV2NPtpPoZKX2zxdbtfltR6moscR7upLmNbi6dQbHny3MtDDKn7Ws7B80uLJxlb3v1JCovlD0/N4vGEfvGsf17ROhnjOJ2vXzM0G3kdtliJBe+R7bHzNynJQeuklUv0rrXn4PsTj1+oTblA9mnnRnR/uOhK49DW9xAH3z+hDXJ/wVk6uc0iFTsDo/aw4ROvvGsC7X09HDQX0tZhg4v7yctD+TOZxesuz/VOgCXUX+OIsXAePI/Bc5kQF+XPpGFDiEfGlpwHXr/RDm6fxrEf5uVAacedVQ+QQfpD239wu4hBcmjfUKhZB8cRYDga4ZB5RAzfof0D9LPo/VYK2UQ+CbFofpW2eHNE+kA+fwt6B3rP2tY3qxZXmB/efLfqlZUXsecfQB9Bn1jb893HGTq5bz3Js964bks8nqj9D653nQo=
+   eJx7yMjA8HAUDykMRAxMUMzMMPDuQceCDNjZgwUPdvcpIsWv8CB0H+No+hvW7lMcTX/DOn4Hu/sUR9PfsI7fwe4+xUGe/oYTBgCI4poP
   </data>
  </layer>
  <objectgroup name="Object Layer 1">
-  <object id="3" name="spawn_player" type="spawn" x="880" y="420" width="60" height="60"/>
-  <object id="6" name="enemy_civilian" type="enemy" x="820" y="600" width="16" height="16">
+  <object id="1" name="spawn_player" type="spawn" x="40" y="40" width="60" height="60"/>
+  <object id="2" name="weapon_pistol" type="powerup" x="40" y="140" width="20" height="20">
    <properties>
-    <property name="enemy" value="civilian"/>
+    <property name="weapon" value="Pistol"/>
    </properties>
   </object>
-  <object id="7" name="enemy_civilian" type="enemy" x="760" y="340" width="16" height="16">
-   <properties>
-    <property name="enemy" value="civilian"/>
-   </properties>
-  </object>
-  <object id="8" name="enemy_civilian" type="enemy" x="660" y="740" width="16" height="16">
-   <properties>
-    <property name="enemy" value="civilian"/>
-   </properties>
-  </object>
-  <object id="9" name="enemy_civilian" type="enemy" x="440" y="200" width="16" height="16">
-   <properties>
-    <property name="enemy" value="civilian"/>
-   </properties>
-  </object>
-  <object id="10" name="enemy_civilian" type="enemy" x="280" y="520" width="16" height="16">
-   <properties>
-    <property name="enemy" value="civilian"/>
-   </properties>
-  </object>
-  <object id="11" name="enemy_civilian" type="enemy" x="380" y="660" width="16" height="16">
-   <properties>
-    <property name="enemy" value="civilian"/>
-   </properties>
-  </object>
-  <object id="12" name="enemy_shotgun_maniac" type="enemy" x="820" y="220" width="16" height="16">
-   <properties>
-    <property name="enemy" value="shotgunManiac"/>
-   </properties>
-  </object>
-  <object id="13" name="enemy_shotgun_maniac" type="enemy" x="480" y="360" width="16" height="16">
-   <properties>
-    <property name="enemy" value="shotgunManiac"/>
-   </properties>
-  </object>
-  <object id="14" name="enemy_shotgun_maniac" type="enemy" x="220" y="640" width="16" height="16">
-   <properties>
-    <property name="enemy" value="shotgunManiac"/>
-   </properties>
-  </object>
-  <object id="15" name="enemy_pistol_boy" type="enemy" x="780" y="720" width="16" height="16">
-   <properties>
-    <property name="enemy" value="pistolBoy"/>
-   </properties>
-  </object>
-  <object id="16" name="enemy_pistol_boy" type="enemy" x="960" y="260" width="16" height="16">
-   <properties>
-    <property name="enemy" value="pistolBoy"/>
-   </properties>
-  </object>
-  <object id="17" name="enemy_pistol_boy" type="enemy" x="600" y="40" width="16" height="16">
-   <properties>
-    <property name="enemy" value="pistolBoy"/>
-   </properties>
-  </object>
-  <object id="18" name="enemy_pistol_boy" type="enemy" x="220" y="200" width="16" height="16">
-   <properties>
-    <property name="enemy" value="pistolBoy"/>
-   </properties>
-  </object>
-  <object id="19" name="enemy_pistol_boy" type="enemy" x="60" y="400" width="16" height="16">
-   <properties>
-    <property name="enemy" value="pistolBoy"/>
-   </properties>
-  </object>
-  <object id="20" name="enemy_pistol_boy" type="enemy" x="560" y="680" width="16" height="16">
-   <properties>
-    <property name="enemy" value="pistolBoy"/>
-   </properties>
-  </object>
-  <object id="21" name="enemy_uzi_rebel" type="enemy" x="400" y="860" width="16" height="16">
-   <properties>
-    <property name="enemy" value="uziRebel"/>
-   </properties>
-  </object>
-  <object id="22" name="enemy_uzi_rebel" type="enemy" x="420" y="940" width="16" height="16">
-   <properties>
-    <property name="enemy" value="uziRebel"/>
-   </properties>
-  </object>
-  <object id="23" name="enemy_uzi_rebel" type="enemy" x="740" y="960" width="16" height="16">
-   <properties>
-    <property name="enemy" value="uziRebel"/>
-   </properties>
-  </object>
-  <object id="24" name="spawn_enemy" type="enemySpawn" x="580" y="880" width="60" height="60"/>
-  <object id="25" name="spawn_enemy" type="enemySpawn" x="500" y="400" width="60" height="60"/>
-  <object id="26" name="spawn_enemy" type="enemySpawn" x="140" y="100" width="60" height="60"/>
-  <object id="27" name="enemy_civilian" type="enemy" x="80" y="880" width="16" height="16">
-   <properties>
-    <property name="enemy" value="civilian"/>
-   </properties>
-  </object>
-  <object id="28" name="weapon_shotgun" type="powerup" x="840" y="400" width="20" height="20">
+  <object id="3" name="weapon_shotgun" type="powerup" x="80" y="140" width="20" height="20">
    <properties>
     <property name="weapon" value="Shotgun"/>
    </properties>
   </object>
-  <object id="29" name="weapon_shotgun" type="powerup" x="960" y="400" width="20" height="20">
-   <properties>
-    <property name="weapon" value="Shotgun"/>
-   </properties>
-  </object>
-  <object id="30" name="ammo_shotgun (25)" type="powerup" x="840" y="540" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="32" name="ammo_shotgun (25)" type="powerup" x="960" y="540" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="33" name="weapon_uzi" type="powerup" x="900" y="360" width="20" height="20">
+  <object id="4" name="weapon_uzi" type="powerup" x="120" y="140" width="20" height="20">
    <properties>
     <property name="weapon" value="Uzi"/>
    </properties>
   </object>
-  <object id="34" name="ammo_uzi (40)" type="powerup" x="880" y="340" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Uzi"/>
-    <property name="value" value="40"/>
-   </properties>
-  </object>
-  <object id="35" name="ammo_uzi (40)" type="powerup" x="920" y="340" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Uzi"/>
-    <property name="value" value="40"/>
-   </properties>
-  </object>
-  <object id="36" name="health (25)" type="powerup" x="900" y="480" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="37" name="health (25)" type="powerup" x="900" y="520" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="38" name="health (25)" type="powerup" x="680" y="160" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="39" name="health (25)" type="powerup" x="440" y="320" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="40" name="health (25)" type="powerup" x="300" y="320" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="41" name="health (25)" type="powerup" x="140" y="960" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="42" name="health (25)" type="powerup" x="120" y="60" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="43" name="health (25)" type="powerup" x="900" y="880" width="20" height="20">
-   <properties>
-    <property name="health" value=""/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="44" name="ammo_shotgun (25)" type="powerup" x="640" y="420" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="45" name="ammo_shotgun (25)" type="powerup" x="440" y="500" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="46" name="ammo_shotgun (25)" type="powerup" x="160" y="420" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="48" name="ammo_shotgun (25)" type="powerup" x="120" y="740" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="49" name="ammo_shotgun (25)" type="powerup" x="20" y="240" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Shotgun"/>
-    <property name="value" value="25"/>
-   </properties>
-  </object>
-  <object id="50" name="weapon_uzi" type="powerup" x="600" y="460" width="20" height="20">
-   <properties>
-    <property name="weapon" value="Uzi"/>
-   </properties>
-  </object>
-  <object id="51" name="weapon_rifle" type="powerup" x="560" y="180" width="20" height="20">
+  <object id="5" name="weapon_rifle" type="powerup" x="160" y="140" width="20" height="20">
    <properties>
     <property name="weapon" value="Rifle"/>
    </properties>
   </object>
-  <object id="52" name="ammo_rifle (40)" type="powerup" x="580" y="180" width="20" height="20">
+  <object id="6" name="weapon_auto_shotgun" type="powerup" x="200" y="140" width="20" height="20">
    <properties>
-    <property name="ammo" value="Rifle"/>
-    <property name="value" value="40"/>
+    <property name="weapon" value="Auto shotgun"/>
    </properties>
   </object>
-  <object id="53" name="weapon_rifle" type="powerup" x="560" y="360" width="20" height="20">
+  <object id="7" name="weapon_grenade_launcher" type="powerup" x="40" y="200" width="20" height="20">
    <properties>
-    <property name="weapon" value="Rifle"/>
+    <property name="weapon" value="Grenade launcher"/>
    </properties>
   </object>
-  <object id="54" name="ammo_rifle (40)" type="powerup" x="580" y="360" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Rifle"/>
-    <property name="value" value="40"/>
-   </properties>
-  </object>
-  <object id="55" name="weapon_rocket_launcher" type="powerup" x="180" y="340" width="20" height="20">
+  <object id="8" name="weapon_rocket_launcher" type="powerup" x="80" y="200" width="20" height="20">
    <properties>
     <property name="weapon" value="Rocket launcher"/>
    </properties>
   </object>
-  <object id="56" name="ammo_rocker_launcher (10)" type="powerup" x="200" y="340" width="20" height="20">
+  <object id="9" name="weapon_bounce_launcher" type="powerup" x="120" y="200" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Bounce launcher"/>
+   </properties>
+  </object>
+  <object id="10" name="weapon_grenade" type="powerup" x="80" y="260" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Grenade"/>
+   </properties>
+  </object>
+  <object id="11" name="health (25)" type="powerup" x="40" y="320" width="20" height="20">
+   <properties>
+    <property name="health" value=""/>
+    <property name="value" value="25"/>
+   </properties>
+  </object>
+  <object id="12" name="weapon_old_shotgun" type="powerup" x="340" y="140" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Old shotgun"/>
+   </properties>
+  </object>
+  <object id="13" name="weapon_old_uzi" type="powerup" x="380" y="140" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Old uzi"/>
+   </properties>
+  </object>
+  <object id="14" name="weapon_broken_laser" type="powerup" x="340" y="200" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Broken laser"/>
+   </properties>
+  </object>
+  <object id="15" name="weapon_op_laser" type="powerup" x="380" y="200" width="20" height="20">
+   <properties>
+    <property name="weapon" value="OP laser"/>
+   </properties>
+  </object>
+  <object id="16" name="weapon_flamer" type="powerup" x="340" y="260" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Flamer"/>
+   </properties>
+  </object>
+  <object id="17" name="weapon_flame" type="powerup" x="380" y="260" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Flame"/>
+   </properties>
+  </object>
+  <object id="18" name="weapon_animated_flamer" type="powerup" x="420" y="260" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Animated flamer"/>
+   </properties>
+  </object>
+  <object id="19" name="weapon_melee" type="powerup" x="40" y="260" width="20" height="20">
+   <properties>
+    <property name="weapon" value="Melee"/>
+   </properties>
+  </object>
+  <object id="20" name="ammo_pistol (50)" type="powerup" x="40" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Pistol"/>
+    <property name="value" value="50"/>
+   </properties>
+  </object>
+  <object id="21" name="ammo_shotgun (25)" type="powerup" x="80" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Shotgun"/>
+    <property name="value" value="25"/>
+   </properties>
+  </object>
+  <object id="22" name="ammo_uzi (40)" type="powerup" x="120" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Uzi"/>
+    <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="23" name="ammo_rifle (40)" type="powerup" x="160" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Rifle"/>
+    <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="24" name="ammo_auto_shotgun (40)" type="powerup" x="200" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Auto shotgun"/>
+    <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="25" name="ammo_grenade_launcher (10)" type="powerup" x="40" y="220" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Grenade launcher"/>
+    <property name="value" value="10"/>
+   </properties>
+  </object>
+  <object id="26" name="ammo_rocket_launcher (10)" type="powerup" x="80" y="220" width="20" height="20">
    <properties>
     <property name="ammo" value="Rocket launcher"/>
     <property name="value" value="10"/>
    </properties>
   </object>
-  <object id="57" name="ammo_uzi (40)" type="powerup" x="60" y="500" width="20" height="20">
+  <object id="27" name="ammo_bounce_launcher (10)" type="powerup" x="120" y="220" width="20" height="20">
    <properties>
-    <property name="ammo" value="Uzi"/>
+    <property name="ammo" value="Bounce launcher"/>
+    <property name="value" value="10"/>
+   </properties>
+  </object>
+  <object id="28" name="ammo_melee (255)" type="powerup" x="40" y="280" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Melee"/>
+    <property name="value" value="255"/>
+   </properties>
+  </object>
+  <object id="29" name="ammo_grenade (5)" type="powerup" x="80" y="280" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Grenade"/>
+    <property name="value" value="5"/>
+   </properties>
+  </object>
+  <object id="30" name="ammo_old_shotgun (25)" type="powerup" x="340" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Old shotgun"/>
+    <property name="value" value="25"/>
+   </properties>
+  </object>
+  <object id="31" name="ammo_old_uzi (40)" type="powerup" x="380" y="160" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Old uzi"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="58" name="ammo_uzi (40)" type="powerup" x="300" y="920" width="20" height="20">
+  <object id="32" name="ammo_broken_laser (50)" type="powerup" x="340" y="220" width="20" height="20">
    <properties>
-    <property name="ammo" value="Uzi"/>
-    <property name="value" value="40"/>
+    <property name="ammo" value="Broken laser"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
+  <object id="33" name="ammo_op_laser (50)" type="powerup" x="380" y="220" width="20" height="20">
+   <properties>
+    <property name="ammo" value="OP laser"/>
+    <property name="value" value="50"/>
+   </properties>
+  </object>
+  <object id="34" name="ammo_flamer (50)" type="powerup" x="340" y="280" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Flamer"/>
+    <property name="value" value="50"/>
+   </properties>
+  </object>
+  <object id="35" name="ammo_flame (50)" type="powerup" x="380" y="280" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Flame"/>
+    <property name="value" value="50"/>
+   </properties>
+  </object>
+  <object id="36" name="ammo_animated_flamer (50)" type="powerup" x="420" y="280" width="20" height="20">
+   <properties>
+    <property name="ammo" value="Animated flamer"/>
+    <property name="value" value="50"/>
+   </properties>
+  </object>
+  <object id="37" name="enemy_civilian" type="enemy" x="620" y="60" width="16" height="16">
+   <properties>
+    <property name="enemy" value="civilian"/>
+   </properties>
+  </object>
+  <object id="38" name="enemy_pistol_boy" type="enemy" x="620" y="140" width="16" height="16">
+   <properties>
+    <property name="enemy" value="pistolBoy"/>
+   </properties>
+  </object>
+  <object id="39" name="enemy_shotgun_maniac" type="enemy" x="620" y="220" width="16" height="16">
+   <properties>
+    <property name="enemy" value="shotgunManiac"/>
+   </properties>
+  </object>
+  <object id="40" name="enemy_uzi_rebel" type="enemy" x="620" y="300" width="16" height="16">
+   <properties>
+    <property name="enemy" value="uziRebel"/>
+   </properties>
+  </object>
+  <object id="41" name="spawn_enemy" type="enemySpawn" x="340" y="40" width="60" height="60"/>
  </objectgroup>
 </map>

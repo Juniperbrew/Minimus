@@ -1,8 +1,9 @@
 name=Uzi
-projectile=Uzi_Bullet
+projectile=Hitscan_Uzi_Bullet
 spread=0
 projectileCount=1
-cooldown=0.1
-image=chainGun
-ammoImage=smallAmmo
+cooldown=0.15
+image=uzi
+ammoImage=largeAmmo
+sound=uzi.wav
 sprite=pistol

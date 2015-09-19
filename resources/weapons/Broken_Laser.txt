@@ -1,4 +1,4 @@
-name=Broken_Laser
+name=Broken laser
 projectile=Broken_Laser
 spread=75
 projectileCount=1

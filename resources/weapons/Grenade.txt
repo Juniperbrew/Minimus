@@ -8,6 +8,6 @@ minChargeVelocity=100
 sound=projectile.ogg
 cooldown=0.5
 image=rocketLauncher
-ammoImage=largeAmmo
+ammoImage=grenade1
 sound=sinko.wav
 sprite=rifle

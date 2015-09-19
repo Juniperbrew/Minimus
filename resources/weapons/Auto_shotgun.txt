@@ -1,9 +1,9 @@
-name=Hitscan_Shotgun
+name=Auto shotgun
 projectile=Hitscan_Shotgun_Bullet
 spread=30
 projectileCount=5
-cooldown=0.5
+cooldown=0.2
 image=superShotgun
-ammoImage=smallShell
+ammoImage=largeShell
 sound=shotgun.wav
 sprite=rifle

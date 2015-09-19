@@ -1,5 +1,4 @@
-name=Laser
-tracer=Laser_Tracer
+name=Melee
 type=hitscan
 length=50
 damage=35

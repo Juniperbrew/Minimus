@@ -2420,41 +2420,41 @@
   <object id="6" name="spawn_enemy" type="enemySpawn" x="420" y="520" width="40" height="40"/>
   <object id="17" name="weapon_shotgun" type="powerup" x="520" y="520" width="20" height="20">
    <properties>
-    <property name="weapon" value="Hitscan_Shotgun"/>
+    <property name="weapon" value="Shotgun"/>
    </properties>
   </object>
   <object id="18" name="ammo_shotgun (25)" type="powerup" x="440" y="260" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Shotgun"/>
+    <property name="ammo" value="Shotgun"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="19" name="weapon_shotgun" type="powerup" x="80" y="920" width="20" height="20">
    <properties>
-    <property name="weapon" value="Hitscan_Shotgun"/>
+    <property name="weapon" value="Shotgun"/>
    </properties>
   </object>
   <object id="20" name="ammo_shotgun (25)" type="powerup" x="700" y="540" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Shotgun"/>
+    <property name="ammo" value="Shotgun"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="21" name="ammo_shotgun (25)" type="powerup" x="640" y="60" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Shotgun"/>
+    <property name="ammo" value="Shotgun"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="22" name="ammo_pistol (50)" type="powerup" x="260" y="240" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Pistol"/>
+    <property name="ammo" value="Pistol"/>
     <property name="value" value="50"/>
    </properties>
   </object>
   <object id="23" name="ammo_pistol (50)" type="powerup" x="440" y="460" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Pistol"/>
+    <property name="ammo" value="Pistol"/>
     <property name="value" value="50"/>
    </properties>
   </object>
@@ -2573,29 +2573,29 @@
   <object id="52" name="spawn_enemy" type="enemySpawn" x="60" y="620" width="60" height="60"/>
   <object id="60" name="weapon_pistol" type="powerup" x="20" y="520" width="20" height="20">
    <properties>
-    <property name="weapon" value="Hitscan_Pistol"/>
+    <property name="weapon" value="Pistol"/>
    </properties>
   </object>
   <object id="61" name="weapon_pistol" type="powerup" x="60" y="520" width="20" height="20">
    <properties>
-    <property name="weapon" value="Hitscan_Pistol"/>
+    <property name="weapon" value="Pistol"/>
    </properties>
   </object>
   <object id="62" name="ammo_pistol (50)" type="powerup" x="20" y="480" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Pistol"/>
+    <property name="ammo" value="Pistol"/>
     <property name="value" value="50"/>
    </properties>
   </object>
   <object id="63" name="ammo_pistol (50)" type="powerup" x="60" y="480" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Pistol"/>
+    <property name="ammo" value="Pistol"/>
     <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="66" name="ammo_shotgun (25)" type="powerup" x="520" y="520" width="20" height="20">
+  <object id="66" name="ammo_shotgun (25)" type="powerup" x="560" y="600" width="20" height="20">
    <properties>
-    <property name="ammo" value="Hitscan_Shotgun"/>
+    <property name="ammo" value="Shotgun"/>
     <property name="value" value="25"/>
    </properties>
   </object>

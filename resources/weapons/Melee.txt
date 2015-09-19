@@ -1,9 +1,9 @@
-name=Laser
-projectile=Laser
+name=Melee
+projectile=Melee
 spread=0
 projectileCount=1
-sound=laser.ogg
+sound=hit.ogg
 cooldown=0.5
 image=plasmaGun
-ammoImage=smallCell
+ammoImage=berserkBox
 sprite=melee

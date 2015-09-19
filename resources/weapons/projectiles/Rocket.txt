@@ -7,5 +7,5 @@ range=600
 velocity=600
 damage=35
 onDestroy=Explosion
-knockback=200
+knockback=400
 networked

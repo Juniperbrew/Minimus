@@ -1,4 +1,4 @@
-name=Hitscan_Pistol
+name=Pistol
 projectile=Hitscan_Pistol_Bullet
 spread=0
 projectileCount=1

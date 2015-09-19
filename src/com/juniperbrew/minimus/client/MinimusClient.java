@@ -351,6 +351,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 for(int id: new HashSet<>(entities.keySet())){
                     removeEntity(id);
                 }
+                powerups.clear();
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -652,7 +653,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attack.x = player.getCenterX();
         attack.y = player.getCenterY();
         attack.weapon = weaponSlot;
-        if(player.chargeMeter>0){
+        if(player.chargeMeter>0&&player.chargeWeapon==weaponSlot){
             attack.projectileModifiers = new HashMap<>();
             float charge = player.chargeMeter/weapon.chargeDuration;
             if(charge>1) charge = 1;
@@ -661,6 +662,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(weapon.projectile.duration>0){
                 attack.projectileModifiers.put("duration",weapon.projectile.duration-player.chargeMeter);
             }
+            player.chargeMeter = 0;
+        }
+        if(player.chargeWeapon!=weaponSlot){
             player.chargeMeter = 0;
         }
 
@@ -1141,7 +1145,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             for(Powerup p : powerups.values()){
                 if(p.type==Powerup.HEALTH){
                     batch.setColor(1,1,1,1);
-                    batch.draw(getTexture("health"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                    batch.draw(getTexture("healthpack"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
                 }else if(p.type==Powerup.AMMO){
                     //TODO clean up these nullchecks
                     if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
@@ -1183,8 +1187,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 StringBuilder textureName = new StringBuilder(e.getImage());
                 if (playerList.contains(e.getID())) {
                     textureName.append("_");
-                    textureName.append(weaponList.get(player.getSlot1Weapon()).sprite);
-                } else if (e.getHealthPercent() > 0.5f) {
+                    if(e.getID()==player.id){
+                        textureName.append(weaponList.get(player.getSlot1Weapon()).sprite);
+                    }else{
+                        //FIXME Use proper player weapon once server is syncing them
+                        textureName.append("rifle");
+                    }
+                }else if (e.getHealthPercent() > 0.5f) {
                     textureName.append("_");
                     textureName.append("hurt");
                 }
@@ -1906,6 +1915,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         for (int rotation = 0; rotation < 360; rotation += MathUtils.random(35,65)) {
             blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80,120)));
         }
+
+        playSoundInLocation(sounds.get("death.wav"),e.getCenterX(),e.getCenterY());
 
         //We are not removing it from older states, should not matter, they get removed once interpolation catches up to them
         authoritativeState.entities.remove(id);

@@ -1,4 +1,4 @@
-name=Animated Flamer
+name=Animated flamer
 projectile=Animated_Flame
 spread=90
 projectileCount=15

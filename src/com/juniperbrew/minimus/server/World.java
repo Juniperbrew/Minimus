@@ -151,8 +151,8 @@ public class World implements EntityChangeListener{
 
         mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
         mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
-        GlobalVars.mapWidth = mapHeight;
-        GlobalVars.mapHeight = mapWidth;
+        GlobalVars.mapWidth = mapWidth;
+        GlobalVars.mapHeight = mapHeight;
 
         GlobalVars.collisionMap = SharedMethods.createCollisionMap(map, GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles);
         movePlayersToSpawn();
@@ -175,6 +175,7 @@ public class World implements EntityChangeListener{
     }
 
     private void spawnMapPowerups(TiledMap map){
+        GlobalVars.consoleLogger.log("\nSpawning map powerups");
         for(RectangleMapObject o : mapObjects.get(map)){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("powerup")){
                 Rectangle r = o.getRectangle();
@@ -182,6 +183,9 @@ public class World implements EntityChangeListener{
                 if(p.containsKey("weapon")){
                     String weaponName = p.get("weapon",String.class);
                     int weaponID = SharedMethods.getWeaponID(weaponList,weaponName);
+                    if(weaponID==-1){
+                        GlobalVars.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
+                    }
                     spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, weaponID, -1));
                 }else if(p.containsKey("health")){
                     int value = Integer.parseInt(p.get("value",String.class));
@@ -189,6 +193,9 @@ public class World implements EntityChangeListener{
                 }else if(p.containsKey("ammo")){
                     String weaponName = p.get("ammo",String.class);
                     int weaponID = SharedMethods.getWeaponID(weaponList, weaponName);
+                    if(weaponID==-1){
+                        GlobalVars.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
+                    }
                     int value = Integer.parseInt(p.get("value",String.class));
                     spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, weaponID, value));
                 }
@@ -197,6 +204,7 @@ public class World implements EntityChangeListener{
     }
 
     private void spawnMapEnemies(TiledMap map){
+        GlobalVars.consoleLogger.log("\nSpawning map enemies");
         for(RectangleMapObject o : mapObjects.get(map)){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
                 Rectangle r = o.getRectangle();
@@ -637,7 +645,8 @@ public class World implements EntityChangeListener{
         entityAttacking.deg = e.getRotation();
         entityAttacking.id = e.getID();
         entityAttacking.weapon = weaponID;
-        if(e.chargeMeter>0){
+
+        if(e.chargeMeter>0&&e.chargeWeapon==weaponID){
             entityAttacking.projectileModifiers = new HashMap<>();
             float charge = e.chargeMeter/weapon.chargeDuration;
             if(charge>1) charge = 1;
@@ -646,6 +655,9 @@ public class World implements EntityChangeListener{
             if(weapon.projectile.duration>0){
                 entityAttacking.projectileModifiers.put("duration",weapon.projectile.duration-e.chargeMeter);
             }
+            e.chargeMeter = 0;
+        }
+        if(e.chargeWeapon!=weaponID){
             e.chargeMeter = 0;
         }
         createAttack(entityAttacking);
@@ -889,7 +901,8 @@ public class World implements EntityChangeListener{
     }
 
     public void addNPC(EnemyDefinition def, Rectangle bounds){
-        System.out.println("Adding npc:"+def);
+
+        GlobalVars.consoleLogger.log("Adding npc:" + def + " at " + bounds);
         int networkID = getNextNetworkID();
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
