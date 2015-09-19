@@ -1,0 +1,9 @@
+name=Broken laser
+projectile=Broken_Laser
+spread=75
+projectileCount=1
+sound=laser.ogg
+cooldown=0.5
+image=plasmaGun
+ammoImage=smallCell
+sprite=rifle
