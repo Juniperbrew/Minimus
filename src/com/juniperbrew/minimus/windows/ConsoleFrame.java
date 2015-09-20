@@ -162,7 +162,9 @@ public class ConsoleFrame extends JFrame {
             try(BufferedReader reader = new BufferedReader(new FileReader(file))){
                 String line;
                 while((line = reader.readLine()) != null){
-                    parseCommand(line);
+                    if(!line.isEmpty()&&line.charAt(0)!='#'){
+                        parseCommand(line);
+                    }
                 }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
@@ -242,7 +244,7 @@ public class ConsoleFrame extends JFrame {
         }
         if(splits[0].equals("ammo")){
             if(minimusServer!=null){
-                minimusServer.addAmmo(Integer.parseInt(splits[1]),Integer.parseInt(splits[2]),Integer.parseInt(splits[3]));
+                minimusServer.addAmmo(Integer.parseInt(splits[1]),splits[2],Integer.parseInt(splits[3]));
             }else{
                 addLine("The " + splits[0] + " command can only be used on server");
             }
@@ -251,9 +253,11 @@ public class ConsoleFrame extends JFrame {
         if(splits[0].equals("idkfa")){
             if(minimusServer!=null){
                 if(splits.length==1){
-                    minimusServer.fillAllAmmo();
+                    minimusServer.giveEveryoneAllWeapons();
+                    minimusServer.fillEveryonesAmmo();
                 }else{
                     minimusServer.fillAmmo(Integer.parseInt(splits[1]));
+                    minimusServer.giveAllWeapons(Integer.parseInt(splits[1]));
                 }
             }else{
                 addLine("The " + splits[0] + " command can only be used on server");

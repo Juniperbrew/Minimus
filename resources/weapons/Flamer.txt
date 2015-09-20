@@ -4,5 +4,5 @@ spread=10
 projectileCount=3
 cooldown=0.1
 image=flame
-ammoImage=flame
+ammo=fire
 sprite=rifle

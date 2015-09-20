@@ -5,6 +5,6 @@ projectileCount=1
 sound=projectile.ogg
 cooldown=0.5
 image=grenadeLauncher
-ammoImage=grenade2
+ammo=grenade
 sound=sinko.wav
 sprite=rifle

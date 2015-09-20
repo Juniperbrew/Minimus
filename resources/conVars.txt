@@ -1,4 +1,4 @@
-sv_player_velocity 250
+sv_player_velocity 300
 sv_tickrate 60
 sv_updaterate 10
 cl_udp 1

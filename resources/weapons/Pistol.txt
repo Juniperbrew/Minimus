@@ -4,6 +4,6 @@ spread=0
 projectileCount=1
 cooldown=0.3
 image=pistol
-ammoImage=smallAmmo
+ammo=smallAmmo
 sound=pistol.wav
 sprite=pistol

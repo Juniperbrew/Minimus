@@ -4,6 +4,6 @@ spread=30
 projectileCount=5
 cooldown=0.5
 image=shotgun
-ammoImage=smallShell
+ammo=smallShell
 sound=shotgun.wav
 sprite=rifle

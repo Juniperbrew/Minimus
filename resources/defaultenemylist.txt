@@ -25,3 +25,45 @@ weapon=Shotgun
 image=shotgunManiac
 health=100
 }
+
+{
+name=bazookaBoy
+weapon=Rocket launcher
+image=bazookaBoy
+health=100
+}
+
+{
+name=commando
+weapon=Rifle
+image=commando
+health=100
+}
+
+{
+name=flamer
+weapon=Flame
+image=flamer
+health=100
+}
+
+{
+name=grenadeGay
+weapon=Grenade launcher
+image=grenadeGay
+health=100
+}
+
+{
+name=punisher
+weapon=Auto shotgun
+image=punisher
+health=200
+}
+
+{
+name=punk
+weapon=Grenade
+image=punk
+health=100
+}

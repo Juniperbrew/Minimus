@@ -462,28 +462,43 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         frameTimeLog.add(Tools.nanoToMilliFloat(System.nanoTime() - frameStart));
     }
 
-    public void fillAllAmmo(){
-        for(int id : playerList.keySet()){
-            fillAmmo(id);
+    public void fillEveryonesAmmo(){
+        for(int playerID:playerList.keySet()){
+            fillAmmo(playerID);
+        }
+    }
+
+    public void giveEveryoneAllWeapons(){
+        for(int playerID:playerList.keySet()){
+            giveAllWeapons(playerID);
         }
     }
 
     public void fillAmmo(int id){
-        for(int weapon:world.weaponList.keySet()){
-            addAmmo(id, weapon, 999999);
+        for(String ammoType:GlobalVars.ammoList){
+            addAmmo(id, ammoType, 999999);
         }
     }
 
-    public void addAmmo(int id, int weapon, int amount){
-        world.entities.get(id).addAmmo(weapon,amount);
-        Network.AddAmmo addAmmo = new Network.AddAmmo();
-        addAmmo.weapon = weapon;
-        addAmmo.amount = amount;
-        sendTCP(playerList.get(id),addAmmo);
-        world.entities.get(id).setWeapon(weapon,true);
+    public void giveAllWeapons(int id){
+        for(int weaponID : GlobalVars.weaponList.keySet()){
+            giveWeapon(weaponID, id);
+        }
+    }
+
+    public void giveWeapon(int weaponID, int id){
+        world.entities.get(id).setWeapon(weaponID, true);
         Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
-        weaponAdded.weapon = weapon;
+        weaponAdded.weapon = weaponID;
         sendTCP(playerList.get(id),weaponAdded);
+    }
+
+    public void addAmmo(int id, String ammoType, int amount){
+        world.entities.get(id).addAmmo(ammoType,amount);
+        Network.AddAmmo addAmmo = new Network.AddAmmo();
+        addAmmo.ammoType = ammoType;
+        addAmmo.amount = amount;
+        sendTCP(playerList.get(id), addAmmo);
     }
 
     public void startWaves(){
@@ -737,7 +752,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             pendingRandomNpcRemovals++;
         }
         if (character == 'p') {
-            world.spawnPowerup(Powerup.HEALTH,30,30);
+            world.spawnHealthPack(30,30);
         }
         if (character == 'w') {
             pendingRandomNpcAdds++;
@@ -998,7 +1013,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void powerupAdded(int id, Powerup powerup) {
-        showMessage("Powerup(" + powerup.type + ") added at (" + powerup.bounds.x + "," + powerup.bounds.y + "): " + id);
+        showMessage("Powerup(" + powerup.getClass().getSimpleName() + ") added at (" + powerup.bounds.x + "," + powerup.bounds.y + "): " + id);
         if(server!=null){
             Network.AddPowerup addPowerup = new Network.AddPowerup();
             addPowerup.networkID = id;
@@ -1044,9 +1059,9 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void ammoAddedChanged(int id, int weapon, int value) {
+    public void ammoAddedChanged(int id, String ammoType, int value) {
         Network.AddAmmo addAmmo = new Network.AddAmmo();
-        addAmmo.weapon = weapon;
+        addAmmo.ammoType = ammoType;
         addAmmo.amount = value;
         sendTCP(playerList.get(id),addAmmo);
     }

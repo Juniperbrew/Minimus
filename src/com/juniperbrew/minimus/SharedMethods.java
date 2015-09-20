@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -929,8 +930,8 @@ public class SharedMethods {
                     if(splits[0].equals("image")){
                         weapon.image = splits[1];
                     }
-                    if(splits[0].equals("ammoImage")){
-                        weapon.ammoImage = splits[1];
+                    if(splits[0].equals("ammo")){
+                        weapon.ammo = splits[1];
                     }
                     if(splits[0].equals("sprite")){
                         weapon.sprite = splits[1];
@@ -1128,8 +1129,8 @@ public class SharedMethods {
                 if(splits[0].equals("image")){
                     weapon.image = splits[1];
                 }
-                if(splits[0].equals("ammoImage")){
-                    weapon.ammoImage = splits[1];
+                if(splits[0].equals("ammo")){
+                    weapon.ammo = splits[1];
                 }
                 if(splits[0].equals("sprite")){
                     weapon.sprite = splits[1];
@@ -1148,4 +1149,13 @@ public class SharedMethods {
         return weapons;
     }
 
+    public static HashSet<String> getAmmoList(HashMap<Integer,Weapon> weaponList){
+        HashSet<String> ammoList = new HashSet<>();
+        for(Weapon w : weaponList.values()){
+            if(w.ammo!=null){
+                ammoList.add(w.ammo);
+            }
+        }
+        return ammoList;
+    }
 }

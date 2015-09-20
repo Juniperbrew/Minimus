@@ -2786,106 +2786,106 @@
     <property name="enemy" value="uziRebel"/>
    </properties>
   </object>
-  <object id="62" name="health (25)" type="powerup" x="240" y="760" width="20" height="20">
+  <object id="62" name="health (50)" type="powerup" x="240" y="760" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="63" name="health (25)" type="powerup" x="40" y="760" width="20" height="20">
+  <object id="63" name="health (50)" type="powerup" x="40" y="760" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="64" name="health (25)" type="powerup" x="80" y="760" width="20" height="20">
+  <object id="64" name="health (50)" type="powerup" x="80" y="760" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="65" name="health (25)" type="powerup" x="200" y="760" width="20" height="20">
+  <object id="65" name="health (50)" type="powerup" x="200" y="760" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="66" name="health (25)" type="powerup" x="100" y="320" width="20" height="20">
+  <object id="66" name="health (50)" type="powerup" x="100" y="320" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="67" name="health (25)" type="powerup" x="20" y="320" width="20" height="20">
+  <object id="67" name="health (50)" type="powerup" x="20" y="320" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="68" name="health (25)" type="powerup" x="600" y="660" width="20" height="20">
+  <object id="68" name="health (50)" type="powerup" x="600" y="660" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="69" name="health (25)" type="powerup" x="1200" y="760" width="20" height="20">
+  <object id="69" name="health (50)" type="powerup" x="1200" y="760" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="70" name="health (25)" type="powerup" x="460" y="460" width="20" height="20">
+  <object id="70" name="health (50)" type="powerup" x="460" y="460" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="71" name="health (25)" type="powerup" x="1280" y="460" width="20" height="20">
+  <object id="71" name="health (50)" type="powerup" x="1280" y="460" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="72" name="health (25)" type="powerup" x="1300" y="220" width="20" height="20">
+  <object id="72" name="health (50)" type="powerup" x="1300" y="220" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="73" name="health (25)" type="powerup" x="1560" y="20" width="20" height="20">
+  <object id="73" name="health (50)" type="powerup" x="1560" y="20" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="74" name="health (25)" type="powerup" x="1200" y="320" width="20" height="20">
+  <object id="74" name="health (50)" type="powerup" x="1200" y="320" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="75" name="health (25)" type="powerup" x="820" y="220" width="20" height="20">
+  <object id="75" name="health (50)" type="powerup" x="820" y="220" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="76" name="health (25)" type="powerup" x="1060" y="80" width="20" height="20">
+  <object id="76" name="health (50)" type="powerup" x="1060" y="80" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="77" name="health (25)" type="powerup" x="440" y="200" width="20" height="20">
+  <object id="77" name="health (50)" type="powerup" x="440" y="200" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
-  <object id="78" name="health (25)" type="powerup" x="280" y="180" width="20" height="20">
+  <object id="78" name="health (50)" type="powerup" x="280" y="180" width="20" height="20">
    <properties>
     <property name="health" value=""/>
-    <property name="value" value="25"/>
+    <property name="value" value="50"/>
    </properties>
   </object>
   <object id="79" name="weapon_uzi" type="powerup" x="1200" y="360" width="20" height="20">
@@ -2895,122 +2895,122 @@
   </object>
   <object id="80" name="ammo_shotgun (25)" type="powerup" x="220" y="580" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="81" name="ammo_shotgun (25)" type="powerup" x="60" y="580" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="82" name="ammo_shotgun (25)" type="powerup" x="200" y="320" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="83" name="ammo_shotgun (25)" type="powerup" x="880" y="680" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="84" name="ammo_shotgun (25)" type="powerup" x="1160" y="440" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="85" name="ammo_shotgun (25)" type="powerup" x="580" y="60" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="86" name="ammo_shotgun (25)" type="powerup" x="940" y="80" width="20" height="20">
    <properties>
-    <property name="ammo" value="Shotgun"/>
+    <property name="ammo" value="smallShell"/>
     <property name="value" value="25"/>
    </properties>
   </object>
-  <object id="87" name="ammo_pistol (50)" type="powerup" x="80" y="420" width="20" height="20">
+  <object id="87" name="ammo_9mm (40)" type="powerup" x="80" y="420" width="20" height="20">
    <properties>
-    <property name="ammo" value="Pistol"/>
-    <property name="value" value="50"/>
-   </properties>
-  </object>
-  <object id="88" name="ammo_pistol (50)" type="powerup" x="380" y="440" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Pistol"/>
-    <property name="value" value="50"/>
-   </properties>
-  </object>
-  <object id="89" name="ammo_pistol (50)" type="powerup" x="860" y="380" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Pistol"/>
-    <property name="value" value="50"/>
-   </properties>
-  </object>
-  <object id="90" name="ammo_pistol (50)" type="powerup" x="980" y="160" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Pistol"/>
-    <property name="value" value="50"/>
-   </properties>
-  </object>
-  <object id="91" name="ammo_uzi (40)" type="powerup" x="120" y="240" width="20" height="20">
-   <properties>
-    <property name="ammo" value="Uzi"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="92" name="ammo_uzi (40)" type="powerup" x="260" y="300" width="20" height="20">
+  <object id="88" name="ammo_9mm (40)" type="powerup" x="380" y="440" width="20" height="20">
    <properties>
-    <property name="ammo" value="Uzi"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="93" name="ammo_uzi (40)" type="powerup" x="300" y="760" width="20" height="20">
+  <object id="89" name="ammo_9mm (40)" type="powerup" x="860" y="380" width="20" height="20">
    <properties>
-    <property name="ammo" value="Uzi"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="94" name="ammo_uzi (40)" type="powerup" x="940" y="420" width="20" height="20">
+  <object id="90" name="ammo_9mm (40)" type="powerup" x="980" y="160" width="20" height="20">
    <properties>
-    <property name="ammo" value="Uzi"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="95" name="ammo_rifle (40)" type="powerup" x="1300" y="680" width="20" height="20">
+  <object id="91" name="ammo_9mm (40)" type="powerup" x="120" y="240" width="20" height="20">
    <properties>
-    <property name="ammo" value="Rifle"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="96" name="ammo_rifle (40)" type="powerup" x="1480" y="420" width="20" height="20">
+  <object id="92" name="ammo_9mm (40)" type="powerup" x="260" y="300" width="20" height="20">
    <properties>
-    <property name="ammo" value="Rifle"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="97" name="ammo_rifle (40)" type="powerup" x="1340" y="180" width="20" height="20">
+  <object id="93" name="ammo_9mm (40)" type="powerup" x="300" y="760" width="20" height="20">
    <properties>
-    <property name="ammo" value="Rifle"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="98" name="ammo_auto_shotgun (40)" type="powerup" x="300" y="540" width="20" height="20">
+  <object id="94" name="ammo_9mm (40)" type="powerup" x="700" y="500" width="20" height="20">
    <properties>
-    <property name="ammo" value="Auto shotgun"/>
+    <property name="ammo" value="smallAmmo"/>
     <property name="value" value="40"/>
    </properties>
   </object>
-  <object id="99" name="ammo_auto_shotgun (40)" type="powerup" x="1440" y="20" width="20" height="20">
+  <object id="95" name="ammo_12mm (40)" type="powerup" x="1300" y="680" width="20" height="20">
    <properties>
-    <property name="ammo" value="Auto shotgun"/>
+    <property name="ammo" value="rifleAmmo"/>
     <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="96" name="ammo_12mm (40)" type="powerup" x="1480" y="420" width="20" height="20">
+   <properties>
+    <property name="ammo" value="rifleAmmo"/>
+    <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="97" name="ammo_12mm (40)" type="powerup" x="1340" y="180" width="20" height="20">
+   <properties>
+    <property name="ammo" value="rifleAmmo"/>
+    <property name="value" value="40"/>
+   </properties>
+  </object>
+  <object id="98" name="ammo_shotgun (25)" type="powerup" x="300" y="540" width="20" height="20">
+   <properties>
+    <property name="ammo" value="smallShell"/>
+    <property name="value" value="25"/>
+   </properties>
+  </object>
+  <object id="99" name="ammo_shotgun (25)" type="powerup" x="1440" y="20" width="20" height="20">
+   <properties>
+    <property name="ammo" value="smallShell"/>
+    <property name="value" value="25"/>
    </properties>
   </object>
   <object id="100" name="weapon_rocket_launcher" type="powerup" x="1300" y="620" width="20" height="20">
@@ -3018,15 +3018,15 @@
     <property name="weapon" value="Rocket launcher"/>
    </properties>
   </object>
-  <object id="101" name="ammo_rocket_launcher (10)" type="powerup" x="1280" y="620" width="20" height="20">
+  <object id="101" name="ammo_rocket (10)" type="powerup" x="1280" y="620" width="20" height="20">
    <properties>
-    <property name="ammo" value="Rocket launcher"/>
+    <property name="ammo" value="largeRocket"/>
     <property name="value" value="10"/>
    </properties>
   </object>
-  <object id="102" name="ammo_rocket_launcher (10)" type="powerup" x="1060" y="300" width="20" height="20">
+  <object id="102" name="ammo_rocket (10)" type="powerup" x="1060" y="300" width="20" height="20">
    <properties>
-    <property name="ammo" value="Rocket launcher"/>
+    <property name="ammo" value="largeRocket"/>
     <property name="value" value="10"/>
    </properties>
   </object>

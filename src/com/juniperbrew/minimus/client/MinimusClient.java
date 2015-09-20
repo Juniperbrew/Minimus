@@ -327,9 +327,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             changeMap(mapChange);
         }else if(object instanceof Network.AddAmmo){
             Network.AddAmmo addAmmo = (Network.AddAmmo) object;
-            int a = player.ammo.get(addAmmo.weapon);
+            int a = player.ammo.get(addAmmo.ammoType);
             a += addAmmo.amount;
-            player.ammo.put(addAmmo.weapon,a);
+            player.ammo.put(addAmmo.ammoType,a);
         }else if(object instanceof Network.WeaponAdded){
             Network.WeaponAdded weaponAdded = (Network.WeaponAdded) object;
             player.weapons.put(weaponAdded.weapon,true);
@@ -621,30 +621,33 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void chargeAttack(int weaponSlot, short msec){
-        if(weaponList.get(weaponSlot)==null){
+    private void chargeAttack(int weaponID, short msec){
+        if(weaponList.get(weaponID)==null){
             return;
         }
+        Weapon weapon = weaponList.get(weaponID);
         player.aimingWeapon = true;
-        if(player.cooldowns.get(weaponSlot) > 0 || player.ammo.get(weaponSlot)<=0||!player.weapons.get(weaponSlot)){
+        if(player.cooldowns.get(weaponID) > 0 || !player.hasAmmo(weapon.ammo)||!player.hasWeapon(weaponID)){
             return;
         }
-        player.chargeWeapon = weaponSlot;
+        player.chargeWeapon = weaponID;
         player.chargeMeter += (msec/1000d);
     }
 
-    private void launchAttack(int weaponSlot){
+    private void launchAttack(int weaponID){
 
-        if(weaponList.get(weaponSlot)==null){
+        if(weaponList.get(weaponID)==null){
             return;
         }
+        Weapon weapon = weaponList.get(weaponID);
         player.aimingWeapon = true;
-        if(player.cooldowns.get(weaponSlot)>0||player.ammo.get(weaponSlot)<=0||!player.weapons.get(weaponSlot)){
+        if(player.cooldowns.get(weaponID)>0||!player.hasAmmo(weapon.ammo)||!player.hasWeapon(weaponID)){
             return;
         }
-        Weapon weapon = weaponList.get(weaponSlot);
-        player.cooldowns.put(weaponSlot, weaponList.get(weaponSlot).cooldown);
-        player.ammo.put(weaponSlot,player.ammo.get(weaponSlot)-1);
+        player.cooldowns.put(weaponID, weaponList.get(weaponID).cooldown);
+        if(weapon.ammo!=null){
+            player.ammo.put(weapon.ammo,player.ammo.get(weapon.ammo)-1);
+        }
         //TODO Ignoring projectile team for now
 
         Network.EntityAttacking attack = new Network.EntityAttacking();
@@ -652,8 +655,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         attack.id = player.id;
         attack.x = player.getCenterX();
         attack.y = player.getCenterY();
-        attack.weapon = weaponSlot;
-        if(player.chargeMeter>0&&player.chargeWeapon==weaponSlot){
+        attack.weapon = weaponID;
+        if(player.chargeMeter>0&&player.chargeWeapon==weaponID){
             attack.projectileModifiers = new HashMap<>();
             float charge = player.chargeMeter/weapon.chargeDuration;
             if(charge>1) charge = 1;
@@ -664,7 +667,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             player.chargeMeter = 0;
         }
-        if(player.chargeWeapon!=weaponSlot){
+        if(player.chargeWeapon!=weaponID){
             player.chargeMeter = 0;
         }
 
@@ -1143,31 +1146,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             batch.begin();
             for(Powerup p : powerups.values()){
-                if(p.type==Powerup.HEALTH){
+                if(p instanceof HealthPack){
                     batch.setColor(1,1,1,1);
                     batch.draw(getTexture("healthpack"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-                }else if(p.type==Powerup.AMMO){
-                    //TODO clean up these nullchecks
-                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).ammoImage!=null) {
-                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).ammoImage);
-                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
-                        batch.setColor(1, 1, 1, 1);
-                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
-                        continue;
-                    }
-                    batch.setColor(1, 0, 0, 1);
-                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-                }else if(p.type==Powerup.WEAPON){
-                    //TODO clean up these nullchecks
-                    if(weaponList!=null&&weaponList.get(p.typeModifier)!=null&&weaponList.get(p.typeModifier).image!=null){
-                        TextureRegion texture = getTexture(weaponList.get(p.typeModifier).image);
-                        Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
-                        batch.setColor(1,1,1,1);
-                        batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
-                        continue;
-                    }
-                    batch.setColor(0, 0, 1, 1);
-                    batch.draw(getTexture("blank"), p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
+                }else if(p instanceof AmmoPickup){
+                    AmmoPickup ammoPickup = (AmmoPickup) p;
+                    TextureRegion texture = getTexture(ammoPickup.ammoType);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
+                    batch.setColor(1, 1, 1, 1);
+                    batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
+                }else if(p instanceof WeaponPickup){
+                    WeaponPickup weaponPickup = (WeaponPickup) p;
+                    TextureRegion texture = getTexture(weaponList.get(weaponPickup.weaponID).image);
+                    Rectangle textureBounds = getCenteredTextureSize(texture,p.bounds);
+                    batch.setColor(1,1,1,1);
+                    batch.draw(texture,textureBounds.x,textureBounds.y,textureBounds.width,textureBounds.height);
                 }
             }
             batch.end();
@@ -1319,17 +1312,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         frameTimeLog.add(Tools.nanoToMilliFloat(System.nanoTime()-frameStart));
     }
 
-    private String getWeaponLine(int weaponSlot){
-        if(weaponList==null||weaponList.get(weaponSlot)==null){
+    private String getWeaponLine(int weaponID){
+        if(weaponList==null||weaponList.get(weaponID)==null){
             return "N/A";
         }
         StringBuilder b = new StringBuilder();
-        if(player.weapons.get(weaponSlot)){
-            b.append(weaponList.get(weaponSlot).name);
+        Weapon weapon = weaponList.get(weaponID);
+        if(player.weapons.get(weaponID)){
+            b.append(weapon.name);
         }else{
             b.append("Empty");
         }
-        b.append(" [").append(player.ammo.get(weaponSlot)).append("]");
+        if(weapon.ammo!=null){
+            b.append(" [").append(player.ammo.get(weapon.ammo)).append("]");
+        }
         return b.toString();
     }
 

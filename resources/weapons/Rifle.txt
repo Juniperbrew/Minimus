@@ -4,6 +4,6 @@ spread=0
 projectileCount=1
 cooldown=0.2
 image=rifle
-ammoImage=rifleAmmo
+ammo=rifleAmmo
 sound=rifle.wav
 sprite=rifle

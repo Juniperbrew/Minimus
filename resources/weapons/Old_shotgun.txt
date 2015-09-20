@@ -4,5 +4,5 @@ spread=40
 projectileCount=5
 cooldown=0.5
 image=superShotgun
-ammoImage=smallShell
+ammo=smallShell
 sprite=rifle

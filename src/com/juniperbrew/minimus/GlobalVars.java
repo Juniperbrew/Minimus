@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Created by Juniperbrew on 8.8.2015.
@@ -25,6 +26,7 @@ public class GlobalVars {
     public static TextureAtlas atlas;
     public static int primaryWeaponCount;
     public static HashMap<Integer,Weapon> weaponList;
+    public static HashSet<String> ammoList;
     public static ConsoleLogger consoleLogger;
 
     public interface ConsoleLogger{

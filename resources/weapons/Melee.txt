@@ -5,5 +5,4 @@ projectileCount=1
 sound=hit.ogg
 cooldown=0.5
 image=plasmaGun
-ammoImage=berserkBox
 sprite=melee

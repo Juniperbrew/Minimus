@@ -22,6 +22,7 @@ import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Team;
+import jdk.nashorn.internal.objects.Global;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
@@ -48,9 +49,6 @@ public class World implements EntityChangeListener{
     private final float KNOCKBACK_VELOCITY = 200;
 
     Set<Integer> playerList = new HashSet<>();
-    //Map<Integer,Map<Integer,Double>> attackCooldown = new HashMap<>();
-    //Map<Integer,HashMap<Integer,Integer>> entityAmmo = new HashMap<>();
-    //Map<Integer,HashMap<Integer,Boolean>> entityWeapons = new HashMap<>();
     Map<Integer,Integer> playerLives = new HashMap<>();
 
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
@@ -87,6 +85,7 @@ public class World implements EntityChangeListener{
 
     HashMap<String,EnemyDefinition> enemyList;
     HashMap<Integer,Weapon> weaponList;
+    HashSet<String> ammoList;
     int primaryWeaponCount;
     HashMap<String,ProjectileDefinition> projectileList;
 
@@ -117,7 +116,10 @@ public class World implements EntityChangeListener{
         loadMaps();
         projectileList = SharedMethods.readSeperatedProjectileList();
         weaponList = readWeaponSlots(SharedMethods.readSeperatedWeaponList(projectileList));
+        ammoList = SharedMethods.getAmmoList(weaponList);
+
         GlobalVars.weaponList = weaponList;
+        GlobalVars.ammoList = ammoList;
         enemyList = SharedMethods.readEnemyList(weaponList);
         loadImages();
 
@@ -187,18 +189,17 @@ public class World implements EntityChangeListener{
                     if(weaponID==-1){
                         GlobalVars.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
                     }
-                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.WEAPON, weaponID, -1));
+                    spawnPowerup(new WeaponPickup(r.x, r.y, r.width, r.height, weaponID));
                 }else if(p.containsKey("health")){
                     int value = Integer.parseInt(p.get("value",String.class));
-                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.HEALTH, -1, value));
+                    spawnPowerup(new HealthPack(r.x, r.y, r.width, r.height, value));
                 }else if(p.containsKey("ammo")){
-                    String weaponName = p.get("ammo",String.class);
-                    int weaponID = SharedMethods.getWeaponID(weaponList, weaponName);
-                    if(weaponID==-1){
-                        GlobalVars.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
+                    String ammoType = p.get("ammo", String.class);
+                    if(!GlobalVars.ammoList.contains(ammoType)){
+                        GlobalVars.consoleLogger.log("ERROR Cannot find ammo named "+ammoType);
                     }
                     int value = Integer.parseInt(p.get("value",String.class));
-                    spawnPowerup(new Powerup(r.x, r.y, r.width, r.height, Powerup.AMMO, weaponID, value));
+                    spawnPowerup(new AmmoPickup(r.x, r.y, r.width, r.height, ammoType, value));
                 }
             }
         }
@@ -307,7 +308,7 @@ public class World implements EntityChangeListener{
                 if (System.nanoTime() - lastHealthPackSpawned > Tools.secondsToNano(HEALTHPACK_SPAWN_DELAY)) {
                     lastHealthPackSpawned = System.nanoTime();
                     spawnedHealthPacksCounter++;
-                    spawnPowerup(Powerup.HEALTH, 30, 30);
+                    spawnHealthPack(30, 30);
                 }
             }
             if (spawnedEnemiesCounter < waveEnemyCount) {
@@ -498,17 +499,20 @@ public class World implements EntityChangeListener{
             for(int powerupID : powerups.keySet()){
                 Powerup p = powerups.get(powerupID);
                 if(player.getGdxBounds().overlaps(p.bounds)){
-                    if(p.type == Powerup.HEALTH){
+                    if(p instanceof HealthPack){
+                        HealthPack healthPack = (HealthPack) p;
                         if(player.getHealth()<player.getMaxHealth()){
-                            player.addHealth(p.value);
+                            player.addHealth(healthPack.value);
                             despawnPowerup(powerupID);
                         }
-                    }else if(p.type == Powerup.AMMO){
-                        entities.get(playerID).addAmmo(p.typeModifier,p.value);
-                        listener.ammoAddedChanged(playerID, p.typeModifier, p.value);
+                    }else if(p instanceof AmmoPickup){
+                        AmmoPickup ammoPickup = (AmmoPickup) p;
+                        entities.get(playerID).addAmmo(ammoPickup.ammoType, ammoPickup.value);
+                        listener.ammoAddedChanged(playerID, ammoPickup.ammoType, ammoPickup.value);
                         despawnPowerup(powerupID);
-                    }else if(p.type == Powerup.WEAPON){
-                        int weapon = p.typeModifier;
+                    }else if(p instanceof WeaponPickup){
+                        WeaponPickup weaponPickup = (WeaponPickup) p;
+                        int weapon = weaponPickup.weaponID;
                         if(!entities.get(playerID).hasWeapon(weapon)){
                             entities.get(playerID).setWeapon(weapon,true);
                             listener.weaponAdded(playerID,weapon);
@@ -625,7 +629,8 @@ public class World implements EntityChangeListener{
         if(weaponList.get(weaponID)==null){
             return;
         }
-        if(e.weaponCooldown(weaponID) || !e.hasAmmo(weaponID) || !e.hasWeapon(weaponID)){
+        Weapon weapon = weaponList.get(weaponID);
+        if(e.weaponCooldown(weaponID) || !e.hasAmmo(weapon.ammo) || !e.hasWeapon(weaponID)){
             return;
         }
         e.chargeWeapon = weaponID;
@@ -636,12 +641,14 @@ public class World implements EntityChangeListener{
         if(weaponList.get(weaponID)==null){
             return;
         }
-        if(e.weaponCooldown(weaponID) || !e.hasAmmo(weaponID) || !e.hasWeapon(weaponID)){
+        Weapon weapon = weaponList.get(weaponID);
+        if(e.weaponCooldown(weaponID) || !e.hasAmmo(weapon.ammo) || !e.hasWeapon(weaponID)){
             return;
         }
-        Weapon weapon = weaponList.get(weaponID);
         e.setWeaponCooldown(weaponID, weaponList.get(weaponID).cooldown);
-        e.addAmmo(weaponID,-1);
+        if(weapon.ammo!=null){
+            e.addAmmo(weapon.ammo,-1);
+        }
 
         Network.EntityAttacking entityAttacking = new Network.EntityAttacking();
         entityAttacking.x = e.getCenterX();
@@ -832,19 +839,25 @@ public class World implements EntityChangeListener{
         }
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
-        HashMap<Integer,Integer> entityAmmo = new HashMap<>();
-        for(int weaponID : weaponList.keySet()){
-            if(ConVars.getBool("sv_idkfa")){
-                entityWeapons.put(weaponID, true);
-                entityAmmo.put(weaponID, 999999999);
-            }else{
-                entityWeapons.put(weaponID, false);
-                entityAmmo.put(weaponID, 0);
+        HashMap<String,Integer> entityAmmo = new HashMap<>();
+        for(int weaponID : weaponList.keySet()) {
+            entityWeapons.put(weaponID, false);
+            if(weaponList.get(weaponID).ammo!=null) {
+                entityAmmo.put(weaponList.get(weaponID).ammo, 0);
             }
         }
-        //Lots of ammo for primary weapon
-        entityWeapons.put(0, true);
-        entityAmmo.put(0, 999999999);
+        if(ConVars.getBool("sv_idkfa")){
+            for(int weaponID : weaponList.keySet()){
+                entityWeapons.put(weaponID, true);
+            }
+            for(String ammoType : entityAmmo.keySet()){
+                entityAmmo.put(ammoType, 999999999);
+            }
+        }
+        //Start with primary weapon
+        entityWeapons.put(1, true);
+        //Start with secondary weapon
+        entityWeapons.put(GlobalVars.primaryWeaponCount+1,true);
 
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
@@ -910,16 +923,21 @@ public class World implements EntityChangeListener{
         int networkID = getNextNetworkID();
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
-        HashMap<Integer,Integer> entityAmmo = new HashMap<>();
-
-        for(int weaponslot: weaponList.keySet()){
-            entityAmmo.put(weaponslot, 0);
-            entityWeapons.put(weaponslot, false);
+        HashMap<String,Integer> entityAmmo = new HashMap<>();
+        for(int weaponID : weaponList.keySet()) {
+            entityWeapons.put(weaponID, false);
+            if(weaponList.get(weaponID).ammo!=null) {
+                entityAmmo.put(weaponList.get(weaponID).ammo, 0);
+            }
         }
 
         //Lots of ammo for weapon
-        entityWeapons.put(def.weapon, true);
-        entityAmmo.put(def.weapon, 999999999);
+        if(def.weapon!=-1){
+            entityWeapons.put(def.weapon, true);
+            if(weaponList.get(def.weapon).ammo!=null){
+                entityAmmo.put(weaponList.get(def.weapon).ammo, 999999999);
+            }
+        }
 
         ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,bounds.width,bounds.height,def.health,-1,
                 def.image,entityWeapons,entityAmmo,this);
@@ -948,13 +966,13 @@ public class World implements EntityChangeListener{
         listener.powerupAdded(id, p);
     }
 
-    public void spawnPowerup(int type, int value, int duration){
+    public void spawnHealthPack(int value, int duration){
 
         int x = MathUtils.random(0, mapWidth);
         int y = MathUtils.random(0, mapHeight);
         final int id = getNextNetworkID();
-        Powerup powerup = new Powerup(x,y,type,value);
-        powerups.put(id,powerup);
+        HealthPack health = new HealthPack(x,y,40,40,value);
+        powerups.put(id,health);
 
         TimerTask task = new TimerTask() {
             @Override
@@ -963,7 +981,7 @@ public class World implements EntityChangeListener{
             }
         };
         timer.schedule(task, Tools.secondsToMilli(duration));
-        listener.powerupAdded(id, powerup);
+        listener.powerupAdded(id, health);
     }
 
     private void despawnPowerup(int id){
@@ -1184,7 +1202,7 @@ public class World implements EntityChangeListener{
         public void waveChanged(int wave);
         public void attackCreated(Network.EntityAttacking entityAttacking, Weapon weapon);
         public void mapChanged(String mapName);
-        public void ammoAddedChanged(int id, int weapon, int value);
+        public void ammoAddedChanged(int id, String ammoType, int value);
         public void weaponAdded(int id, int weapon);
         public void networkedProjectileSpawned(String projectileName, float x, float y, int ownerID, int team);
     }

@@ -60,6 +60,9 @@ public class Network {
         kryo.register(SpawnRequest.class);
         kryo.register(SetLives.class);
         kryo.register(Powerup.class);
+        kryo.register(HealthPack.class);
+        kryo.register(WeaponPickup.class);
+        kryo.register(AmmoPickup.class);
         kryo.register(AddPowerup.class);
         kryo.register(RemovePowerup.class);
         kryo.register(Weapon.class);
@@ -80,7 +83,7 @@ public class Network {
     }
 
     public static class AddAmmo{
-        public int weapon;
+        public String ammoType;
         public int amount;
     }
 
@@ -184,7 +187,7 @@ public class Network {
         public HashMap<Integer,Weapon> weaponList;
         public int primaryWeaponCount;
         public HashMap<String,ProjectileDefinition> projectileList;
-        public HashMap<Integer,Integer> ammo;
+        public HashMap<String,Integer> ammo;
         public HashMap<Integer,Boolean> weapons;
     }
 

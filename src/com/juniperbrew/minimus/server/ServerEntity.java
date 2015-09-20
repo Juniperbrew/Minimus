@@ -2,6 +2,7 @@ package com.juniperbrew.minimus.server;
 
 import com.juniperbrew.minimus.Entity;
 import com.juniperbrew.minimus.Enums;
+import com.juniperbrew.minimus.GlobalVars;
 import com.juniperbrew.minimus.NetworkEntity;
 
 import java.util.HashMap;
@@ -17,11 +18,11 @@ public class ServerEntity extends Entity {
     boolean invulnerable;
     HashMap<Integer,Double> weaponCooldowns = new HashMap<>();
     HashMap<Integer,Boolean> weapons = new HashMap<>();
-    HashMap<Integer,Integer> ammo = new HashMap<>();
+    HashMap<String,Integer> ammo = new HashMap<>();
     public float chargeMeter;
     public int chargeWeapon;
 
-    public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<Integer,Integer> ammo, EntityChangeListener listener){
+    public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<String,Integer> ammo, EntityChangeListener listener){
         super(id, x, y, width, height, maxHealth, team, image);
         this.listener = listener;
         this.weapons = weapons;
@@ -83,10 +84,15 @@ public class ServerEntity extends Entity {
         }
     }
 
-    public void addAmmo(int weapon, int amount){
-        int weaponAmmo = ammo.get(weapon);
+    public void addAmmo(String ammoType, int amount){
+        int weaponAmmo = ammo.get(ammoType);
         weaponAmmo += amount;
-        ammo.put(weapon,weaponAmmo);
+        ammo.put(ammoType,weaponAmmo);
+    }
+
+    public void addAmmoToWeapon(int weapon, int amount){
+        String ammoType = GlobalVars.weaponList.get(weapon).ammo;
+        addAmmo(ammoType, amount);
     }
 
     public void setWeapon(int weapon, boolean state){
@@ -105,7 +111,11 @@ public class ServerEntity extends Entity {
         weaponCooldowns.put(weapon,cooldown);
     }
 
-    public boolean hasAmmo(int weapon){
-        return ammo.get(weapon)>0;
+    public boolean hasAmmo(String ammoType){
+        if(ammo.containsKey(ammoType)){
+            return ammo.get(ammoType)>0;
+        }else{
+            return true;
+        }
     }
 }

@@ -5,6 +5,6 @@ projectileCount=1
 sound=projectile.ogg
 cooldown=0.5
 image=bounceLauncher
-ammoImage=smallRocket
+ammo=smallRocket
 sound=sinko.wav
 sprite=rifle

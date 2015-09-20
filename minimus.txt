@@ -3,10 +3,11 @@ TODO sync entity active weapon, specifically players
 TODO smoother map change
 TODO no interpolation when respawning or changing map
 TODO prevent wave healthpacks from spawning inside walls
-TODO spawn with first primary and first secondary weapon
-TODO ammotypes
+TODO different enemy speeds
 FIXME server map
 
+DONE spawn with first primary and first secondary weapon
+DONE ammotypes
 DONE live fps graph
 DONE running
 DONE minimap

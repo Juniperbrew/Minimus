@@ -14,7 +14,7 @@ public class Weapon {
     public ProjectileDefinition projectile;
     public double cooldown;
     public String image;
-    public String ammoImage;
+    public String ammo;
     public String sprite;
 
     @Override
@@ -30,7 +30,7 @@ public class Weapon {
                 ", projectile=" + projectile +
                 ", cooldown=" + cooldown +
                 ", image='" + image + '\'' +
-                ", ammoImage='" + ammoImage + '\'' +
+                ", ammo='" + ammo + '\'' +
                 ", sprite='" + sprite + '\'' +
                 '}';
     }

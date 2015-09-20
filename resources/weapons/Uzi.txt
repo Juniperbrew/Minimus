@@ -4,6 +4,6 @@ spread=0
 projectileCount=1
 cooldown=0.15
 image=uzi
-ammoImage=largeAmmo
+ammo=smallAmmo
 sound=uzi.wav
 sprite=pistol
