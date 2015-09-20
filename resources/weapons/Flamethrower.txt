@@ -6,3 +6,4 @@ cooldown=0.2
 image=fire
 ammo=fire
 sprite=rifle
+sound=flame.wav
