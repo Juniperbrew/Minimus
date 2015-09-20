@@ -46,24 +46,24 @@ public class EntityAI {
         lastAttackDone = System.nanoTime();
     }
 
-    public void act(double velocity, double delta){
+    public void act(double delta){
         entity.updateCooldowns(delta);
         targetSearchTimer -= delta;
         if(aiType == MOVING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
-            move(velocity, delta);
+            move(delta);
         }else if(aiType == MOVING_AND_SHOOTING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
-            move(velocity,delta);
+            move(delta);
             shoot(delta);
         }else if(aiType == FOLLOWING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             lookForTarget();
-            move(velocity,delta);
+            move(delta);
         }else if(aiType == FOLLOWING_AND_SHOOTING){
             setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
             lookForTarget();
-            move(velocity,delta);
+            move(delta);
             shoot(delta);
         }
     }
@@ -98,7 +98,7 @@ public class EntityAI {
         setDestination(x,y);
     }
 
-    private void move(double velocity,double delta){
+    private void move(double delta){
         destinationTimer += delta;
         destinationTimeLimit -= delta;
         if(hasDestination) {
@@ -110,7 +110,7 @@ public class EntityAI {
                 return;
             }
 
-            double distanceMoved = velocity * delta;
+            double distanceMoved = entity.velocity * delta;
             double fullDistance = (float) Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2));
 
             double deltaX = (distanceX * distanceMoved) / fullDistance;

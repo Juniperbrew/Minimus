@@ -2,6 +2,7 @@
 name=civilian
 image=civilian
 health=50
+velocity=75
 }
 
 
@@ -10,6 +11,7 @@ name=uziRebel
 weapon=Uzi
 image=uziRebel
 health=150
+velocity=75
 }
 
 {
@@ -17,6 +19,7 @@ name=pistolBoy
 weapon=Pistol
 image=pistolBoy
 health=100
+velocity=75
 }
 
 {
@@ -24,6 +27,7 @@ name=shotgunManiac
 weapon=Shotgun
 image=shotgunManiac
 health=100
+velocity=75
 }
 
 {
@@ -31,6 +35,7 @@ name=bazookaBoy
 weapon=Rocket launcher
 image=bazookaBoy
 health=100
+velocity=75
 }
 
 {
@@ -38,6 +43,7 @@ name=commando
 weapon=Rifle
 image=commando
 health=100
+velocity=200
 }
 
 {
@@ -45,6 +51,7 @@ name=flamer
 weapon=Flame
 image=flamer
 health=100
+velocity=75
 }
 
 {
@@ -52,6 +59,7 @@ name=grenadeGay
 weapon=Grenade launcher
 image=grenadeGay
 health=100
+velocity=75
 }
 
 {
@@ -59,6 +67,7 @@ name=punisher
 weapon=Auto shotgun
 image=punisher
 health=200
+velocity=75
 }
 
 {
@@ -66,4 +75,5 @@ name=punk
 weapon=Grenade
 image=punk
 health=100
+velocity=75
 }

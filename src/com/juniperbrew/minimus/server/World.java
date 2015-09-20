@@ -271,7 +271,7 @@ public class World implements EntityChangeListener{
 
     private void updateEntities(float delta){
         for(EntityAI ai:entityAIs.values()){
-            ai.act(ConVars.getDouble("sv_npc_velocity"), delta);
+            ai.act(delta);
         }
         Iterator<Knockback> iter = knockbacks.iterator();
         while(iter.hasNext()){
@@ -862,7 +862,7 @@ public class World implements EntityChangeListener{
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
                 ConVars.getInt("sv_player_max_health"),ConVars.getInt("sv_player_default_team"),
-                "rambo",entityWeapons,entityAmmo,this);
+                "rambo",entityWeapons,entityAmmo,ConVars.getFloat("sv_player_velocity"),this);
         newPlayer.invulnerable = true;
         addEntity(newPlayer);
 
@@ -940,7 +940,7 @@ public class World implements EntityChangeListener{
         }
 
         ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,bounds.width,bounds.height,def.health,-1,
-                def.image,entityWeapons,entityAmmo,this);
+                def.image,entityWeapons,entityAmmo,def.velocity,this);
         entityAIs.put(networkID, new EntityAI(npc, EntityAI.FOLLOWING_AND_SHOOTING, def.weapon, this));
 
 

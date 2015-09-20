@@ -1,5 +1,5 @@
 name=Flame
-projectile=Animated_Flame
+projectile=burn
 spread=0
 projectileCount=1
 cooldown=0.2

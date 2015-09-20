@@ -21,12 +21,14 @@ public class ServerEntity extends Entity {
     HashMap<String,Integer> ammo = new HashMap<>();
     public float chargeMeter;
     public int chargeWeapon;
+    float velocity;
 
-    public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<String,Integer> ammo, EntityChangeListener listener){
+    public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<String,Integer> ammo, float velocity, EntityChangeListener listener){
         super(id, x, y, width, height, maxHealth, team, image);
         this.listener = listener;
         this.weapons = weapons;
         this.ammo = ammo;
+        this.velocity = velocity;
         for(int weapon : weapons.keySet()){
             weaponCooldowns.put(weapon,-1d);
         }

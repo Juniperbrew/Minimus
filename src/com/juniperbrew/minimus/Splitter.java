@@ -43,8 +43,6 @@ public class Splitter {
                     fileName = splits[1].replace(" ","_");
                 }
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -58,8 +56,6 @@ public class Splitter {
         try(PrintWriter writer = new PrintWriter(file)) {
             writer.print(content);
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
             e.printStackTrace();
         }
         System.out.println();
