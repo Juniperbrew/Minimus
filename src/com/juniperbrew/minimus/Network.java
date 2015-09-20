@@ -7,6 +7,8 @@ import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Rotation;
+import com.juniperbrew.minimus.components.Slot1;
+import com.juniperbrew.minimus.components.Slot2;
 import com.juniperbrew.minimus.components.Team;
 
 import java.util.ArrayList;
@@ -52,6 +54,8 @@ public class Network {
         kryo.register(AddDeath.class);
         kryo.register(Rotation.class);
         kryo.register(Team.class);
+        kryo.register(Slot1.class);
+        kryo.register(Slot2.class);
         kryo.register(FakePing.class);
         kryo.register(SendFile.class);
         kryo.register(FileReceived.class);
@@ -89,7 +93,7 @@ public class Network {
 
     public static class MapChange{
         public String mapName;
-        public HashMap<Integer,Powerup> powerups;
+        //public HashMap<Integer,Powerup> powerups;
     }
 
     public static class Message{

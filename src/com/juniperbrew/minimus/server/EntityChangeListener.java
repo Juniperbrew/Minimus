@@ -10,4 +10,6 @@ public interface EntityChangeListener {
     public void rotationChanged(int id);
     public void teamChanged(int id);
     public void entityDied(int id, int sourceID);
+    public void slot1WeaponChanged(int id);
+    public void slot2WeaponChanged(int id);
 }

@@ -1,8 +1,0 @@
-name=Flame
-projectile=burn
-spread=0
-projectileCount=1
-cooldown=0.2
-image=fire
-ammo=fire
-sprite=rifle

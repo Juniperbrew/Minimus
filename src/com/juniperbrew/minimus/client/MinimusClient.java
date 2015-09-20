@@ -37,6 +37,8 @@ import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
+import com.juniperbrew.minimus.components.Slot1;
+import com.juniperbrew.minimus.components.Slot2;
 import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
@@ -389,7 +391,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         fadeScreen();
         SharedMethods.printCollisionMap();
         loadMap(mapChange.mapName);
-        powerups = mapChange.powerups;
+        //powerups = mapChange.powerups;
+        powerups.clear();
         projectiles.clear();
         particles.clear();
         blood.clear();
@@ -835,6 +838,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     ClientEntity old = entities.get(id);
                     old.setHealth(e.health);
                     old.setTeam(e.team);
+                    old.setSlot1Weapon(e.slot1Weapon);
+                    old.setSlot2Weapon(e.slot2Weapon);
                 }
             }else{
                 showMessage("Couldn't find entity "+id+" in state update");
@@ -1180,12 +1185,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 StringBuilder textureName = new StringBuilder(e.getImage());
                 if (playerList.contains(e.getID())) {
                     textureName.append("_");
-                    if(e.getID()==player.id){
+                    textureName.append(weaponList.get(e.getSlot1Weapon()).sprite);
+                    /*if(e.getID()==player.id){
                         textureName.append(weaponList.get(player.getSlot1Weapon()).sprite);
                     }else{
                         //FIXME Use proper player weapon once server is syncing them
                         textureName.append("rifle");
-                    }
+                    }*/
                 }else if (e.getHealthPercent() > 0.5f) {
                     textureName.append("_");
                     textureName.append("hurt");
@@ -1430,6 +1436,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if(component instanceof Team){
                         Team team = (Team) component;
                         changedEntity.team = team.team;
+                    }
+                    if(component instanceof Slot1){
+                        Slot1 slot1 = (Slot1) component;
+                        changedEntity.slot1Weapon = slot1.weaponID;
+                    }
+                    if(component instanceof Slot2){
+                        Slot2 slot2 = (Slot2) component;
+                        changedEntity.slot2Weapon = slot2.weaponID;
                     }
                 }
                 newEntityList.put(id,changedEntity);

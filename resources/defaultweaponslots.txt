@@ -17,6 +17,6 @@ Secondary
 3:Old uzi
 4:Broken laser
 5:Flamer
-6:Flame
+6:Flamethrower
 7:Animated flamer
 8:OP laser

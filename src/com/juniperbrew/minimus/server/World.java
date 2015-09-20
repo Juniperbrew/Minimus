@@ -21,6 +21,8 @@ import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
+import com.juniperbrew.minimus.components.Slot1;
+import com.juniperbrew.minimus.components.Slot2;
 import com.juniperbrew.minimus.components.Team;
 import jdk.nashorn.internal.objects.Global;
 
@@ -60,6 +62,8 @@ public class World implements EntityChangeListener{
     Set<Integer> healthChangedEntities = new HashSet<>();
     Set<Integer> rotationChangedEntities = new HashSet<>();
     Set<Integer> teamChangedEntities = new HashSet<>();
+    Set<Integer> slot1ChangedEntities = new HashSet<>();
+    Set<Integer> slot2ChangedEntities = new HashSet<>();
 
     ArrayList<Integer> pendingEntityRemovals = new ArrayList<>();
 
@@ -164,13 +168,13 @@ public class World implements EntityChangeListener{
         projectiles.clear();
 
         enemySpawnZones = getEnemySpawnZones(map);
-        spawnMapPowerups(map);
 
         Network.MapChange mapChange = new Network.MapChange();
         mapChange.mapName=mapName;
-        mapChange.powerups = new HashMap<>(powerups);
+        //mapChange.powerups = new HashMap<>(powerups);
         listener.mapChanged(mapName);
 
+        spawnMapPowerups(map);
         spawnMapEnemies(map);
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
@@ -862,7 +866,7 @@ public class World implements EntityChangeListener{
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
                 ConVars.getInt("sv_player_max_health"),ConVars.getInt("sv_player_default_team"),
-                "rambo",entityWeapons,entityAmmo,ConVars.getFloat("sv_player_velocity"),this);
+                "rambo",entityWeapons,entityAmmo,ConVars.getFloat("sv_player_velocity"),0,this);
         newPlayer.invulnerable = true;
         addEntity(newPlayer);
 
@@ -940,7 +944,7 @@ public class World implements EntityChangeListener{
         }
 
         ServerEntity npc = new ServerEntity(networkID,bounds.x,bounds.y,bounds.width,bounds.height,def.health,-1,
-                def.image,entityWeapons,entityAmmo,def.velocity,this);
+                def.image,entityWeapons,entityAmmo,def.velocity,def.vision,this);
         entityAIs.put(networkID, new EntityAI(npc, EntityAI.FOLLOWING_AND_SHOOTING, def.weapon, this));
 
 
@@ -1035,6 +1039,8 @@ public class World implements EntityChangeListener{
         changedEntities.addAll(healthChangedEntities);
         changedEntities.addAll(rotationChangedEntities);
         changedEntities.addAll(teamChangedEntities);
+        changedEntities.addAll(slot1ChangedEntities);
+        changedEntities.addAll(slot2ChangedEntities);
 
         for(int id: changedEntities){
             ArrayList<Component> components = new ArrayList<>();
@@ -1055,11 +1061,21 @@ public class World implements EntityChangeListener{
                 ServerEntity e = entities.get(id);
                 components.add(new Team(e.getTeam()));
             }
+            if(slot1ChangedEntities.contains(id)){
+                ServerEntity e = entities.get(id);
+                components.add(new Slot1(e.getSlot1Weapon()));
+            }
+            if(slot2ChangedEntities.contains(id)){
+                ServerEntity e = entities.get(id);
+                components.add(new Slot2(e.getSlot2Weapon()));
+            }
         }
         posChangedEntities.clear();
         healthChangedEntities.clear();
         rotationChangedEntities.clear();
         teamChangedEntities.clear();
+        slot1ChangedEntities.clear();
+        slot2ChangedEntities.clear();
         return changedComponents;
     }
 
@@ -1118,7 +1134,6 @@ public class World implements EntityChangeListener{
 
         SharedMethods.renderParticles(delta, batch, projectiles);
         SharedMethods.renderParticles(delta, batch, particles);
-
     }
 
     private void removeEntity(int networkID) {
@@ -1129,6 +1144,8 @@ public class World implements EntityChangeListener{
         posChangedEntities.remove(networkID);
         teamChangedEntities.remove(networkID);
         rotationChangedEntities.remove(networkID);
+        slot1ChangedEntities.remove(networkID);
+        slot2ChangedEntities.remove(networkID);
 
         if(playerList.remove(networkID)){
             listener.playerRemoved(networkID);
@@ -1188,6 +1205,16 @@ public class World implements EntityChangeListener{
         }else{
             pendingEntityRemovals.add(id);
         }
+    }
+
+    @Override
+    public void slot1WeaponChanged(int id) {
+        slot1ChangedEntities.add(id);
+    }
+
+    @Override
+    public void slot2WeaponChanged(int id) {
+        slot2ChangedEntities.add(id);
     }
 
     interface WorldChangeListener{

@@ -8,6 +8,7 @@ public class EnemyDefinition {
     public String image;
     public int health;
     public float velocity;
+    public float vision;
 
     @Override
     public String toString() {
@@ -16,6 +17,7 @@ public class EnemyDefinition {
                 ", image='" + image + '\'' +
                 ", health=" + health +
                 ", velocity=" + velocity +
+                ", vision=" + vision +
                 '}';
     }
 }

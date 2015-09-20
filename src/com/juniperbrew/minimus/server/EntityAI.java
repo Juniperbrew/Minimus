@@ -87,7 +87,7 @@ public class EntityAI {
                 }
             }
         }
-        if(closestTarget!=null && Math.sqrt(closestDistance) < ConVars.getFloat("sv_npc_target_search_radius")){
+        if(closestTarget!=null && Math.sqrt(closestDistance) < entity.vision){
             setTarget(closestTarget.getCenterX(), closestTarget.getCenterY());
             targetUpdated = true;
         }

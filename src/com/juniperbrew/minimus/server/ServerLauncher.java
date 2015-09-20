@@ -44,19 +44,9 @@ public class ServerLauncher {
             menuBar.add(new JMenu("File"));
             JMenu windowsMenu = new JMenu("Windows");
             JMenuItem consoleItem = new JMenuItem("Console");
-            consoleItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    minimusServer.showConsoleWindow();
-                }
-            });
+            consoleItem.addActionListener(e -> minimusServer.showConsoleWindow());
             JMenuItem serverStatusItem = new JMenuItem("Server status");
-            serverStatusItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    minimusServer.showServerStatusWindow();
-                }
-            });
+            serverStatusItem.addActionListener(e -> minimusServer.showServerStatusWindow());
             windowsMenu.add(consoleItem);
             windowsMenu.add(serverStatusItem);
             menuBar.add(windowsMenu);

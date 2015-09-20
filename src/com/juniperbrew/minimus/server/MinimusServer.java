@@ -1052,7 +1052,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if(server!=null){
             Network.MapChange mapChange = new Network.MapChange();
             mapChange.mapName=mapName;
-            mapChange.powerups = new HashMap<>(world.powerups);
+            //mapChange.powerups = new HashMap<>(world.powerups);
             sendTCPtoAll(mapChange);
             resize(windowWidth, windowHeight);
         }

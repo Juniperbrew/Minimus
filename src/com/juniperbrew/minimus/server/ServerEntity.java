@@ -22,13 +22,15 @@ public class ServerEntity extends Entity {
     public float chargeMeter;
     public int chargeWeapon;
     float velocity;
+    float vision;
 
-    public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<String,Integer> ammo, float velocity, EntityChangeListener listener){
+    public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<String,Integer> ammo, float velocity, float vision, EntityChangeListener listener){
         super(id, x, y, width, height, maxHealth, team, image);
         this.listener = listener;
         this.weapons = weapons;
         this.ammo = ammo;
         this.velocity = velocity;
+        this.vision = vision;
         for(int weapon : weapons.keySet()){
             weaponCooldowns.put(weapon,-1d);
         }
@@ -89,7 +91,7 @@ public class ServerEntity extends Entity {
     public void addAmmo(String ammoType, int amount){
         int weaponAmmo = ammo.get(ammoType);
         weaponAmmo += amount;
-        ammo.put(ammoType,weaponAmmo);
+        ammo.put(ammoType, weaponAmmo);
     }
 
     public void addAmmoToWeapon(int weapon, int amount){
@@ -119,5 +121,15 @@ public class ServerEntity extends Entity {
         }else{
             return true;
         }
+    }
+
+    public void setSlot1Weapon(int weaponID){
+        super.setSlot1Weapon(weaponID);
+        listener.slot1WeaponChanged(getID());
+    }
+
+    public void setSlot2Weapon(int secondarySlot){
+        super.setSlot2Weapon(secondarySlot);
+        listener.slot2WeaponChanged(getID());
     }
 }
