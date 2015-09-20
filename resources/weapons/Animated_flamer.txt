@@ -1,6 +1,6 @@
 name=Animated flamer
 projectile=Animated_Flame
-pread=90
+spread=90
 projectileCount=15
 cooldown=0
 image=fire
