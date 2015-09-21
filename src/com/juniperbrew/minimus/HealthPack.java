@@ -9,6 +9,13 @@ public class HealthPack extends Powerup{
     public HealthPack() {
     }
 
+    @Override
+    public String toString() {
+        return "HealthPack{" +
+                "value=" + value +
+                '}';
+    }
+
     public HealthPack(float x, float y, float width, float height, int value){
         super(x,y,width,height);
         this.value = value;

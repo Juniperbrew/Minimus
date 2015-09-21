@@ -1013,7 +1013,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void powerupAdded(int id, Powerup powerup) {
-        showMessage("Powerup(" + powerup.getClass().getSimpleName() + ") added at (" + powerup.bounds.x + "," + powerup.bounds.y + "): " + id);
+        showMessage("Powerup(" + powerup + ") added at (" + powerup.bounds.x + "," + powerup.bounds.y + ") ID:" + id);
         if(server!=null){
             Network.AddPowerup addPowerup = new Network.AddPowerup();
             addPowerup.networkID = id;

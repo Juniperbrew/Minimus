@@ -1,10 +1,12 @@
 TODO support for variable/random projectile velocity,rotation,range,size?,projectilecount?,damage?,knockback?,friction?
-TODO sync entity active weapon, specifically players
 TODO smoother map change
 TODO no interpolation when respawning or changing map
 TODO prevent wave healthpacks from spawning inside walls
+TODO other players aiming animation
+TODO enemies cant see behind themselves, enemy turnrate?
 FIXME server map
 
+DONE sync entity active weapon, specifically players
 DONE different enemy speeds
 DONE spawn with first primary and first secondary weapon
 DONE ammotypes

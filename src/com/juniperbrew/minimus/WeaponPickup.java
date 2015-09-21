@@ -14,4 +14,12 @@ public class WeaponPickup extends Powerup{
         this.weaponID = weaponID;
 
     }
+
+    @Override
+    public String toString() {
+        return "WeaponPickup{" +
+                "weaponID=" + weaponID +
+                ", weaponName=" + GlobalVars.weaponList.get(weaponID).name +
+                '}';
+    }
 }

@@ -15,4 +15,12 @@ public class AmmoPickup extends Powerup {
         this.ammoType = ammoType;
         this.value = value;
     }
+
+    @Override
+    public String toString() {
+        return "AmmoPickup{" +
+                "ammoType='" + ammoType + '\'' +
+                ", value=" + value +
+                '}';
+    }
 }
