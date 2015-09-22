@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="40" height="80" tilewidth="20" tileheight="20" nextobjectid="49">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="40" height="80" tilewidth="20" tileheight="20" nextobjectid="50">
  <properties>
   <property name="mapScale" value="4"/>
  </properties>
@@ -2654,9 +2654,9 @@
     <property name="enemy" value="punk"/>
    </properties>
   </object>
-  <object id="48" name="enemy_punk" type="enemy" x="120" y="1420" width="16" height="16">
+  <object id="49" name="enemy_commando" type="enemy" x="240" y="500" width="16" height="16">
    <properties>
-    <property name="enemy" value="punk"/>
+    <property name="enemy" value="commando"/>
    </properties>
   </object>
  </objectgroup>

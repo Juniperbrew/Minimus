@@ -136,7 +136,7 @@ public class Network {
     public static class EntityAttacking{
         public int id;
         public int weapon;
-        public int deg;
+        public float deg;
         public float x;
         public float y;
         public HashMap<String,Float> projectileModifiers;

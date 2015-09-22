@@ -62,7 +62,7 @@ import org.apache.commons.collections4.queue.CircularFifoQueue;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener {
+public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener, GlobalVars.ConsoleLogger {
 
     Client client;
     @SuppressWarnings("FieldCanBeLocal")
@@ -206,6 +206,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void create() {
+        GlobalVars.consoleLogger = this;
         if(ConVars.getBool("cl_auto_send_errorlogs")){
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client", true, serverIP));
         }else{
@@ -945,8 +946,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         return interpPos;
     }
 
-    private int interpolateRotation(NetworkEntity from, NetworkEntity to, double alpha){
-        return (int) (from.rotation+(to.rotation-from.rotation)*alpha);
+    private float interpolateRotation(NetworkEntity from, NetworkEntity to, double alpha){
+        //If different sign
+        if((from.rotation>=0) == (to.rotation<0)){
+            //FIXME Look at this
+            float anglediff = Tools.getAngleDiff(from.rotation,to.rotation);
+            //GlobalVars.consoleLogger.log("From:"+from.rotation);
+            //GlobalVars.consoleLogger.log("To:"+to.rotation);
+            //GlobalVars.consoleLogger.log("Alpha:"+alpha);
+            //GlobalVars.consoleLogger.log("Diff:"+anglediff);
+            double result = (from.rotation-(anglediff)*alpha);
+            if(result>180) result-=360;
+            if(result<-180) result+=360;
+            //GlobalVars.consoleLogger.log("Result:"+result);
+            return (float) result;
+        }else{
+            return (float) (from.rotation+(to.rotation-from.rotation)*alpha);
+        }
     }
 
     private ArrayList<Network.UserInput> compressInputPacket(ArrayList<Network.UserInput> inputs){
@@ -2034,6 +2050,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 backgroundMusic.setVolume(musicVolume);
             }
         }
+    }
+
+    @Override
+    public void log(String message) {
+        showMessage(message);
     }
 
     class Packet{

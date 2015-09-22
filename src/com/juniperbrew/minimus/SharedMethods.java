@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class SharedMethods {
 
-    public static ArrayList<Line2D.Float> createHitscan(Weapon weapon, float centerX, float centerY, int deg){
+    public static ArrayList<Line2D.Float> createHitscan(Weapon weapon, float centerX, float centerY, float deg){
         ProjectileDefinition projectileDefinition = weapon.projectile;
         final ArrayList<Line2D.Float> hitscans = new ArrayList<>();
         //int startDistance = ConVars.getInt("sv_npc_default_size") / 2;
@@ -73,7 +73,7 @@ public class SharedMethods {
         return new Particle(def,bounds,rotation,x,y,0);
     }
 
-    public static Particle createMovingParticle(ProjectileDefinition def, float x, float y, int rotation, float velocity) {
+    public static Particle createMovingParticle(ProjectileDefinition def, float x, float y, float rotation, float velocity) {
         Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
         return new Particle(def,bounds,rotation,x,y, velocity);
     }
@@ -83,7 +83,7 @@ public class SharedMethods {
         return new Projectile(def, bounds, entityId, team);
     }
 
-    public static ArrayList<Projectile> createProjectiles(Weapon weapon, float centerX, float centerY, int deg, int entityId, int team, HashMap<String,Float> projectileModifiers) {
+    public static ArrayList<Projectile> createProjectiles(Weapon weapon, float centerX, float centerY, float deg, int entityId, int team, HashMap<String,Float> projectileModifiers) {
         ProjectileDefinition def = weapon.projectile;
         final ArrayList<Projectile> projectiles = new ArrayList<>();
         int length = def.length;
@@ -129,7 +129,7 @@ public class SharedMethods {
         float delta = input.msec / 1000f;
 
         float distance = velocity * delta;
-        int direction = e.getRotation();
+        float direction = e.getRotation();
 
         if (input.buttons.contains(Enums.Buttons.W)) {
             deltaX = MathUtils.cosDeg(direction) * distance;

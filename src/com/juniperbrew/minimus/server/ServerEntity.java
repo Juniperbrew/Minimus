@@ -45,7 +45,7 @@ public class ServerEntity extends Entity {
         listener.healthChanged(getID());
     }
 
-    public void setRotation(int degrees){
+    public void setRotation(float degrees){
         super.setRotation(degrees);
         listener.rotationChanged(getID());
     }

@@ -39,6 +39,9 @@ public class EntityAI {
     boolean targetUpdated;
     float targetSearchTimer;
 
+    private static final float TURNRATE = 120; //Deg/s
+    private float targetRotation;
+
     public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
         this.entity = entity;
         this.world = world;
@@ -82,8 +85,15 @@ public class EntityAI {
             if (target.invulnerable ||  target.getTeam() == entity.getTeam()) {
                 continue;
             }
-            float targetAngle = Tools.getAngle(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY());
-            float anglediff = (entity.getRotation() - targetAngle + 180) % 360 - 180;
+            float targetAngle = Tools.getAngle(entity.getCenterX(), entity.getCenterY(), target.getCenterX(), target.getCenterY());
+            float entityAngle = entity.getRotation();
+            float anglediff = Tools.getAngleDiff(targetAngle,entityAngle);
+            /*if(entity.getID()==-5){
+                GlobalVars.consoleLogger.log("CurrentAngle:" + entity.getRotation());
+                GlobalVars.consoleLogger.log("TargetAngle:" + targetAngle);
+                GlobalVars.consoleLogger.log("Anglediff:"+anglediff);
+                GlobalVars.consoleLogger.log("######");
+            }*/
             if(anglediff>FOV/2||anglediff<-FOV/2){
                 continue;
             }
@@ -109,6 +119,32 @@ public class EntityAI {
     private void move(double delta){
         destinationTimer += delta;
         destinationTimeLimit -= delta;
+
+        if(targetRotation!=entity.getRotation()){
+            double turn = TURNRATE*delta;
+            //float anglediff = (entityRotation - convertedTargetRotation + 180) % 360 - 180;
+            float anglediff = Tools.getAngleDiff(entity.getRotation(),targetRotation);
+            /*if(entity.getID()==45){
+                GlobalVars.consoleLogger.log("Current rotation:" + entity.getRotation());
+                GlobalVars.consoleLogger.log("Target rotation:"+targetRotation);
+                GlobalVars.consoleLogger.log("Turn:"+turn);
+                GlobalVars.consoleLogger.log("Anglediff:" + anglediff);
+            }*/
+
+            if(Math.abs(anglediff) < turn){
+                float deltaUsage = Math.abs(anglediff)/TURNRATE;
+                entity.setRotation(targetRotation);
+                delta-=deltaUsage;
+            }else{
+                if(anglediff<=0){
+                   entity.setRotation((float) (entity.getRotation()+turn));
+                }else{
+                    entity.setRotation((float) (entity.getRotation()-turn));
+                }
+                return;
+            }
+        }
+
         if(hasDestination) {
             double distanceX = destination.x - entity.getCenterX();
             double distanceY = destination.y - entity.getCenterY();
@@ -159,7 +195,12 @@ public class EntityAI {
         float deltaX = destination.x - entity.getCenterX();
         float deltaY = destination.y - entity.getCenterY();
         int degrees = (int) (MathUtils.radiansToDegrees*MathUtils.atan2(deltaY,deltaX));
-        entity.setRotation(degrees);
+        targetRotation = degrees;
+        /*if(entity.getID()==45){
+            GlobalVars.consoleLogger.log("###########################New target rotation:"+targetRotation);
+        }*/
+
+        //entity.setRotation(degrees);
     }
 
     private void setRandomDestination(int mapWidth,int mapHeight){

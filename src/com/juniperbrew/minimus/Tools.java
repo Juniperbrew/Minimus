@@ -152,4 +152,10 @@ public class Tools {
                 ", height = "+camera.viewportHeight+
                 ", zoom = "+camera.zoom;
     }
+
+    public static float getAngleDiff(float angle1, float angle2){
+        float anglediff = (angle1 - angle2 + 180) % 360 - 180;
+        if(anglediff<=-180) anglediff +=360;
+        return anglediff;
+    }
 }

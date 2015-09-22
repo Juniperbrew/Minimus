@@ -16,7 +16,7 @@ public class NetworkEntity {
     public float height;
     public int health;
     public int maxHealth;
-    public int rotation;
+    public float rotation;
     public int slot1Weapon;
     public int slot2Weapon;
     public int team;

@@ -134,11 +134,11 @@ public class Entity {
         return new Rectangle2D.Float(networkEntity.x, networkEntity.y, networkEntity.width, networkEntity.height);
     }
 
-    public int getRotation() {
+    public float getRotation() {
         return networkEntity.rotation;
     }
 
-    public void setRotation(int degrees) {
+    public void setRotation(float degrees) {
         networkEntity.rotation = degrees;
     }
 

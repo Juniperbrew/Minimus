@@ -27,7 +27,7 @@ public class Projectile extends Particle{
         super(def,bounds);
         init(def,ownerID,team);
     }
-    public Projectile(ProjectileDefinition def, Rectangle bounds, int rotation, float originX, float originY, int ownerID, int team) {
+    public Projectile(ProjectileDefinition def, Rectangle bounds, float rotation, float originX, float originY, int ownerID, int team) {
         super(def,bounds,rotation,originX,originY);
         init(def,ownerID,team);
     }

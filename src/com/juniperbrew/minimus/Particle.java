@@ -13,7 +13,7 @@ import com.badlogic.gdx.math.Rectangle;
  */
 public class Particle {
 
-    public int rotation;
+    public float rotation;
     Sprite sprite;
     Animation animation;
     float stateTime;
@@ -35,11 +35,11 @@ public class Particle {
         this(def,rect,0,rect.x+rect.width/2,rect.y+rect.height/2,0);
     }
 
-    public Particle(ProjectileDefinition def, Rectangle rect, int rotation, float originX, float originY){
+    public Particle(ProjectileDefinition def, Rectangle rect, float rotation, float originX, float originY){
         this(def,rect,rotation,originX,originY,def.velocity);
     }
 
-    public Particle(ProjectileDefinition def, Rectangle rect, int rotation, float originX, float originY, float velocity){
+    public Particle(ProjectileDefinition def, Rectangle rect, float rotation, float originX, float originY, float velocity){
         spawnTime = System.nanoTime();
         this.originX = originX;
         this.originY = originY;
