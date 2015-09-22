@@ -26,6 +26,7 @@ public class EntityAI {
 
     private static final int MAX_RANGE = 400; //Pixels
     private static final float TARGET_UPDATE_DELAY = 0.1f;
+    private static final float FOV = 180;
 
     public boolean hasDestination;
     ServerEntity entity;
@@ -75,9 +76,18 @@ public class EntityAI {
         targetSearchTimer = TARGET_UPDATE_DELAY;
         float closestDistance = Float.POSITIVE_INFINITY;
         ServerEntity closestTarget = null;
+
+
         for(ServerEntity target : world.entities.values()){
             if (target.invulnerable ||  target.getTeam() == entity.getTeam()) {
                 continue;
+            }
+            if(GlobalVars.debugFeatureToggle){
+                float targetAngle = Tools.getAngle(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY());
+                float anglediff = (entity.getRotation() - targetAngle + 180) % 360 - 180;
+                if(anglediff>FOV/2||anglediff<-FOV/2){
+                    continue;
+                }
             }
             float distance = Tools.getSquaredDistance(target.getCenterX(),target.getCenterY(),entity.getCenterX(),entity.getCenterY());
             if(distance < closestDistance){

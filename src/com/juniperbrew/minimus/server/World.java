@@ -403,7 +403,6 @@ public class World implements EntityChangeListener{
                                     knockback.setAngle(i.angle());
                                     //Scale the damage too
                                     projectile.damage *= scale;
-                                    GlobalVars.consoleLogger.log(target.getID()+" lost "+projectile.damage+" from explosion");
                                 }else{
                                     knockback = new Vector2(projectile.knockback,0);
                                     knockback.setAngle(projectile.rotation);

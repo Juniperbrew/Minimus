@@ -763,6 +763,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if (character == 'y'){
             set200Entities = true;
         }
+        if (character == 'm'){
+            GlobalVars.debugFeatureToggle = !GlobalVars.debugFeatureToggle;
+            showMessage("DebugFeatureToggle:"+GlobalVars.debugFeatureToggle);
+        }
         if (character == 'l') {
             showMessage("Sending full update to all clients");
             for(Connection c : server.getConnections()){

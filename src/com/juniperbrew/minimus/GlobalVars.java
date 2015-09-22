@@ -29,6 +29,8 @@ public class GlobalVars {
     public static HashSet<String> ammoList;
     public static ConsoleLogger consoleLogger;
 
+    public static boolean debugFeatureToggle = true;
+
     public interface ConsoleLogger{
         void log(String message);
     }
