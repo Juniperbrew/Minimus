@@ -82,12 +82,10 @@ public class EntityAI {
             if (target.invulnerable ||  target.getTeam() == entity.getTeam()) {
                 continue;
             }
-            if(GlobalVars.debugFeatureToggle){
-                float targetAngle = Tools.getAngle(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY());
-                float anglediff = (entity.getRotation() - targetAngle + 180) % 360 - 180;
-                if(anglediff>FOV/2||anglediff<-FOV/2){
-                    continue;
-                }
+            float targetAngle = Tools.getAngle(entity.getCenterX(),entity.getCenterY(),target.getCenterX(),target.getCenterY());
+            float anglediff = (entity.getRotation() - targetAngle + 180) % 360 - 180;
+            if(anglediff>FOV/2||anglediff<-FOV/2){
+                continue;
             }
             float distance = Tools.getSquaredDistance(target.getCenterX(),target.getCenterY(),entity.getCenterX(),entity.getCenterY());
             if(distance < closestDistance){
