@@ -33,6 +33,8 @@ public class Particle {
     public boolean ignoreEntityCollision;
     public boolean dontDestroyOnCollision;
     public float hitboxScaling;
+    public boolean stopOnCollision;
+    public boolean stopped;
 
     public Particle(ProjectileDefinition def, Rectangle rect){
         this(def,rect,0,rect.x+rect.width/2,rect.y+rect.height/2,0);
@@ -55,6 +57,7 @@ public class Particle {
         this.ignoreEntityCollision = def.ignoreEntityCollision;
         this.dontDestroyOnCollision = def.dontDestroyOnCollision;
         this.hitboxScaling = def.hitboxScaling;
+        this.stopOnCollision = def.stopOnCollision;
         setImage(def, rect);
         setDuration(def.duration);
     }
@@ -83,7 +86,7 @@ public class Particle {
     }
 
     public void setTexture(TextureRegion texture,Rectangle rect){
-        createSprite(texture,rect);
+        createSprite(texture, rect);
     }
     public void setTexture(TextureRegion texture,Rectangle rect,Color color){
         createSprite(texture,rect);
@@ -91,7 +94,7 @@ public class Particle {
     }
     public void setAnimation(Animation animation,Rectangle rect){
         this.animation = animation;
-        createSprite(animation.getKeyFrame(0),rect);
+        createSprite(animation.getKeyFrame(0), rect);
     }
 
     private void createSprite(TextureRegion texture, Rectangle rect){
@@ -107,8 +110,13 @@ public class Particle {
     }
 
     public void render(SpriteBatch batch, float delta){
+        //FIXME animation statetime goes ahead twice as fast when projectile has stopped this looks good with flamethrower but will be an unpredictable effect in general
         if(animation!=null){
-            stateTime += delta;
+            if(stopped){
+                stateTime += 2*delta;
+            }else{
+                stateTime += delta;
+            }
             sprite.setRegion(animation.getKeyFrame(stateTime));
         }
         sprite.draw(batch);
@@ -121,15 +129,18 @@ public class Particle {
                 velocity = 0;
             }
         }
-        float distance = velocity * delta;
-        if (range>0 &&totalDistanceTraveled + distance > range) {
-            moveDistance(range - totalDistanceTraveled);
-            totalDistanceTraveled = range;
-            destroyed = true;
-        } else {
-            moveDistance(distance);
-            totalDistanceTraveled += distance;
+        if(!stopped){
+            float distance = velocity * delta;
+            if (range>0 &&totalDistanceTraveled + distance > range) {
+                moveDistance(range - totalDistanceTraveled);
+                totalDistanceTraveled = range;
+                destroyed = true;
+            } else {
+                moveDistance(distance);
+                totalDistanceTraveled += distance;
+            }
         }
+
         if(animation!=null && animation.getPlayMode() == Animation.PlayMode.NORMAL){
             if(animation.isAnimationFinished(stateTime)){
                 destroyed = true;
@@ -152,6 +163,9 @@ public class Particle {
                     rotation = 180 - rotation;
                     sprite.setRotation(rotation);
                     return;
+                }else if(stopOnCollision){
+                    stopped = true;
+                    return;
                 }else if(!dontDestroyOnCollision){
                     destroyed = true;
                     return;
@@ -162,6 +176,9 @@ public class Particle {
                 if(bounce){
                     rotation = 0 - rotation;
                     sprite.setRotation(rotation);
+                    return;
+                }else if(stopOnCollision){
+                    stopped = true;
                     return;
                 }else if(!dontDestroyOnCollision){
                     destroyed = true;

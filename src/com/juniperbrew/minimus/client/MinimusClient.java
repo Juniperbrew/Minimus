@@ -1043,7 +1043,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     ClientEntity target = entities.get(id);
                     if(Intersector.overlaps(projectile.getBoundingRectangle(),target.getGdxBounds())){
                         if (Intersector.overlapConvexPolygons(projectile.getBoundingPolygon(), target.getPolygonBounds())) {
-                            if(!projectile.dontDestroyOnCollision){
+                            if(projectile.stopOnCollision){
+                                projectile.stopped = true;
+                            }else if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
                             if (id == player.id) {

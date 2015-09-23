@@ -8,4 +8,5 @@ velocity=400
 damage=25
 knockback=50
 hitboxScaling=0.3
+stopOnCollision
 networked

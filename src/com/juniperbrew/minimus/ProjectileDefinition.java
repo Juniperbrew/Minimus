@@ -38,6 +38,7 @@ public class ProjectileDefinition {
     public boolean looping;
     public boolean bounce;
     public float hitboxScaling;
+    public boolean stopOnCollision;
 
     @Override
     public String toString() {
@@ -67,6 +68,7 @@ public class ProjectileDefinition {
                 ", looping=" + looping +
                 ", bounce=" + bounce +
                 ", hitboxScaling=" + hitboxScaling +
+                ", stopOnCollision=" + stopOnCollision +
                 '}';
     }
 

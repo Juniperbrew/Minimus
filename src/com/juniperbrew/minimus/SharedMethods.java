@@ -866,6 +866,9 @@ public class SharedMethods {
                     if (splits[0].equals("hitboxScaling")) {
                         projectileDefinition.hitboxScaling = Float.parseFloat(splits[1]);
                     }
+                    if(splits[0].equals("stopOnCollision")){
+                        projectileDefinition.stopOnCollision = true;
+                    }
                 }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();

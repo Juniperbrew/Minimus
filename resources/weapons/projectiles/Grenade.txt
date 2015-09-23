@@ -10,4 +10,5 @@ knockback=200
 bounce
 friction=300
 dontDestroyOnCollision
+stopOnCollision
 networked

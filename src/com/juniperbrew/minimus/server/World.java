@@ -391,7 +391,9 @@ public class World implements EntityChangeListener{
                     Rectangle entityBounds = target.getGdxBounds();
                     if(Intersector.intersectRectangles(projectileBounds, entityBounds, intersection)){
                         if(Intersector.overlapConvexPolygons(projectile.getBoundingPolygon(), target.getPolygonBounds())){
-                            if(!projectile.dontDestroyOnCollision){
+                            if(projectile.stopOnCollision){
+                                projectile.stopped = true;
+                            }else if(!projectile.dontDestroyOnCollision){
                                 projectile.destroyed = true;
                             }
                             //Explosion self knockbacks apply on player but dont damage him
