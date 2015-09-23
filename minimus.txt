@@ -2,7 +2,6 @@ TODO support for variable/random projectile velocity,rotation,range,size?,projec
 TODO smoother map change
 TODO no interpolation when respawning or changing map
 TODO other players aiming animation
-FIXME server map
 
 DONE prevent wave healthpacks from spawning inside walls
 DONE enemies cant see behind themselves, enemy turnrate

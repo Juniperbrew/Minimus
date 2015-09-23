@@ -24,7 +24,6 @@ import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Slot1;
 import com.juniperbrew.minimus.components.Slot2;
 import com.juniperbrew.minimus.components.Team;
-import jdk.nashorn.internal.objects.Global;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
@@ -111,7 +110,6 @@ public class World implements EntityChangeListener{
     ArrayList<Rectangle> enemySpawnZones;
 
     TextureRegion cachedMap;
-    boolean redrawMap;
 
     public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
@@ -1099,21 +1097,19 @@ public class World implements EntityChangeListener{
         }
     }
 
-    public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch, OrthographicCamera camera){
+    public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch, OrthographicCamera camera,OrthographicCamera hudCamera){
 
         batch.setColor(1, 1, 1, 1);
-        if(cachedMap==null||redrawMap){
+        if(cachedMap==null){
             mapRenderer.setView(camera);
             mapRenderer.render();
             cachedMap = ScreenUtils.getFrameBufferTexture();
-            redrawMap = false;
         }else{
-            batch.setProjectionMatrix(camera.combined);
+            batch.setProjectionMatrix(hudCamera.combined);
             batch.begin();
-            //FIXME why cant i just draw the map at (0,0) this probably has something to do with how i center the map to window
-            //FIXME if window height is greater than width the map is no longer centered
-            batch.draw(cachedMap, -(camera.viewportWidth - GlobalVars.mapWidth) / 2f, 0, camera.viewportWidth, camera.viewportHeight);
+            batch.draw(cachedMap,0,0);
             batch.end();
+            batch.setProjectionMatrix(camera.combined);
         }
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);

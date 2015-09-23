@@ -128,6 +128,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         world = new World(this, new TmxMapLoader(), batch);
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
+        camera = new OrthographicCamera();
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
         resize(h, w);
         font = new BitmapFont();
@@ -444,7 +445,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        world.render(delta, shapeRenderer, batch, camera);
+        world.render(delta, shapeRenderer, batch, camera, hudCamera);
 
         if(showGraphs) {
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
@@ -876,9 +877,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         int mapWidth = world.getMapWidth();
         int mapHeight = world.getMapHeight();
         if(h > ((float)w/ mapWidth)* mapHeight){
-            camera = new OrthographicCamera(mapWidth, h*((float) mapWidth /w));
+            camera.viewportWidth = mapWidth;
+            camera.viewportHeight = h*((float) mapWidth /w);
         }else{
-            camera = new OrthographicCamera(w*((float) mapHeight /h), mapHeight);
+            camera.viewportWidth = w*((float) mapHeight /h);
+            camera.viewportHeight = mapHeight;
         }
         viewPortX = mapWidth /2f;
         viewPortY = mapHeight /2f;
@@ -890,7 +893,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         hudCamera.position.set(windowWidth/2,windowHeight / 2,0);
         hudCamera.update();
 
-        world.redrawMap = true;
+        world.cachedMap = null;
     }
     @Override
     public void pause() {}
