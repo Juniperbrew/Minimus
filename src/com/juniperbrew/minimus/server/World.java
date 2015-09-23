@@ -1,13 +1,10 @@
 package com.juniperbrew.minimus.server;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.MapLayer;
-import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
@@ -71,10 +68,9 @@ public class World implements EntityChangeListener{
     private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
 
-    int mapWidth;
-    int mapHeight;
-
     TiledMap map;
+    ArrayList<RectangleMapObject> mapObjects;
+
     String mapName;
     private int wave;
     private int spawnedHealthPacksCounter;
@@ -102,35 +98,41 @@ public class World implements EntityChangeListener{
     TextureAtlas atlas;
     TmxMapLoader mapLoader;
 
-    HashMap<String,TiledMap> mapList = new HashMap<>();
-    HashMap<TiledMap,ArrayList<RectangleMapObject>> mapObjects = new HashMap<>();
+    //HashMap<String,TiledMap> mapList = new HashMap<>();
+    //HashMap<TiledMap,ArrayList<RectangleMapObject>> mapObjects = new HashMap<>();
     OrthogonalTiledMapRenderer mapRenderer;
     SpriteBatch batch;
 
     ArrayList<Rectangle> enemySpawnZones;
 
     TextureRegion cachedMap;
+    private float mapEndTimer;
+    boolean mapCleared;
+
+    Rectangle mapExit;
 
     public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
         this.mapLoader = mapLoader;
         this.batch = batch;
-        loadMaps();
+        //loadMaps();
         projectileList = SharedMethods.readSeperatedProjectileList();
         weaponList = readWeaponSlots(SharedMethods.readSeperatedWeaponList(projectileList));
         ammoList = SharedMethods.getAmmoList(weaponList);
 
-        GlobalVars.weaponList = weaponList;
-        GlobalVars.ammoList = ammoList;
+        G.weaponList = weaponList;
+        G.ammoList = ammoList;
         enemyList = SharedMethods.readEnemyList(weaponList);
         loadImages();
 
         changeMap(ConVars.get("sv_map"));
     }
 
-    private TiledMap loadMap(String mapName){
-        GlobalVars.consoleLogger.log("Loading map: " + mapName);
-        return mapLoader.load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
+    private void loadMap(String mapName){
+        G.consoleLogger.log("Loading map: " + mapName);
+        String fileName = G.mapFolder+File.separator+mapName+File.separator+mapName+".tmx";
+        map = mapLoader.load(fileName);
+        mapObjects = SharedMethods.getScaledMapobjects(map);
     }
 
     public HashMap<Integer,NetworkEntity> getNetworkedEntities(){
@@ -142,34 +144,37 @@ public class World implements EntityChangeListener{
     }
 
     public void changeMap(String mapName){
-        map = mapList.get(mapName);
+        G.consoleLogger.log("\nChanging map to "+mapName);
+        loadMap(mapName);
         cachedMap = null;
+        mapExit = null;
+        mapCleared = false;
         this.mapName = mapName;
         float mapScale = SharedMethods.getMapScale(map);
 
-        GlobalVars.mapScale = mapScale;
-        GlobalVars.mapWidthTiles = map.getProperties().get("width",Integer.class);
-        GlobalVars.mapHeightTiles = map.getProperties().get("height",Integer.class);
-        GlobalVars.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
-        GlobalVars.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* mapScale);
+        G.mapScale = mapScale;
+        G.mapWidthTiles = map.getProperties().get("width",Integer.class);
+        G.mapHeightTiles = map.getProperties().get("height",Integer.class);
+        G.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
+        G.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* mapScale);
 
-        mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
-        mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
-        GlobalVars.mapWidth = mapWidth;
-        GlobalVars.mapHeight = mapHeight;
+        G.mapWidth = G.mapWidthTiles * G.tileWidth;
+        G.mapHeight = G.mapHeightTiles * G.tileHeight;
 
-        GlobalVars.collisionMap = SharedMethods.createCollisionMap(map, GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles);
+        G.consoleLogger.log("Mapsize: "+G.mapWidthTiles+"x"+G.mapHeightTiles);
+
+        G.collisionMap = SharedMethods.createCollisionMap(map, G.mapWidthTiles, G.mapHeightTiles);
         movePlayersToSpawn();
 
         removeAllNpcs();
         powerups.clear();
         projectiles.clear();
 
-        enemySpawnZones = getEnemySpawnZones(map);
+        enemySpawnZones = getEnemySpawnZones();
+        mapExit = SharedMethods.getMapExit(mapObjects);
 
         Network.MapChange mapChange = new Network.MapChange();
         mapChange.mapName=mapName;
-        //mapChange.powerups = new HashMap<>(powerups);
         listener.mapChanged(mapName);
 
         spawnMapPowerups(map);
@@ -179,8 +184,8 @@ public class World implements EntityChangeListener{
     }
 
     private void spawnMapPowerups(TiledMap map){
-        GlobalVars.consoleLogger.log("\nSpawning map powerups");
-        for(RectangleMapObject o : mapObjects.get(map)){
+        G.consoleLogger.log("\nSpawning map powerups");
+        for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("powerup")){
                 Rectangle r = o.getRectangle();
                 MapProperties p = o.getProperties();
@@ -188,7 +193,7 @@ public class World implements EntityChangeListener{
                     String weaponName = p.get("weapon",String.class);
                     int weaponID = SharedMethods.getWeaponID(weaponList,weaponName);
                     if(weaponID==-1){
-                        GlobalVars.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
+                        G.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
                     }
                     spawnPowerup(new WeaponPickup(r.x, r.y, r.width, r.height, weaponID));
                 }else if(p.containsKey("health")){
@@ -196,8 +201,8 @@ public class World implements EntityChangeListener{
                     spawnPowerup(new HealthPack(r.x, r.y, r.width, r.height, value));
                 }else if(p.containsKey("ammo")){
                     String ammoType = p.get("ammo", String.class);
-                    if(!GlobalVars.ammoList.contains(ammoType)){
-                        GlobalVars.consoleLogger.log("ERROR Cannot find ammo named "+ammoType);
+                    if(!G.ammoList.contains(ammoType)){
+                        G.consoleLogger.log("ERROR Cannot find ammo named "+ammoType);
                     }
                     int value = Integer.parseInt(p.get("value",String.class));
                     spawnPowerup(new AmmoPickup(r.x, r.y, r.width, r.height, ammoType, value));
@@ -207,8 +212,8 @@ public class World implements EntityChangeListener{
     }
 
     private void spawnMapEnemies(TiledMap map){
-        GlobalVars.consoleLogger.log("\nSpawning map enemies");
-        for(RectangleMapObject o : mapObjects.get(map)){
+        G.consoleLogger.log("\nSpawning map enemies");
+        for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
                 Rectangle r = o.getRectangle();
                 MapProperties p = o.getProperties();
@@ -218,25 +223,9 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private ArrayList<RectangleMapObject> getScaledMapobjects(TiledMap map){
-        float s = SharedMethods.getMapScale(map);
-        ArrayList<RectangleMapObject> mapObjects = new ArrayList<>();
-        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
-            for(MapObject o : layer.getObjects()){
-                if(o instanceof RectangleMapObject){
-                    RectangleMapObject rectObject = (RectangleMapObject) o;
-                    Rectangle bounds = rectObject.getRectangle();
-                    rectObject.getRectangle().set(bounds.x*s,bounds.y*s,bounds.width*s,bounds.height*s);
-                    mapObjects.add(rectObject);
-                }
-            }
-        }
-        return mapObjects;
-    }
-
     public void setPlayerWeapon(int id, int weaponID){
         ServerEntity player = entities.get(id);
-        if(weaponID<=GlobalVars.primaryWeaponCount){
+        if(weaponID<= G.primaryWeaponCount){
             player.setSlot1Weapon(weaponID);
         }else{
             player.setSlot2Weapon(weaponID);
@@ -250,11 +239,12 @@ public class World implements EntityChangeListener{
         }
         pendingEntityRemovals.clear();
 
-        updateGameState();
+        updateGameState(delta);
         updateEntities(delta);
         updateProjectiles(delta);
         updateParticles(delta);
         //checkPlayerEntityCollisions();
+        checkPlayerCollisions();
         checkEntityCollisions();
         checkPowerupCollisions();
     }
@@ -296,7 +286,7 @@ public class World implements EntityChangeListener{
 
     }
 
-    private void updateGameState(){
+    private void updateGameState(float delta){
         if(spawnWaves) {
             if (entityAIs.isEmpty() && (spawnedEnemiesCounter == waveEnemyCount)) {
                 spawnedHealthPacksCounter = 0;
@@ -321,21 +311,38 @@ public class World implements EntityChangeListener{
             }
         }else{
             if (entityAIs.isEmpty()){
-                String nextMap = map.getProperties().get("nextLevel",String.class);
-                if(nextMap!=null){
-                    changeMap(nextMap);
+                if(!mapCleared){
+                    if(mapExit==null){
+                        mapEndTimer = 10f;
+                        listener.mapCleared(mapEndTimer);
+                    }else{
+                        listener.mapCleared(0);
+                    }
+                    mapCleared = true;
+                }
+
+                if(mapExit == null){
+                    if(mapEndTimer<=0){
+                        String nextMap = map.getProperties().get("nextLevel",String.class);
+                        if(nextMap!=null){
+                            changeMap(nextMap);
+                        }
+                        mapCleared = false;
+                    }else{
+                        mapEndTimer -= delta;
+                    }
                 }
             }
         }
     }
 
     private void movePlayerToSpawn(int id){
-        Rectangle spawnZone = getSpawnZone(map);
+        Rectangle spawnZone = getSpawnZone();
         ServerEntity e = entities.get(id);
         if(spawnZone!=null){
             e.moveTo(MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-e.getWidth()),MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-e.getHeight()));
         }else{
-            e.moveTo(MathUtils.random(mapWidth-e.getWidth()),MathUtils.random(mapHeight-e.getHeight()));
+            e.moveTo(MathUtils.random(G.mapWidth-e.getWidth()),MathUtils.random(G.mapHeight-e.getHeight()));
         }
     }
 
@@ -345,19 +352,19 @@ public class World implements EntityChangeListener{
         }
     }
 
-    private Rectangle getSpawnZone(TiledMap map){
-        for(RectangleMapObject o : mapObjects.get(map)){
+    private Rectangle getSpawnZone(){
+        for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
-                GlobalVars.consoleLogger.log("Spawn at:" + o.getRectangle());
+                G.consoleLogger.log("Spawn at:" + o.getRectangle());
                 return o.getRectangle();
             }
         }
         return null;
     }
 
-    private ArrayList<Rectangle> getEnemySpawnZones(TiledMap map){
+    private ArrayList<Rectangle> getEnemySpawnZones(){
         ArrayList<Rectangle> zones = new ArrayList<>();
-        for(RectangleMapObject o : mapObjects.get(map)){
+        for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemySpawn")){
                 zones.add(o.getRectangle());
             }
@@ -432,6 +439,21 @@ public class World implements EntityChangeListener{
             }
         }
         projectiles.removeAll(destroyedProjectiles);
+    }
+
+    private void checkPlayerCollisions(){
+        for(int id : playerList){
+            ServerEntity player = entities.get(id);
+            if(mapCleared&&mapExit!=null){
+                if(player.getGdxBounds().overlaps(mapExit)){
+                    String nextMap = map.getProperties().get("nextLevel",String.class);
+                    if(nextMap!=null){
+                        changeMap(nextMap);
+                    }
+                    continue;
+                }
+            }
+        }
     }
 
     private void checkEntityCollisions(){
@@ -760,7 +782,7 @@ public class World implements EntityChangeListener{
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponslots.txt");
         }
-        GlobalVars.consoleLogger.log("\nLoading weapon slots from file:" + file);
+        G.consoleLogger.log("\nLoading weapon slots from file:" + file);
         HashMap<Integer,Weapon> weaponList = new HashMap<>();
         HashMap<Integer,String> primaries = new HashMap<>();
         HashMap<Integer,String> secondaries = new HashMap<>();
@@ -790,30 +812,30 @@ public class World implements EntityChangeListener{
             e.printStackTrace();
         }
 
-        GlobalVars.consoleLogger.log("Populating weaponlist");
-        GlobalVars.consoleLogger.log("Primary weapons");
+        G.consoleLogger.log("Populating weaponlist");
+        G.consoleLogger.log("Primary weapons");
         int id = 1;
         for(int slot: primaries.keySet()){
-            GlobalVars.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(primaries.get(slot)));
+            G.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(primaries.get(slot)));
             weaponList.put(id,weapons.get(primaries.get(slot)));
             id++;
         }
-        GlobalVars.consoleLogger.log("Secondary weapons");
+        G.consoleLogger.log("Secondary weapons");
         for(int slot: secondaries.keySet()){
-            GlobalVars.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(secondaries.get(slot)));
+            G.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(secondaries.get(slot)));
             weaponList.put(id,weapons.get(secondaries.get(slot)));
             id++;
         }
-        GlobalVars.consoleLogger.log("Storing primary weapon count: " + primaries.size());
+        G.consoleLogger.log("Storing primary weapon count: " + primaries.size());
         primaryWeaponCount = primaries.size();
-        GlobalVars.primaryWeaponCount = primaryWeaponCount;
+        G.primaryWeaponCount = primaryWeaponCount;
         return weaponList;
     }
 
     private void loadImages() {
-        GlobalVars.consoleLogger.log("\nLoading texture atlas");
+        G.consoleLogger.log("\nLoading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
-        GlobalVars.atlas = atlas;
+        G.atlas = atlas;
     }
 
     private void addEntity(ServerEntity e){
@@ -825,17 +847,17 @@ public class World implements EntityChangeListener{
 
         int networkID = getNextNetworkID();
         playerList.add(networkID);
-        int width = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
-        int height = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
-        Rectangle spawnZone = getSpawnZone(map);
+        int width = (int) (ConVars.getInt("sv_npc_default_size")* G.mapScale);
+        int height = (int) (ConVars.getInt("sv_npc_default_size")* G.mapScale);
+        Rectangle spawnZone = getSpawnZone();
         float x;
         float y;
         if(spawnZone!=null){
             x = MathUtils.random(spawnZone.getX(),spawnZone.getX()+spawnZone.getWidth()-width);
             y = MathUtils.random(spawnZone.getY(),spawnZone.getY()+spawnZone.getHeight()-height);
         }else{
-            x = MathUtils.random(mapWidth-width);
-            y = MathUtils.random(mapHeight-height);
+            x = MathUtils.random(G.mapWidth-width);
+            y = MathUtils.random(G.mapHeight-height);
         }
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
@@ -857,7 +879,7 @@ public class World implements EntityChangeListener{
         //Start with primary weapon
         entityWeapons.put(1, true);
         //Start with secondary weapon
-        entityWeapons.put(GlobalVars.primaryWeaponCount+1,true);
+        entityWeapons.put(G.primaryWeaponCount+1,true);
 
         playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
         ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
@@ -888,8 +910,8 @@ public class World implements EntityChangeListener{
     }
 
     public void addNPC(EnemyDefinition def){
-        int width = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
-        int height = (int) (ConVars.getInt("sv_npc_default_size")*GlobalVars.mapScale);
+        int width = (int) (ConVars.getInt("sv_npc_default_size")* G.mapScale);
+        int height = (int) (ConVars.getInt("sv_npc_default_size")* G.mapScale);
         float spawnPosition = MathUtils.random(SPAWN_AREA_WIDTH * -1, SPAWN_AREA_WIDTH);
         float x;
         float y;
@@ -900,18 +922,18 @@ public class World implements EntityChangeListener{
         }else{
             if(MathUtils.randomBoolean()){
                 if(spawnPosition >= 0){
-                    x = mapWidth+spawnPosition;
+                    x = G.mapWidth+spawnPosition;
                 }else{
                     x = spawnPosition;
                 }
-                y = MathUtils.random(0-SPAWN_AREA_WIDTH,mapHeight+SPAWN_AREA_WIDTH);
+                y = MathUtils.random(0-SPAWN_AREA_WIDTH, G.mapHeight+SPAWN_AREA_WIDTH);
             }else{
                 if(spawnPosition >= 0){
-                    y = mapHeight+spawnPosition;
+                    y = G.mapHeight+spawnPosition;
                 }else{
                     y = spawnPosition;
                 }
-                x = MathUtils.random(0-SPAWN_AREA_WIDTH,mapWidth + SPAWN_AREA_WIDTH);
+                x = MathUtils.random(0-SPAWN_AREA_WIDTH, G.mapWidth + SPAWN_AREA_WIDTH);
             }
         }
         addNPC(def, new Rectangle(x, y, width, height));
@@ -919,7 +941,7 @@ public class World implements EntityChangeListener{
 
     public void addNPC(EnemyDefinition def, Rectangle bounds){
 
-        GlobalVars.consoleLogger.log("Adding npc:" + def + " at " + bounds);
+        G.consoleLogger.log("Adding npc:" + def + " at " + bounds);
         int networkID = getNextNetworkID();
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
@@ -971,8 +993,8 @@ public class World implements EntityChangeListener{
         Rectangle bounds = new Rectangle(0,0,40,40);
         //Try 20 times to spawn it outside a wall after that just spawn it anywhere
         for (int i = 0; i < 20; i++) {
-            bounds.setX(MathUtils.random(0, mapWidth));
-            bounds.setY(MathUtils.random(0, mapHeight));
+            bounds.setX(MathUtils.random(0, G.mapWidth));
+            bounds.setY(MathUtils.random(0, G.mapHeight));
             if(!SharedMethods.checkMapCollision(bounds)){
                 break;
             }
@@ -1007,20 +1029,6 @@ public class World implements EntityChangeListener{
                 }while(playerList.contains(keys[removeIndex]));
                 networkID = keys[removeIndex];
                 removeEntity(networkID);
-            }
-        }
-    }
-
-    private void loadMaps(){
-
-        File mapFolder = new File("resources" + File.separator + "maps");
-        GlobalVars.consoleLogger.log("Loading maps from: " + mapFolder);
-        for (final File file : mapFolder.listFiles()) {
-            if (file.isDirectory()) {
-                TiledMap map = loadMap(file.getName());
-                mapList.put(file.getName(), map);
-                mapObjects.put(map, getScaledMapobjects(map));
-                GlobalVars.consoleLogger.log("Loaded: " + file.getName());
             }
         }
     }
@@ -1158,13 +1166,6 @@ public class World implements EntityChangeListener{
         return entities.size();
     }
 
-    public int getMapHeight(){
-        return mapHeight;
-    }
-    public int getMapWidth(){
-        return mapWidth;
-    }
-
     public ServerEntity getEntity(int id){
         return entities.get(id);
     }
@@ -1230,6 +1231,7 @@ public class World implements EntityChangeListener{
         public void waveChanged(int wave);
         public void attackCreated(Network.EntityAttacking entityAttacking, Weapon weapon);
         public void mapChanged(String mapName);
+        public void mapCleared(float timer);
         public void ammoAddedChanged(int id, String ammoType, int value);
         public void weaponAdded(int id, int weapon);
         public void networkedProjectileSpawned(String projectileName, float x, float y, int ownerID, int team);

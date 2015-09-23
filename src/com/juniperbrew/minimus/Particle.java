@@ -58,16 +58,16 @@ public class Particle {
 
     private void setImage(ProjectileDefinition def, Rectangle rect){
         if (def.image != null) {
-            TextureRegion texture = GlobalVars.atlas.findRegion(def.image);
+            TextureRegion texture = G.atlas.findRegion(def.image);
             setTexture(texture, rect);
         } else if (def.animation != null) {
-            Animation animation = new Animation(def.frameDuration, GlobalVars.atlas.findRegions(def.animation));
+            Animation animation = new Animation(def.frameDuration, G.atlas.findRegions(def.animation));
             if(def.looping){
                 animation.setPlayMode(Animation.PlayMode.LOOP);
             }
             setAnimation(animation, rect);
         } else {
-            TextureRegion texture = GlobalVars.atlas.findRegion("blank");
+            TextureRegion texture = G.atlas.findRegion("blank");
             Color color;
             if (def.color == null) {
                 color = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);

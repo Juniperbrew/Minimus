@@ -4,6 +4,9 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Intersector;
@@ -183,10 +186,10 @@ public class SharedMethods {
 
     public static boolean checkMapCollision(Rectangle bounds) {
 
-        int minX = (int) Math.floor(bounds.x / GlobalVars.tileWidth);
-        int maxX = (int) Math.floor((bounds.x + bounds.width) / GlobalVars.tileWidth);
-        int minY = (int) Math.floor(bounds.y / GlobalVars.tileHeight);
-        int maxY = (int) Math.floor((bounds.y + bounds.height) / GlobalVars.tileHeight);
+        int minX = (int) Math.floor(bounds.x / G.tileWidth);
+        int maxX = (int) Math.floor((bounds.x + bounds.width) / G.tileWidth);
+        int minY = (int) Math.floor(bounds.y / G.tileHeight);
+        int maxY = (int) Math.floor((bounds.y + bounds.height) / G.tileHeight);
 
 
         for (int x = minX; x <= maxX; x++) {
@@ -199,10 +202,10 @@ public class SharedMethods {
 
     public static float checkMapAxisCollision(Rectangle bounds, boolean xAxis) {
 
-        int minX = (int) Math.floor(bounds.x / GlobalVars.tileWidth);
-        int maxX = (int) Math.floor((bounds.x + bounds.width) / GlobalVars.tileWidth);
-        int minY = (int) Math.floor(bounds.y / GlobalVars.tileHeight);
-        int maxY = (int) Math.floor((bounds.y + bounds.height) / GlobalVars.tileHeight);
+        int minX = (int) Math.floor(bounds.x / G.tileWidth);
+        int maxX = (int) Math.floor((bounds.x + bounds.width) / G.tileWidth);
+        int minY = (int) Math.floor(bounds.y / G.tileHeight);
+        int maxY = (int) Math.floor((bounds.y + bounds.height) / G.tileHeight);
 
         float correction = 0;
         float tempCorrection;
@@ -235,14 +238,14 @@ public class SharedMethods {
     }
 
     private static Rectangle getTileBounds(int x, int y){
-        return new Rectangle(x*GlobalVars.tileWidth,y*GlobalVars.tileHeight,GlobalVars.tileWidth,GlobalVars.tileHeight);
+        return new Rectangle(x* G.tileWidth,y* G.tileHeight, G.tileWidth, G.tileHeight);
     }
 
     public static boolean isTileSolid(int x, int y) {
-        if (x < 0 || x >= GlobalVars.mapWidthTiles || y < 0 || y >= GlobalVars.mapHeightTiles) {
+        if (x < 0 || x >= G.mapWidthTiles || y < 0 || y >= G.mapHeightTiles) {
             return false;
         }
-        if (GlobalVars.collisionMap[x][y]) {
+        if (G.collisionMap[x][y]) {
             return true;
         } else {
             return false;
@@ -280,17 +283,17 @@ public class SharedMethods {
         if(tile==null){
             return null;
         }
-        Rectangle bounds = new Rectangle(tile.x*GlobalVars.tileWidth,tile.y*GlobalVars.tileHeight,GlobalVars.tileWidth,GlobalVars.tileHeight);
+        Rectangle bounds = new Rectangle(tile.x* G.tileWidth,tile.y* G.tileHeight, G.tileWidth, G.tileHeight);
         Line2D.Float line = new Line2D.Float(screenX0,screenY0,screenX1,screenY1);
         return getLineIntersectionWithRectangle(line,bounds);
     }
 
 
     public static Vector2 raytraceInt(float screenX0, float screenY0, float screenX1, float screenY1) {
-        int x0 = (int) (screenX0 / GlobalVars.tileWidth);
-        int y0 = (int) (screenY0 / GlobalVars.tileHeight);
-        int x1 = (int) (screenX1 / GlobalVars.tileWidth);
-        int y1 = (int) (screenY1 / GlobalVars.tileHeight);
+        int x0 = (int) (screenX0 / G.tileWidth);
+        int y0 = (int) (screenY0 / G.tileHeight);
+        int x1 = (int) (screenX1 / G.tileWidth);
+        int y1 = (int) (screenY1 / G.tileHeight);
 
         int dx = Math.abs(x1 - x0);
         int dy = Math.abs(y1 - y0);
@@ -323,10 +326,10 @@ public class SharedMethods {
 
         renderer.begin(ShapeRenderer.ShapeType.Line);
         renderer.setColor(0,1,0,1);
-        double x0 = screenX0 / GlobalVars.tileWidth;
-        double y0 = screenY0 / GlobalVars.tileHeight;
-        double x1 = screenX1 / GlobalVars.tileWidth;
-        double y1 = screenY1 / GlobalVars.tileHeight;
+        double x0 = screenX0 / G.tileWidth;
+        double y0 = screenY0 / G.tileHeight;
+        double x1 = screenX1 / G.tileWidth;
+        double y1 = screenY1 / G.tileHeight;
 
         double dx = Math.abs(x1 - x0);
         double dy = Math.abs(y1 - y0);
@@ -376,7 +379,7 @@ public class SharedMethods {
 
         for (; n > 0; --n)
         {
-            renderer.rect(x*GlobalVars.tileWidth,y*GlobalVars.tileHeight,GlobalVars.tileWidth,GlobalVars.tileHeight);
+            renderer.rect(x* G.tileWidth,y* G.tileHeight, G.tileWidth, G.tileHeight);
 
             if (error > 0)
             {
@@ -399,10 +402,10 @@ public class SharedMethods {
         System.out.println("sY0:"+screenY0);
         System.out.println("sX1:"+screenX1);
         System.out.println("sY1:"+screenY1);
-        double x0 = screenX0 / GlobalVars.tileWidth;
-        double y0 = screenY0 / GlobalVars.tileHeight;
-        double x1 = screenX1 / GlobalVars.tileWidth;
-        double y1 = screenY1 / GlobalVars.tileHeight;
+        double x0 = screenX0 / G.tileWidth;
+        double y0 = screenY0 / G.tileHeight;
+        double x1 = screenX1 / G.tileWidth;
+        double y1 = screenY1 / G.tileHeight;
         System.out.println("X0:"+x0);
         System.out.println("Y0:"+y0);
         System.out.println("X1:"+x1);
@@ -490,10 +493,10 @@ public class SharedMethods {
     public static Vector2 raytrace(float screenX0, float screenY0, float screenX1, float screenY1)
     {
 
-        double x0 = screenX0 / GlobalVars.tileWidth;
-        double y0 = screenY0 / GlobalVars.tileHeight;
-        double x1 = screenX1 / GlobalVars.tileWidth;
-        double y1 = screenY1 / GlobalVars.tileHeight;
+        double x0 = screenX0 / G.tileWidth;
+        double y0 = screenY0 / G.tileHeight;
+        double x1 = screenX1 / G.tileWidth;
+        double y1 = screenY1 / G.tileHeight;
 
         double dx = Math.abs(x1 - x0);
         double dy = Math.abs(y1 - y0);
@@ -579,9 +582,9 @@ public class SharedMethods {
     }
 
     public static void printCollisionMap(){
-        for(int y = 0; y < GlobalVars.mapHeightTiles; y++){
-            for (int x = 0; x < GlobalVars.mapWidthTiles; x++) {
-                if(GlobalVars.collisionMap[x][GlobalVars.mapHeightTiles-y-1]){
+        for(int y = 0; y < G.mapHeightTiles; y++){
+            for (int x = 0; x < G.mapWidthTiles; x++) {
+                if(G.collisionMap[x][G.mapHeightTiles-y-1]){
                     System.out.print("#");
                 }else{
                     System.out.print("0");
@@ -704,7 +707,7 @@ public class SharedMethods {
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultenemylist.txt");
         }
-        GlobalVars.consoleLogger.log("\nLoading enemies from file:" + file);
+        G.consoleLogger.log("\nLoading enemies from file:" + file);
         HashMap<String,EnemyDefinition> enemies = new HashMap<>();
         EnemyDefinition enemyDefinition = null;
         String enemyName = null;
@@ -750,7 +753,7 @@ public class SharedMethods {
             e.printStackTrace();
         }
         for(EnemyDefinition e: enemies.values()){
-            GlobalVars.consoleLogger.log(e.toString());
+            G.consoleLogger.log(e.toString());
         }
 
         return enemies;
@@ -759,7 +762,7 @@ public class SharedMethods {
     public static HashMap<String,ProjectileDefinition> readSeperatedProjectileList(){
         File projectileFolder = new File("resources"+File.separator+"weapons"+File.separator+"projectiles");
         ArrayList<File> files = new ArrayList<>();
-        GlobalVars.consoleLogger.log("\nLoading projectiles from folder:" + projectileFolder);
+        G.consoleLogger.log("\nLoading projectiles from folder:" + projectileFolder);
         for (File fileEntry : projectileFolder.listFiles()) {
             if (!fileEntry.isDirectory()&&!fileEntry.isHidden()) {
                 if(!fileEntry.getName().equals("!PROPERTIES.txt")){
@@ -870,7 +873,7 @@ public class SharedMethods {
         }
 
         for(ProjectileDefinition def: projectiles.values()){
-            GlobalVars.consoleLogger.log(def.toString());
+            G.consoleLogger.log(def.toString());
         }
 
         return projectiles;
@@ -879,7 +882,7 @@ public class SharedMethods {
     public static HashMap<String,Weapon> readSeperatedWeaponList(HashMap<String,ProjectileDefinition> projectileList){
         File weaponsFolder = new File("resources"+File.separator+"weapons");
         ArrayList<File> files = new ArrayList<>();
-        GlobalVars.consoleLogger.log("\nLoading weapons from folder:" + weaponsFolder);
+        G.consoleLogger.log("\nLoading weapons from folder:" + weaponsFolder);
         for (File fileEntry : weaponsFolder.listFiles()) {
             if (!fileEntry.isDirectory()&&!fileEntry.isHidden()) {
                 if(!fileEntry.getName().equals("!PROPERTIES.txt")){
@@ -952,7 +955,7 @@ public class SharedMethods {
         }
 
         for(Weapon w: weapons.values()){
-            GlobalVars.consoleLogger.log(w.toString());
+            G.consoleLogger.log(w.toString());
         }
 
         return weapons;
@@ -963,7 +966,7 @@ public class SharedMethods {
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultprojectilelist.txt");
         }
-        GlobalVars.consoleLogger.log("\nLoading projectiles from file:"+file);
+        G.consoleLogger.log("\nLoading projectiles from file:"+file);
         HashMap<String,ProjectileDefinition> projectiles = new HashMap<>();
         ProjectileDefinition projectileDefinition = null;
         String projectileName = null;
@@ -1074,7 +1077,7 @@ public class SharedMethods {
         }
 
         for(ProjectileDefinition def: projectiles.values()){
-            GlobalVars.consoleLogger.log(def.toString());
+            G.consoleLogger.log(def.toString());
         }
 
         return projectiles;
@@ -1085,7 +1088,7 @@ public class SharedMethods {
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponlist.txt");
         }
-        GlobalVars.consoleLogger.log("\nLoading weapons from file:" + file);
+        G.consoleLogger.log("\nLoading weapons from file:" + file);
         HashMap<String,Weapon> weapons = new HashMap<>();
         Weapon weapon = null;
         String name = null;
@@ -1149,7 +1152,7 @@ public class SharedMethods {
         }
 
         for(Weapon w: weapons.values()){
-            GlobalVars.consoleLogger.log(w.toString());
+            G.consoleLogger.log(w.toString());
         }
 
         return weapons;
@@ -1163,5 +1166,30 @@ public class SharedMethods {
             }
         }
         return ammoList;
+    }
+
+    public static Rectangle getMapExit(ArrayList<RectangleMapObject> mapObjects){
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("exit")){
+                return o.getRectangle();
+            }
+        }
+        return null;
+    }
+
+    public static ArrayList<RectangleMapObject> getScaledMapobjects(TiledMap map){
+        float s = SharedMethods.getMapScale(map);
+        ArrayList<RectangleMapObject> mapObjects = new ArrayList<>();
+        for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
+            for(MapObject o : layer.getObjects()){
+                if(o instanceof RectangleMapObject){
+                    RectangleMapObject rectObject = (RectangleMapObject) o;
+                    Rectangle bounds = rectObject.getRectangle();
+                    rectObject.getRectangle().set(bounds.x*s,bounds.y*s,bounds.width*s,bounds.height*s);
+                    mapObjects.add(rectObject);
+                }
+            }
+        }
+        return mapObjects;
     }
 }

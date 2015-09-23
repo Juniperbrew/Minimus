@@ -19,7 +19,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.ConsoleReader;
-import com.juniperbrew.minimus.GlobalVars;
+import com.juniperbrew.minimus.G;
 import com.juniperbrew.minimus.NetworkEntity;
 import com.juniperbrew.minimus.Enums;
 import com.juniperbrew.minimus.ExceptionLogger;
@@ -55,7 +55,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusServer implements ApplicationListener, InputProcessor, Score.ScoreChangeListener, ConVars.ConVarChangeListener, World.WorldChangeListener, GlobalVars.ConsoleLogger {
+public class MinimusServer implements ApplicationListener, InputProcessor, Score.ScoreChangeListener, ConVars.ConVarChangeListener, World.WorldChangeListener, G.ConsoleLogger {
 
     Server server;
     ShapeRenderer shapeRenderer;
@@ -118,7 +118,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     @Override
     public void create() {
         //Log.TRACE();
-        GlobalVars.consoleLogger = this;
+        G.consoleLogger = this;
         ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
@@ -177,7 +177,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Listener listener = new Listener(){
             public void connected(Connection connection){
                 StatusData dataUsage = new StatusData(connection, System.nanoTime(),ConVars.getInt("cl_log_interval_seconds"));
-                connection.setTimeout(GlobalVars.TIMEOUT);
+                connection.setTimeout(G.TIMEOUT);
                 connectionStatus.put(connection, dataUsage);
                 serverStatusFrame.addConnection(connection.toString(), dataUsage);
                 sendFullStateUpdate(connection);
@@ -476,13 +476,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     public void fillAmmo(int id){
-        for(String ammoType:GlobalVars.ammoList){
+        for(String ammoType: G.ammoList){
             addAmmo(id, ammoType, 999999);
         }
     }
 
     public void giveAllWeapons(int id){
-        for(int weaponID : GlobalVars.weaponList.keySet()){
+        for(int weaponID : G.weaponList.keySet()){
             giveWeapon(weaponID, id);
         }
     }
@@ -765,8 +765,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             set200Entities = true;
         }
         if (character == 'm'){
-            GlobalVars.debugFeatureToggle = !GlobalVars.debugFeatureToggle;
-            showMessage("DebugFeatureToggle:"+GlobalVars.debugFeatureToggle);
+            G.debugFeatureToggle = !G.debugFeatureToggle;
+            showMessage("DebugFeatureToggle:"+ G.debugFeatureToggle);
         }
         if (character == 'l') {
             showMessage("Sending full update to all clients");
@@ -874,17 +874,15 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public void resize(int w, int h) {
         windowWidth = w;
         windowHeight = h;
-        int mapWidth = world.getMapWidth();
-        int mapHeight = world.getMapHeight();
-        if(h > ((float)w/ mapWidth)* mapHeight){
-            camera.viewportWidth = mapWidth;
-            camera.viewportHeight = h*((float) mapWidth /w);
+        if(h > ((float)w/ G.mapWidth)* G.mapHeight){
+            camera.viewportWidth = G.mapWidth;
+            camera.viewportHeight = h*((float) G.mapWidth /w);
         }else{
-            camera.viewportWidth = w*((float) mapHeight /h);
-            camera.viewportHeight = mapHeight;
+            camera.viewportWidth = w*((float) G.mapHeight /h);
+            camera.viewportHeight = G.mapHeight;
         }
-        viewPortX = mapWidth /2f;
-        viewPortY = mapHeight /2f;
+        viewPortX = G.mapWidth /2f;
+        viewPortY = G.mapHeight /2f;
         camera.position.set(viewPortX, viewPortY, 0);
         camera.update();
 
@@ -1063,6 +1061,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             sendTCPtoAll(mapChange);
             resize(windowWidth, windowHeight);
         }
+    }
+
+    @Override
+    public void mapCleared(float timer) {
+        Network.MapCleared mapCleared = new Network.MapCleared();
+        mapCleared.timer = timer;
+        sendTCPtoAll(mapCleared);
     }
 
     @Override

@@ -1,12 +1,9 @@
 package com.juniperbrew.minimus.server;
 
 import com.juniperbrew.minimus.Entity;
-import com.juniperbrew.minimus.Enums;
-import com.juniperbrew.minimus.GlobalVars;
-import com.juniperbrew.minimus.NetworkEntity;
+import com.juniperbrew.minimus.G;
 
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by Juniperbrew on 22/06/15.
@@ -95,7 +92,7 @@ public class ServerEntity extends Entity {
     }
 
     public void addAmmoToWeapon(int weapon, int amount){
-        String ammoType = GlobalVars.weaponList.get(weapon).ammo;
+        String ammoType = G.weaponList.get(weapon).ammo;
         addAmmo(ammoType, amount);
     }
 

@@ -80,6 +80,7 @@ public class Network {
         kryo.register(Rectangle.class);
         kryo.register(SpawnProjectile.class);
         kryo.register(ChangeWeapon.class);
+        kryo.register(MapCleared.class);
     }
 
     public static class WeaponAdded{
@@ -93,7 +94,6 @@ public class Network {
 
     public static class MapChange{
         public String mapName;
-        //public HashMap<Integer,Powerup> powerups;
     }
 
     public static class Message{
@@ -277,5 +277,9 @@ public class Network {
 
     public static class ChangeWeapon{
         public int weapon;
+    }
+
+    public static class MapCleared{
+        public float timer;
     }
 }

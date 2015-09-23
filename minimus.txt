@@ -1,8 +1,10 @@
 TODO support for variable/random projectile velocity,rotation,range,size?,projectilecount?,damage?,knockback?,friction?
-TODO smoother map change
 TODO no interpolation when respawning or changing map
 TODO other players aiming animation
+TODO scale projectile hitbox from their texture size
+TODO consider proper pathfinding
 
+DONE smoother map change
 DONE prevent wave healthpacks from spawning inside walls
 DONE enemies cant see behind themselves, enemy turnrate
 DONE sync entity active weapon, specifically players

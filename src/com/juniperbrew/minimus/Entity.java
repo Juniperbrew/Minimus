@@ -56,14 +56,14 @@ public class Entity {
 
     public void applyMovement() {
 
-        if (getX() + getWidth() + movement.x > GlobalVars.mapWidth) {
-            movement.x = GlobalVars.mapWidth - getX() - getWidth();
+        if (getX() + getWidth() + movement.x > G.mapWidth) {
+            movement.x = G.mapWidth - getX() - getWidth();
         }
         if (getX() + movement.x < 0) {
             movement.x = 0 - getX();
         }
-        if (getY() + getHeight() + movement.y > GlobalVars.mapHeight) {
-            movement.y = GlobalVars.mapHeight - getY() - getHeight();
+        if (getY() + getHeight() + movement.y > G.mapHeight) {
+            movement.y = G.mapHeight - getY() - getHeight();
         }
         if (getY() + movement.y < 0) {
             movement.y = 0 - getY();
@@ -198,15 +198,15 @@ public class Entity {
     }
 
     public void setSlot1Weapon(int weaponID){
-        if(weaponID>GlobalVars.primaryWeaponCount){
+        if(weaponID> G.primaryWeaponCount){
             return;
         }
         networkEntity.slot1Weapon = weaponID;
     }
 
     public void setSlot2Weapon(int secondarySlot){
-        int weaponID = GlobalVars.primaryWeaponCount+secondarySlot;
-        if(weaponID>GlobalVars.weaponList.size()){
+        int weaponID = G.primaryWeaponCount+secondarySlot;
+        if(weaponID> G.weaponList.size()){
             return;
         }
         networkEntity.slot2Weapon = weaponID;

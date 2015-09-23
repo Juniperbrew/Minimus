@@ -1,10 +1,5 @@
 package com.juniperbrew.minimus;
 
-import com.badlogic.gdx.math.Polygon;
-import com.badlogic.gdx.math.Rectangle;
-
-import java.awt.geom.Rectangle2D;
-
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
@@ -52,7 +47,7 @@ public class NetworkEntity {
         this.team = team;
         this.image = image;
         slot1Weapon = 1;
-        slot2Weapon = GlobalVars.primaryWeaponCount + 1;
+        slot2Weapon = G.primaryWeaponCount + 1;
     }
 
     public NetworkEntity(int id, float x, float y, int team) {

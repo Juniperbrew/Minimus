@@ -1,16 +1,11 @@
 package com.juniperbrew.minimus.server;
 
-import com.badlogic.gdx.math.Circle;
-import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.GlobalVars;
+import com.juniperbrew.minimus.G;
 import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
-
-import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
  * Created by Juniperbrew on 22/06/15.
@@ -27,7 +22,7 @@ public class EntityAI {
     private static final int MAX_RANGE = 400; //Pixels
     //FIXME Test how well 1 second target update delay would work in practice
     private static final float TARGET_UPDATE_DELAY = 0.1f;
-    private static final float FOV = 180;
+    private static final float FOV = 160;
 
     public boolean hasDestination;
     ServerEntity entity;
@@ -40,7 +35,7 @@ public class EntityAI {
     boolean targetUpdated;
     float targetSearchTimer;
 
-    private static final float TURNRATE = 120; //Deg/s
+    private static final float TURNRATE = 180; //Deg/s
     private float targetRotation;
 
     public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
@@ -55,18 +50,18 @@ public class EntityAI {
         entity.updateCooldowns(delta);
         targetSearchTimer -= delta;
         if(aiType == MOVING){
-            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
+            setRandomDestination(G.mapWidth, G.mapHeight);
             move(delta);
         }else if(aiType == MOVING_AND_SHOOTING){
-            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
+            setRandomDestination(G.mapWidth, G.mapHeight);
             move(delta);
             shoot(delta);
         }else if(aiType == FOLLOWING){
-            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
+            setRandomDestination(G.mapWidth, G.mapHeight);
             lookForTarget();
             move(delta);
         }else if(aiType == FOLLOWING_AND_SHOOTING){
-            setRandomDestination(GlobalVars.mapWidth, GlobalVars.mapHeight);
+            setRandomDestination(G.mapWidth, G.mapHeight);
             lookForTarget();
             move(delta);
             shoot(delta);
@@ -212,19 +207,19 @@ public class EntityAI {
             offsetX -= (entity.getWidth()/2) + margin;
             destinationXTileCheck += (entity.getWidth()/2);
         }else{
-            offsetX += GlobalVars.tileWidth + (entity.getWidth()/2) + margin;
+            offsetX += G.tileWidth + (entity.getWidth()/2) + margin;
             destinationXTileCheck -= (entity.getWidth()/2);
         }
         if(destination.y-entity.getCenterY()>=0){
             offsetY -= (entity.getHeight()/2) + margin;
             destinationYTileCheck += (entity.getHeight()/2);
         }else{
-            offsetY += GlobalVars.tileHeight +(entity.getHeight()/2)+ margin;
+            offsetY += G.tileHeight +(entity.getHeight()/2)+ margin;
             destinationYTileCheck -= (entity.getHeight()/2);
         }
         Vector2 tile = SharedMethods.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
         if(tile!=null) {
-            setDestination(tile.x*GlobalVars.tileWidth+offsetX,tile.y*GlobalVars.tileHeight+offsetY);
+            setDestination(tile.x* G.tileWidth+offsetX,tile.y* G.tileHeight+offsetY);
         }else{
             setDestination(destination.x, destination.y);
         }

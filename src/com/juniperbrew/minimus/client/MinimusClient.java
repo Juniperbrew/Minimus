@@ -17,6 +17,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
@@ -62,7 +63,7 @@ import org.apache.commons.collections4.queue.CircularFifoQueue;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener, GlobalVars.ConsoleLogger {
+public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener, G.ConsoleLogger {
 
     Client client;
     @SuppressWarnings("FieldCanBeLocal")
@@ -189,6 +190,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Queue<Float> frameTimeLog = new CircularFifoQueue<>(100);
     private boolean showGraphs;
 
+    Rectangle mapExit;
+    private float mapChangeTimer;
+    private boolean mapCleared;
+
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
         ConVars.addListener(this);
@@ -206,7 +211,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void create() {
-        GlobalVars.consoleLogger = this;
+        G.consoleLogger = this;
         if(ConVars.getBool("cl_auto_send_errorlogs")){
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client", true, serverIP));
         }else{
@@ -298,9 +303,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             powerups = assign.powerups;
             currentWave = assign.wave;
             weaponList = assign.weaponList;
-            GlobalVars.weaponList = weaponList;
+            G.weaponList = weaponList;
             primaryWeaponCount = assign.primaryWeaponCount;
-            GlobalVars.primaryWeaponCount = primaryWeaponCount;
+            G.primaryWeaponCount = primaryWeaponCount;
             projectileList = assign.projectileList;
             player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
             ghostPlayer = new ClientEntity();
@@ -347,6 +352,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof String){
             String command = (String) object;
             consoleFrame.giveCommand(command);
+        }else if(object instanceof Network.MapCleared){
+            Network.MapCleared mapClearedPacket = (Network.MapCleared) object;
+            mapChangeTimer = mapClearedPacket.timer;
+            mapCleared = true;
+            if(mapChangeTimer>0){
+                showMessage("Map cleared changing map in "+ mapChangeTimer + " seconds");
+            }else{
+                showMessage("Map cleared find the exit.");
+            }
         }else if(object instanceof Packet){
             Packet p = (Packet) object;
             if(p.name.equals("Disconnected")){
@@ -389,6 +403,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void changeMap(Network.MapChange mapChange){
         showMessage("Changing map to " + mapChange.mapName);
+        mapCleared = false;
+        mapChangeTimer = 0;
         fadeScreen();
         SharedMethods.printCollisionMap();
         loadMap(mapChange.mapName);
@@ -400,11 +416,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void createMinimap(){
-        Pixmap pixmap = new Pixmap(GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles, Pixmap.Format.RGBA8888 );
-        for (int x = 0; x < GlobalVars.mapWidthTiles; x++) {
-            for (int y = 0; y < GlobalVars.mapHeightTiles; y++) {
+        Pixmap pixmap = new Pixmap(G.mapWidthTiles, G.mapHeightTiles, Pixmap.Format.RGBA8888 );
+        for (int x = 0; x < G.mapWidthTiles; x++) {
+            for (int y = 0; y < G.mapHeightTiles; y++) {
                 //Pixmap coordinates are Y down
-                if(GlobalVars.collisionMap[x][GlobalVars.mapHeightTiles-y-1]){
+                if(G.collisionMap[x][G.mapHeightTiles-y-1]){
                     pixmap.drawPixel(x,y,Color.rgba8888(1, 1, 1, 1));
                 }else{
                     pixmap.drawPixel(x,y,Color.rgba8888(1, 1, 1, 0));
@@ -435,6 +451,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         for(Object o;(o = pendingPackets.poll())!=null;){
             handlePacket(o);
+        }
+        if(mapChangeTimer>0){
+            mapChangeTimer-=delta;
         }
 
         for(ClientEntity e : entities.values()) {
@@ -1140,6 +1159,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 mapRenderer.render();
             }
 
+            if(mapExit!=null){
+
+                shapeRenderer.setColor(1,1,0,1);
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                shapeRenderer.rect(mapExit.x, mapExit.y, mapExit.width, mapExit.height);
+                shapeRenderer.end();
+                Gdx.gl.glEnable(GL20.GL_BLEND);
+                shapeRenderer.setColor(1, 1, 0, 0.2f);
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                shapeRenderer.rect(mapExit.x, mapExit.y, mapExit.width, mapExit.height);
+                shapeRenderer.end();
+            }
+
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
@@ -1272,6 +1304,25 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
+        if(mapCleared){
+            if(mapChangeTimer>0){
+                font.draw(batch, "Map cleared, changing map in: "+mapChangeTimer + "seconds.", 5, 60);
+            }else if(mapExit!=null){
+                font.draw(batch, "Map cleared find the exit.", 5, 60);
+                batch.setProjectionMatrix(camera.combined);
+                batch.setColor(Color.YELLOW);
+                Vector2 center = new Vector2();
+                mapExit.getCenter(center);
+                float angle = Tools.getAngle(player.getCenterX(), player.getCenterY(), center.x, center.y);
+                float xDistance = MathUtils.cosDeg(angle)*100;
+                float yDistance = MathUtils.sinDeg(angle)*100;
+                float scale = 1+1*(Math.abs((getClientTime()%1)-0.5f));
+                float arrowWidth = 50;
+                float arrowHeight = 70;
+                batch.draw(getTexture("arrow"),player.getCenterX()+xDistance-arrowWidth/2,player.getCenterY()+yDistance-arrowHeight/2, arrowWidth/2,arrowHeight/2,arrowWidth,arrowHeight,scale,scale,angle);
+                batch.setProjectionMatrix(hudCamera.combined);
+            }
+        }
         font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
         font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);
@@ -1310,8 +1361,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }else{
                     batch.setColor(1,0,0,1);
                 }
-                int x = (int) (e.getCenterX() / GlobalVars.tileWidth);
-                int y = (int) (e.getCenterY()/GlobalVars.tileHeight);
+                int x = (int) (e.getCenterX() / G.tileWidth);
+                int y = (int) (e.getCenterY()/ G.tileHeight);
                 batch.draw(blank,mapX+x*scale,mapY+y*scale,scale,scale);
             }
         }
@@ -1397,7 +1448,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             if(tile!=null){
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1,0,0,1);
-                shapeRenderer.rect(tile.x * GlobalVars.tileWidth, tile.y *GlobalVars.tileHeight, GlobalVars.tileWidth, GlobalVars.tileHeight);
+                shapeRenderer.rect(tile.x * G.tileWidth, tile.y * G.tileHeight, G.tileWidth, G.tileHeight);
                 shapeRenderer.end();
             }
         }
@@ -1653,7 +1704,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             @Override
             public void connected(Connection connection){
                 pendingPackets.add(new Packet("Connected"));
-                connection.setTimeout(GlobalVars.TIMEOUT);
+                connection.setTimeout(G.TIMEOUT);
             }
 
             public void received(Connection connection, Object object) {
@@ -1719,7 +1770,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void loadTextures(){
         showMessage("Loading texture atlas");
         atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
-        GlobalVars.atlas = atlas;
+        G.atlas = atlas;
         showMessage("Loading textures");
         Array<TextureAtlas.AtlasRegion> regions = atlas.getRegions();
 
@@ -1790,7 +1841,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     public void selectWeapon(int weapon){
-        if(weapon<=GlobalVars.primaryWeaponCount){
+        if(weapon<= G.primaryWeaponCount){
             player.setSlot1Weapon(weapon);
         }else{
             player.setSlot2Weapon(weapon);
@@ -1884,22 +1935,24 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void loadMap(String mapName){
-        map = new TmxMapLoader().load(GlobalVars.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
+        map = new TmxMapLoader().load(G.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
         fixTextureBleeding(map);
         float mapScale = SharedMethods.getMapScale(map);
+        ArrayList<RectangleMapObject> mapObjects = SharedMethods.getScaledMapobjects(map);
+        mapExit = SharedMethods.getMapExit(mapObjects);
         MapProperties p = map.getProperties();
-        GlobalVars.mapWidthTiles = p.get("width", Integer.class);
-        GlobalVars.mapHeightTiles = p.get("height", Integer.class);
-        GlobalVars.tileWidth = (int) (p.get("tilewidth", Integer.class)* mapScale);
-        GlobalVars.tileHeight = (int) (p.get("tileheight",Integer.class)* mapScale);
+        G.mapWidthTiles = p.get("width", Integer.class);
+        G.mapHeightTiles = p.get("height", Integer.class);
+        G.tileWidth = (int) (p.get("tilewidth", Integer.class)* mapScale);
+        G.tileHeight = (int) (p.get("tileheight",Integer.class)* mapScale);
 
-        mapHeight = GlobalVars.mapHeightTiles * GlobalVars.tileHeight;
-        mapWidth = GlobalVars.mapWidthTiles * GlobalVars.tileWidth;
-        GlobalVars.mapWidth = mapWidth;
-        GlobalVars.mapHeight = mapHeight;
+        mapHeight = G.mapHeightTiles * G.tileHeight;
+        mapWidth = G.mapWidthTiles * G.tileWidth;
+        G.mapWidth = mapWidth;
+        G.mapHeight = mapHeight;
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-        GlobalVars.collisionMap = SharedMethods.createCollisionMap(map, GlobalVars.mapWidthTiles, GlobalVars.mapHeightTiles);
+        G.collisionMap = SharedMethods.createCollisionMap(map, G.mapWidthTiles, G.mapHeightTiles);
         createMinimap();
     }
 

@@ -19,7 +19,7 @@ public class WeaponPickup extends Powerup{
     public String toString() {
         return "WeaponPickup{" +
                 "weaponID=" + weaponID +
-                ", weaponName=" + GlobalVars.weaponList.get(weaponID).name +
+                ", weaponName=" + G.weaponList.get(weaponID).name +
                 '}';
     }
 }

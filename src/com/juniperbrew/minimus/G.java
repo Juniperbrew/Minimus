@@ -9,7 +9,7 @@ import java.util.HashSet;
 /**
  * Created by Juniperbrew on 8.8.2015.
  */
-public class GlobalVars {
+public class G {
 
 
     public static final int TIMEOUT = 0; //Default 12000
