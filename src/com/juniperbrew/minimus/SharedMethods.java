@@ -863,6 +863,9 @@ public class SharedMethods {
                     if(splits[0].equals("bounce")){
                         projectileDefinition.bounce = true;
                     }
+                    if (splits[0].equals("hitboxScaling")) {
+                        projectileDefinition.hitboxScaling = Float.parseFloat(splits[1]);
+                    }
                 }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();

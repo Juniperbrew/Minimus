@@ -37,6 +37,7 @@ public class ProjectileDefinition {
     public boolean networked;
     public boolean looping;
     public boolean bounce;
+    public float hitboxScaling;
 
     @Override
     public String toString() {
@@ -65,6 +66,7 @@ public class ProjectileDefinition {
                 ", networked=" + networked +
                 ", looping=" + looping +
                 ", bounce=" + bounce +
+                ", hitboxScaling=" + hitboxScaling +
                 '}';
     }
 

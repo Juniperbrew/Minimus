@@ -4,7 +4,8 @@ width=128
 length=128
 animation=burn2
 frameDuration=0.2
-velocity=200
+velocity=400
 damage=25
 knockback=50
+hitboxScaling=0.3
 networked

@@ -6,7 +6,9 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 
 /**
  * Created by Juniperbrew on 5.9.2015.
@@ -30,6 +32,7 @@ public class Particle {
     public boolean ignoreMapCollision;
     public boolean ignoreEntityCollision;
     public boolean dontDestroyOnCollision;
+    public float hitboxScaling;
 
     public Particle(ProjectileDefinition def, Rectangle rect){
         this(def,rect,0,rect.x+rect.width/2,rect.y+rect.height/2,0);
@@ -51,6 +54,7 @@ public class Particle {
         this.ignoreMapCollision = def.ignoreMapCollision;
         this.ignoreEntityCollision = def.ignoreEntityCollision;
         this.dontDestroyOnCollision = def.dontDestroyOnCollision;
+        this.hitboxScaling = def.hitboxScaling;
         setImage(def, rect);
         setDuration(def.duration);
     }
@@ -94,7 +98,7 @@ public class Particle {
         sprite = new Sprite(texture);
         sprite.setPosition(rect.x,rect.y);
         sprite.setOrigin(originX-rect.x,originY-rect.y);
-        sprite.setSize(rect.width,rect.height);
+        sprite.setSize(rect.width, rect.height);
         sprite.setRotation(rotation);
     }
 
@@ -141,7 +145,7 @@ public class Particle {
         float x = MathUtils.cosDeg(rotation)*distance;
         float y = MathUtils.sinDeg(rotation)*distance;
         if(!ignoreMapCollision){
-            Rectangle r = sprite.getBoundingRectangle();
+            Rectangle r = getBoundingRectangle();
             r.setPosition(r.x + x, r.y);
             if(SharedMethods.checkMapCollision(r)){
                 if(bounce){
@@ -153,7 +157,7 @@ public class Particle {
                     return;
                 }
             }
-            r.setPosition(r.x, r.y+y);
+            r.setPosition(r.x, r.y + y);
             if(SharedMethods.checkMapCollision(r)){
                 if(bounce){
                     rotation = 0 - rotation;
@@ -166,5 +170,28 @@ public class Particle {
             }
         }
         sprite.translate(x, y);
+    }
+
+    public Polygon getBoundingPolygon(){
+        Polygon bounds = Tools.getBoundingPolygon(sprite);
+        if(hitboxScaling!=0){
+            Vector2 center = new Vector2();
+            getBoundingRectangle().getCenter(center);
+            bounds.setOrigin(center.x,center.y);
+            bounds.setScale(hitboxScaling,hitboxScaling);
+        }
+        return bounds;
+    }
+
+    public Rectangle getBoundingRectangle(){
+        Rectangle bounds = sprite.getBoundingRectangle();
+        if(hitboxScaling!=0){
+            float scaledWidth = bounds.width*hitboxScaling;
+            float scaledHeight = bounds.height*hitboxScaling;
+            float xOffset = (bounds.width-scaledWidth)/2;
+            float yOffset = (bounds.height-scaledHeight)/2;
+            bounds.set(bounds.x + xOffset, bounds.y + yOffset, scaledWidth, scaledHeight);
+        }
+        return bounds;
     }
 }

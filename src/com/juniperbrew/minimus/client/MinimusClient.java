@@ -1064,13 +1064,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     }
                 }
             }
-            if(!projectile.ignoreMapCollision){
-                if (SharedMethods.checkMapCollision(projectile.getBoundingRectangle())) {
-                    if(!(projectile.ignoreMapCollision || projectile.dontDestroyOnCollision)){
-                        projectile.destroyed = true;
-                    }
-                }
-            }
 
             if(projectile.destroyed){
                 destroyedProjectiles.add(projectile);
@@ -1234,12 +1227,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 if (playerList.contains(e.getID())) {
                     textureName.append("_");
                     textureName.append(weaponList.get(e.getSlot1Weapon()).sprite);
-                    /*if(e.getID()==player.id){
-                        textureName.append(weaponList.get(player.getSlot1Weapon()).sprite);
-                    }else{
-                        //FIXME Use proper player weapon once server is syncing them
-                        textureName.append("rifle");
-                    }*/
                 }else if (e.getHealthPercent() > 0.5f) {
                     textureName.append("_");
                     textureName.append("hurt");
@@ -1272,7 +1259,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             SharedMethods.renderParticles(delta, batch, particles);
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.setColor(1,1,1,1);
-                SharedMethods.renderAttackBoundingBox(shapeRenderer,projectiles);
+                SharedMethods.renderAttackBoundingBox(shapeRenderer, projectiles);
                 shapeRenderer.setColor(1,1,0,1);
                 SharedMethods.renderAttackPolygon(shapeRenderer, projectiles);
             }

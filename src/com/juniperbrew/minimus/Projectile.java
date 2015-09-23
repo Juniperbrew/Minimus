@@ -1,6 +1,5 @@
 package com.juniperbrew.minimus;
 
-import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
 import java.util.HashSet;
@@ -39,14 +38,6 @@ public class Projectile extends Particle{
         knockback = def.knockback;
         onDestroy = def.onDestroy;
         explosionKnockback = def.explosionKnockback;
-    }
-
-    public Polygon getBoundingPolygon(){
-        return Tools.getBoundingPolygon(sprite);
-    }
-
-    public Rectangle getBoundingRectangle(){
-        return sprite.getBoundingRectangle();
     }
 
     @Override

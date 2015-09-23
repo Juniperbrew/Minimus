@@ -423,8 +423,8 @@ public class World implements EntityChangeListener{
                                     }
                                 }
                             }
+                            projectile.entitiesHit.add(target.getID());
                         }
-                        projectile.entitiesHit.add(target.getID());
                     }
                 }
             }
