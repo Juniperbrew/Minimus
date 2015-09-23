@@ -25,6 +25,7 @@ public class EntityAI {
     public static final int FOLLOWING_AND_SHOOTING = 3;
 
     private static final int MAX_RANGE = 400; //Pixels
+    //FIXME Test how well 1 second target update delay would work in practice
     private static final float TARGET_UPDATE_DELAY = 0.1f;
     private static final float FOV = 180;
 
@@ -86,14 +87,8 @@ public class EntityAI {
                 continue;
             }
             float targetAngle = Tools.getAngle(entity.getCenterX(), entity.getCenterY(), target.getCenterX(), target.getCenterY());
-            float entityAngle = entity.getRotation();
-            float anglediff = Tools.getAngleDiff(targetAngle,entityAngle);
-            /*if(entity.getID()==-5){
-                GlobalVars.consoleLogger.log("CurrentAngle:" + entity.getRotation());
-                GlobalVars.consoleLogger.log("TargetAngle:" + targetAngle);
-                GlobalVars.consoleLogger.log("Anglediff:"+anglediff);
-                GlobalVars.consoleLogger.log("######");
-            }*/
+            float anglediff = Tools.getAngleDiff(targetAngle,entity.getRotation());
+
             if(anglediff>FOV/2||anglediff<-FOV/2){
                 continue;
             }
@@ -122,14 +117,7 @@ public class EntityAI {
 
         if(targetRotation!=entity.getRotation()){
             double turn = TURNRATE*delta;
-            //float anglediff = (entityRotation - convertedTargetRotation + 180) % 360 - 180;
             float anglediff = Tools.getAngleDiff(entity.getRotation(),targetRotation);
-            /*if(entity.getID()==45){
-                GlobalVars.consoleLogger.log("Current rotation:" + entity.getRotation());
-                GlobalVars.consoleLogger.log("Target rotation:"+targetRotation);
-                GlobalVars.consoleLogger.log("Turn:"+turn);
-                GlobalVars.consoleLogger.log("Anglediff:" + anglediff);
-            }*/
 
             if(Math.abs(anglediff) < turn){
                 float deltaUsage = Math.abs(anglediff)/TURNRATE;
@@ -196,11 +184,6 @@ public class EntityAI {
         float deltaY = destination.y - entity.getCenterY();
         int degrees = (int) (MathUtils.radiansToDegrees*MathUtils.atan2(deltaY,deltaX));
         targetRotation = degrees;
-        /*if(entity.getID()==45){
-            GlobalVars.consoleLogger.log("###########################New target rotation:"+targetRotation);
-        }*/
-
-        //entity.setRotation(degrees);
     }
 
     private void setRandomDestination(int mapWidth,int mapHeight){

@@ -970,10 +970,17 @@ public class World implements EntityChangeListener{
 
     public void spawnHealthPack(int value, int duration){
 
-        int x = MathUtils.random(0, mapWidth);
-        int y = MathUtils.random(0, mapHeight);
+        Rectangle bounds = new Rectangle(0,0,40,40);
+        //Try 20 times to spawn it outside a wall after that just spawn it anywhere
+        for (int i = 0; i < 20; i++) {
+            bounds.setX(MathUtils.random(0, mapWidth));
+            bounds.setY(MathUtils.random(0, mapHeight));
+            if(!SharedMethods.checkMapCollision(bounds)){
+                break;
+            }
+        }
         final int id = getNextNetworkID();
-        HealthPack health = new HealthPack(x,y,40,40,value);
+        HealthPack health = new HealthPack(bounds.x,bounds.y,40,40,value);
         powerups.put(id,health);
 
         TimerTask task = new TimerTask() {
