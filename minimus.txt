@@ -1,7 +1,9 @@
 TODO support for variable/random projectile velocity,rotation,range,size?,projectilecount?,damage?,knockback?,friction?
-TODO no interpolation when respawning or changing map
-TODO other players aiming animation
 TODO consider proper pathfinding
+TODO stamina bar for running, fast regen, no regen when getting hit or shooting
+
+TODO other players aiming animation
+TODO no interpolation when respawning or changing map
 
 DONE scale projectile hitbox from their texture size
 DONE smoother map change

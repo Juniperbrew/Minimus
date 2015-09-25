@@ -47,7 +47,6 @@ public class World implements EntityChangeListener{
     private final float KNOCKBACK_VELOCITY = 200;
 
     Set<Integer> playerList = new HashSet<>();
-    Map<Integer,Integer> playerLives = new HashMap<>();
 
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
@@ -284,6 +283,18 @@ public class World implements EntityChangeListener{
             e.applyMovement();
         }
 
+        for(int id : playerList){
+            PlayerServerEntity player = (PlayerServerEntity) entities.get(id);
+            if(player.getRespawnTimer()>0){
+                player.reduceRespawnTimer(delta);
+                if(player.getRespawnTimer()<=0){
+                    ServerEntity deadPlayer = entities.get(id);
+                    deadPlayer.restoreMaxHealth();
+                    movePlayerToSpawn(id);
+                    listener.playerRespawned(id, deadPlayer.getX(), deadPlayer.getY());
+                }
+            }
+        }
     }
 
     private void updateGameState(float delta){
@@ -436,7 +447,7 @@ public class World implements EntityChangeListener{
                 if(projectile.onDestroy!=null){
                     Vector2 center = new Vector2();
                     projectile.getBoundingRectangle().getCenter(center);
-                    createStationaryThing(projectile.onDestroy,center.x,center.y,projectile.ownerID,projectile.team);
+                    createStationaryThing(projectile.onDestroy, center.x, center.y, projectile.ownerID, projectile.team);
                 }
             }
         }
@@ -461,9 +472,21 @@ public class World implements EntityChangeListener{
     private void checkEntityCollisions(){
 
         for(ServerEntity e1 : entities.values()){
+            if(e1 instanceof PlayerServerEntity){
+                PlayerServerEntity player = (PlayerServerEntity) e1;
+                if(player.getLives()<0||player.getRespawnTimer()>0){
+                    continue;
+                }
+            }
             for(ServerEntity e2: entities.values()){
                 if(e1.getID() == e2.getID()){
                     continue;
+                }
+                if(e2 instanceof PlayerServerEntity){
+                    PlayerServerEntity player = (PlayerServerEntity) e2;
+                    if(player.getLives()<0||player.getRespawnTimer()>0){
+                        continue;
+                    }
                 }
                 Rectangle bounds1 = e1.getGdxBounds();
                 Rectangle bounds2 = e2.getGdxBounds();
@@ -475,12 +498,6 @@ public class World implements EntityChangeListener{
                     Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
                     knockback.setAngle(i.angle());
                     knockbacks.add(new Knockback(e1.getID(), knockback));
-                    if(playerList.contains(e1.getID())&&!isInvulnerable(e1)) {
-                        if(e1.getTeam()!=e2.getTeam()) {
-                            e1.lastContactDamageTaken = System.nanoTime();
-                            e1.reduceHealth(ConVars.getInt("sv_contact_damage"), e2.getID());
-                        }
-                    }
                 }
                 //}
             }
@@ -506,10 +523,6 @@ public class World implements EntityChangeListener{
                         Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
                         knockback.setAngle(i.angle());
                         knockbacks.add(new Knockback(player.getID(), knockback));
-                        if(!isInvulnerable(player)) {
-                            player.lastContactDamageTaken = System.nanoTime();
-                            player.reduceHealth(ConVars.getInt("sv_contact_damage"), e.getID());
-                        }
                     }
                 }
             }
@@ -548,92 +561,95 @@ public class World implements EntityChangeListener{
         }
     }
 
-    public void processInput(ServerEntity e, Network.UserInput input){
+    public void processInput(PlayerServerEntity player, Network.UserInput input){
         //TODO figure out some way to share this function with client
-        if(e.invulnerable&&input.buttons.size()>0){
-            e.invulnerable = false;
+        player.updateCooldowns(input.msec / 1000d);
+        if(player.respawnTimer>0||player.lives<0){
+            return;
         }
-        SharedMethods.applyInput(e, input);
+        if(player.invulnerable&&input.buttons.size()>0&&player.getRespawnTimer()<=0){
+            G.consoleLogger.log("Removing invulernability for " + player.getID());
+            player.invulnerable = false;
+        }
+        SharedMethods.applyInput(player, input);
         if(input.buttons.contains(Enums.Buttons.NUM1)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(1);
+                player.setSlot2Weapon(1);
             }else{
-                e.setSlot1Weapon(1);
+                player.setSlot1Weapon(1);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM2)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(2);
+                player.setSlot2Weapon(2);
             }else{
-                e.setSlot1Weapon(2);
+                player.setSlot1Weapon(2);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM3)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(3);
+                player.setSlot2Weapon(3);
             }else{
-                e.setSlot1Weapon(3);
+                player.setSlot1Weapon(3);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM4)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(4);
+                player.setSlot2Weapon(4);
             }else{
-                e.setSlot1Weapon(4);
+                player.setSlot1Weapon(4);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM5)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(5);
+                player.setSlot2Weapon(5);
             }else{
-                e.setSlot1Weapon(5);
+                player.setSlot1Weapon(5);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM6)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(6);
+                player.setSlot2Weapon(6);
             }else{
-                e.setSlot1Weapon(6);
+                player.setSlot1Weapon(6);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM7)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(7);
+                player.setSlot2Weapon(7);
             }else{
-                e.setSlot1Weapon(7);
+                player.setSlot1Weapon(7);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM8)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(8);
+                player.setSlot2Weapon(8);
             }else{
-                e.setSlot1Weapon(8);
+                player.setSlot1Weapon(8);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM9)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(9);
+                player.setSlot2Weapon(9);
             }else{
-                e.setSlot1Weapon(9);
+                player.setSlot1Weapon(9);
             }
         }
         if(input.buttons.contains(Enums.Buttons.NUM0)){
             if(input.buttons.contains(Enums.Buttons.SHIFT)){
-                e.setSlot2Weapon(10);
+                player.setSlot2Weapon(10);
             }else{
-                e.setSlot1Weapon(10);
+                player.setSlot1Weapon(10);
             }
         }
 
         if(input.buttons.contains(Enums.Buttons.MOUSE1)){
-            attack(e,e.getSlot1Weapon(),input.msec);
+            attack(player,player.getSlot1Weapon(),input.msec);
         }else if(input.buttons.contains(Enums.Buttons.MOUSE2)){
-            attack(e,e.getSlot2Weapon(),input.msec);
-        }else if(e.chargeMeter>0){
-            launchAttack(e,e.chargeWeapon);
+            attack(player,player.getSlot2Weapon(),input.msec);
+        }else if(player.chargeMeter>0){
+            launchAttack(player,player.chargeWeapon);
         }
-
-        e.updateCooldowns(input.msec / 1000d);
     }
 
     public void attack(ServerEntity e, int weaponID, short msec){
@@ -881,18 +897,18 @@ public class World implements EntityChangeListener{
         //Start with primary weapon
         entityWeapons.put(1, true);
         //Start with secondary weapon
-        entityWeapons.put(G.primaryWeaponCount+1,true);
+        entityWeapons.put(G.primaryWeaponCount + 1, true);
 
-        playerLives.put(networkID, ConVars.getInt("sv_start_lives"));
-        ServerEntity newPlayer = new ServerEntity(networkID,x,y,width,height,
+        PlayerServerEntity newPlayer = new PlayerServerEntity(networkID,x,y,width,height,
                 ConVars.getInt("sv_player_max_health"),ConVars.getInt("sv_player_default_team"),
                 "rambo",entityWeapons,entityAmmo,ConVars.getFloat("sv_player_velocity"),0,this);
+        newPlayer.setLives(ConVars.getInt("sv_start_lives"));
         newPlayer.invulnerable = true;
         addEntity(newPlayer);
 
         Network.AssignEntity assign = new Network.AssignEntity();
         assign.networkID = networkID;
-        assign.lives = playerLives.get(networkID);
+        assign.lives = newPlayer.getLives();
         assign.velocity = ConVars.getFloat("sv_player_velocity");
         assign.mapName = mapName;
         assign.playerList = new ArrayList<>(playerList);
@@ -974,14 +990,6 @@ public class World implements EntityChangeListener{
     public void addRandomNPC(){
         EnemyDefinition def = enemyList.values().toArray(new EnemyDefinition[enemyList.size()])[MathUtils.random(enemyList.size()-1)];
         addNPC(def);
-    }
-
-    private boolean isInvulnerable(ServerEntity e){
-        if(System.nanoTime()-e.lastContactDamageTaken > Tools.secondsToNano(ConVars.getDouble("sv_invulnerability_timer"))){
-            return false;
-        }else{
-            return true;
-        }
     }
 
     public void spawnPowerup(Powerup p){
@@ -1196,16 +1204,15 @@ public class World implements EntityChangeListener{
     public void entityDied(int id, int sourceID) {
         listener.entityKilled(id, sourceID);
         if (playerList.contains(id)) {
-            Tools.addToMap(playerLives, id, -1);
-            listener.playerLivesChanged(id, playerLives.get(id));
-            if(playerLives.get(id) >= 0){
+            PlayerServerEntity player = (PlayerServerEntity) entities.get(id);
+            player.setLives(player.getLives() - 1);
+            listener.playerDied(id, player.getLives());
+
+            if(player.getLives() >= 0){
                 //Respawn player if lives left
-                ServerEntity deadPlayer = entities.get(id);
-                deadPlayer.restoreMaxHealth();
-                movePlayerToSpawn(id);
-            }else{
-                pendingEntityRemovals.add(id);
+                player.setRespawnTimer(5);
             }
+            player.invulnerable = true;
         }else{
             pendingEntityRemovals.add(id);
         }
@@ -1223,7 +1230,8 @@ public class World implements EntityChangeListener{
 
     interface WorldChangeListener{
         public void playerAdded(Connection c, Network.AssignEntity assign);
-        public void playerLivesChanged(int id, int lives);
+        public void playerDied(int id, int livesLeft);
+        public void playerRespawned(int id, float x, float y);
         public void playerRemoved(int id);
         public void entityRemoved(int id);
         public void entityKilled(int victimID, int killerID);

@@ -108,6 +108,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private HashMap<Integer,Powerup> powerups = new HashMap<>();
     ArrayList<Integer> playerList = new ArrayList<>();
+    HashMap<Integer,Float> playerDeathAnimations = new HashMap<>();
 
     int currentWave;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
@@ -193,6 +194,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Rectangle mapExit;
     private float mapChangeTimer;
     private boolean mapCleared;
+
+    Animation deathAnimation;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -280,7 +283,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             score.addNpcKill(addNpcKill.id);
         }else if(object instanceof Network.AddPlayer){
             Network.AddPlayer addPlayer = (Network.AddPlayer) object;
-            showMessage("PlayerID "+addPlayer.networkID+" added.");
+            showMessage("PlayerID " + addPlayer.networkID + " added.");
             playerList.add(addPlayer.networkID);
             score.addPlayer(addPlayer.networkID);
         }else if(object instanceof Network.AddEntity){
@@ -300,6 +303,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             lives = assign.lives;
 
             playerList = assign.playerList;
+            //For all dead players set enough statetime on their animation to hit last frame
+            //Its probably possible to not have an entity state from server here in which case this will crash
+            for(int id:playerList){
+                if(entities.get(id).getHealth()<=0){
+                    playerDeathAnimations.put(id,5f);
+                }
+            }
+
             powerups = assign.powerups;
             currentWave = assign.wave;
             weaponList = assign.weaponList;
@@ -317,9 +328,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.WaveChanged){
             Network.WaveChanged waveChanged = (Network.WaveChanged) object;
             currentWave = waveChanged.wave;
-        }else if(object instanceof Network.SetLives){
-            Network.SetLives setLives = (Network.SetLives) object;
-            lives = setLives.lives;
+        }else if(object instanceof Network.PlayerDied){
+            Network.PlayerDied playerDied = (Network.PlayerDied) object;
+            if(playerDied.id==player.id){
+                lives--;
+            }
+            playerDeathAnimations.put(playerDied.id,0f);
         }else if(object instanceof Network.AddPowerup){
             Network.AddPowerup addPowerup = (Network.AddPowerup) object;
             powerups.put(addPowerup.networkID,addPowerup.powerup);
@@ -361,6 +375,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }else{
                 showMessage("Map cleared find the exit.");
             }
+        }else if(object instanceof Network.RespawnPlayer){
+            Network.RespawnPlayer respawnPlayer = (Network.RespawnPlayer) object;
+            playerDeathAnimations.remove(respawnPlayer.id);
         }else if(object instanceof Packet){
             Packet p = (Packet) object;
             if(p.name.equals("Disconnected")){
@@ -471,9 +488,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         //Dont pollInput or create snapshot if we have no state from server
         if (authoritativeState != null){
-            if(player!=null&&playerList.contains(player.id)){
+            if(playerDeathAnimations.containsKey(player.id)){
+                inputQueue.clear();
+                predictedPositions.clear();
+            }else{
                 pollInput(delta);
             }
+            player.updateCooldowns(delta);
             createStateSnapshot(getClientTime());
             updateNetworkedState(stateSnapshot);
             correctPlayerPositionError();
@@ -542,7 +563,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         pendingInputPacket.add(input);
 
         processClientInput(input);
-        player.updateCooldowns(input.msec / 1000f);
     }
 
     private void processClientInput(Network.UserInput input){
@@ -1120,7 +1140,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(authoritativeState==null||player==null){
             return;
         }
-
+        for(int id : playerDeathAnimations.keySet()){
+            playerDeathAnimations.put(id,playerDeathAnimations.get(id)+delta);
+        }
         renderStart = System.nanoTime();
 
         Gdx.gl.glClearColor(0f, 0f, 0f, 1);
@@ -1217,13 +1239,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             //Render entities
             batch.begin();
-            for(ClientEntity e: entities.values()) { //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
+
+            for(int id : playerDeathAnimations.keySet()){
+                ClientEntity deadPlayer = entities.get(id);
+                TextureRegion texture = deathAnimation.getKeyFrame(playerDeathAnimations.get(id));
+                Rectangle textureBounds = getCenteredScaledTextureSize(texture, deadPlayer.getGdxBounds(), 1.8125f);
+                batch.draw(texture, textureBounds.x, textureBounds.y, textureBounds.width / 2, textureBounds.height / 2, textureBounds.width, textureBounds.height, 1, 1, deadPlayer.getRotation() + 180, true);
+            }
+
+            for(int id: entities.keySet()) { //FIXME will there ever be an entity that is not in stateSnapshot, yes when adding entities on server so we get nullpointer here
+                if(playerDeathAnimations.containsKey(id)){
+                    continue;
+                }
+                ClientEntity e = entities.get(id);
                 float healthbarWidth = e.getWidth() + 20;
                 float healthbarHeight = healthbarWidth / 7;
                 float healthbarXOffset = -healthbarHeight;
                 float healthbarYOffset = e.getWidth() + 10;
-                float x = e.getX();
-                float y = e.getY();
                 batch.setColor(1, 1, 1, 1);
                 StringBuilder textureName = new StringBuilder(e.getImage());
                 if (playerList.contains(e.getID())) {
@@ -1242,12 +1274,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     texture = getTexture(textureName.toString(), e.getID());
                 }
                 Rectangle textureBounds = getCenteredScaledTextureSize(texture, e.getGdxBounds(), 1.8125f);
-                batch.draw(texture, (int) textureBounds.x, (int) textureBounds.y, textureBounds.width / 2, textureBounds.height / 2, textureBounds.width, textureBounds.height, 1, 1, e.getRotation() + 180, true);
+                batch.draw(texture, textureBounds.x, textureBounds.y, textureBounds.width / 2, textureBounds.height / 2, textureBounds.width, textureBounds.height, 1, 1, e.getRotation() + 180, true);
                 batch.setColor(0, 1, 0, 1);
-                batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthbarWidth, healthbarHeight);
+                batch.draw(getTexture("blank", e.getID()), e.getX() + healthbarXOffset, e.getY() + healthbarYOffset, healthbarWidth, healthbarHeight);
                 batch.setColor(1, 0, 0, 1);
                 float healthWidth = healthbarWidth * e.getHealthPercent();
-                batch.draw(getTexture("blank", e.getID()), x + healthbarXOffset, y + healthbarYOffset, healthWidth, healthbarHeight);
+                batch.draw(getTexture("blank", e.getID()), e.getX() + healthbarXOffset, e.getY() + healthbarYOffset, healthWidth, healthbarHeight);
                 if (e.getID() == player.id && player.chargeMeter > 0) {
                     float charge = player.chargeMeter / weaponList.get(player.chargeWeapon).chargeDuration;
                     if (charge > 1) charge = 1;
@@ -1777,6 +1809,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 showMessage("Loaded texture:"+region.name);
             }
         }
+        deathAnimation = new Animation(animationFrameTime,atlas.findRegions("death"), Animation.PlayMode.NORMAL);
     }
 
     private TextureRegion getTexture(String name){
@@ -1993,6 +2026,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(playerList.contains(id)){
             showMessage("PlayerID "+id+" removed.");
             playerList.remove(Integer.valueOf(id));
+            playerDeathAnimations.remove(id);
             score.removePlayer(id);
             if(id==player.id){
                 player.id = -1;

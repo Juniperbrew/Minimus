@@ -62,7 +62,7 @@ public class Network {
         kryo.register(byte[].class);
         kryo.register(WaveChanged.class);
         kryo.register(SpawnRequest.class);
-        kryo.register(SetLives.class);
+        kryo.register(PlayerDied.class);
         kryo.register(Powerup.class);
         kryo.register(HealthPack.class);
         kryo.register(WeaponPickup.class);
@@ -81,6 +81,7 @@ public class Network {
         kryo.register(SpawnProjectile.class);
         kryo.register(ChangeWeapon.class);
         kryo.register(MapCleared.class);
+        kryo.register(RespawnPlayer.class);
     }
 
     public static class WeaponAdded{
@@ -263,8 +264,8 @@ public class Network {
         }
     }
 
-    public static class SetLives{
-        public int lives;
+    public static class PlayerDied{
+        public int id;
     }
 
     public static class SpawnProjectile{
@@ -281,5 +282,11 @@ public class Network {
 
     public static class MapCleared{
         public float timer;
+    }
+
+    public static class RespawnPlayer{
+        public int id;
+        public float x;
+        public float y;
     }
 }

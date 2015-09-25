@@ -11,7 +11,6 @@ import java.util.HashMap;
 public class ServerEntity extends Entity {
 
     EntityChangeListener listener;
-    long lastContactDamageTaken;
     boolean invulnerable;
     HashMap<Integer,Double> weaponCooldowns = new HashMap<>();
     HashMap<Integer,Boolean> weapons = new HashMap<>();
@@ -20,6 +19,7 @@ public class ServerEntity extends Entity {
     public int chargeWeapon;
     float velocity;
     float vision;
+
 
     public ServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer,Boolean> weapons, HashMap<String,Integer> ammo, float velocity, float vision, EntityChangeListener listener){
         super(id, x, y, width, height, maxHealth, team, image);

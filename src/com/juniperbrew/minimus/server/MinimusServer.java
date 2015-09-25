@@ -305,7 +305,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             int id = playerList.getKey(connection);
 
             for(Network.UserInput input : inputList){
-                world.processInput(world.entities.get(id), input);
+                world.processInput((PlayerServerEntity) world.entities.get(id), input);
                 lastInputIDProcessed.put(connection,input.inputID);
             }
             inputList.clear();
@@ -1009,11 +1009,21 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void playerLivesChanged(int id, int lives){
+    public void playerDied(int id, int lives){
         showMessage("Player("+id+") lives is now: "+lives);
-        Network.SetLives setLives = new Network.SetLives();
-        setLives.lives = lives;
-        sendTCP(playerList.get(id), setLives);
+        Network.PlayerDied playerDied = new Network.PlayerDied();
+        playerDied.id = id;
+        sendTCPtoAll(playerDied);
+    }
+
+    @Override
+    public void playerRespawned(int id, float x, float y) {
+        showMessage("Player("+id+") respawned at ("+x+","+y+")");
+        Network.RespawnPlayer respawnPlayer = new Network.RespawnPlayer();
+        respawnPlayer.id = id;
+        respawnPlayer.x = x;
+        respawnPlayer.y = y;
+        sendTCPtoAll(respawnPlayer);
     }
 
     @Override
