@@ -82,6 +82,7 @@ public class Network {
         kryo.register(ChangeWeapon.class);
         kryo.register(MapCleared.class);
         kryo.register(RespawnPlayer.class);
+        kryo.register(GoldChange.class);
     }
 
     public static class WeaponAdded{
@@ -288,5 +289,9 @@ public class Network {
         public int id;
         public float x;
         public float y;
+    }
+
+    public static class GoldChange{
+        public int amount;
     }
 }

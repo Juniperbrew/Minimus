@@ -14,6 +14,7 @@ public class PlayerClientEntity extends ClientEntity{
     public int id;
     public float chargeMeter;
     public int chargeWeapon;
+    public int gold;
 
     public PlayerClientEntity(int id, Map<Integer, Boolean> weapons, Map<String, Integer> ammo) {
         super();

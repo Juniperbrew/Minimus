@@ -378,6 +378,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.RespawnPlayer){
             Network.RespawnPlayer respawnPlayer = (Network.RespawnPlayer) object;
             playerDeathAnimations.remove(respawnPlayer.id);
+        }else if(object instanceof Network.GoldChange){
+            Network.GoldChange goldChange = (Network.GoldChange) object;
+            showMessage("Player gold changed by "+goldChange.amount);
+            player.gold += goldChange.amount;
         }else if(object instanceof Packet){
             Packet p = (Packet) object;
             if(p.name.equals("Disconnected")){
@@ -1327,9 +1331,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         if(mapCleared){
             if(mapChangeTimer>0){
-                font.draw(batch, "Map cleared, changing map in: "+mapChangeTimer + "seconds.", 5, 60);
+                glyphLayout.setText(font, "Map cleared, changing map in: "+String.format("%.1f", mapChangeTimer) + " seconds.");
+                font.draw(batch, "Map cleared, changing map in: "+String.format("%.1f", mapChangeTimer) + " seconds.", windowWidth / 2 - glyphLayout.width/2 ,windowHeight/2-glyphLayout.height/2);
             }else if(mapExit!=null){
-                font.draw(batch, "Map cleared find the exit.", 5, 60);
+                glyphLayout.setText(font, "Map cleared find the exit.");
+                font.draw(batch, "Map cleared find the exit.", windowWidth / 2 - glyphLayout.width/2 ,windowHeight/2-glyphLayout.height/2);
                 batch.setProjectionMatrix(camera.combined);
                 batch.setColor(Color.YELLOW);
                 Vector2 center = new Vector2();
@@ -1344,6 +1350,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 batch.setProjectionMatrix(hudCamera.combined);
             }
         }
+        font.draw(batch, "Cash: " + player.gold+"$", 5, 60);
         font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
         font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
         glyphLayout.setText(font, "Wave " + currentWave);

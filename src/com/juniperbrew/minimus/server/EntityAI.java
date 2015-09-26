@@ -25,7 +25,7 @@ public class EntityAI {
     private static final float FOV = 160;
 
     public boolean hasDestination;
-    ServerEntity entity;
+    NpcServerEntity entity;
     long lastAttackDone;
     int aiType;
     int weapon;
@@ -38,7 +38,7 @@ public class EntityAI {
     private static final float TURNRATE = 180; //Deg/s
     private float targetRotation;
 
-    public EntityAI(ServerEntity entity, int aiType, int weapon, World world){
+    public EntityAI(NpcServerEntity entity, int aiType, int weapon, World world){
         this.entity = entity;
         this.world = world;
         this.aiType = aiType;

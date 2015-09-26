@@ -488,14 +488,16 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     public void giveWeapon(int weaponID, int id){
-        world.entities.get(id).setWeapon(weaponID, true);
+        PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
+        player.setWeapon(weaponID, true);
         Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
         weaponAdded.weapon = weaponID;
         sendTCP(playerList.get(id),weaponAdded);
     }
 
     public void addAmmo(int id, String ammoType, int amount){
-        world.entities.get(id).addAmmo(ammoType,amount);
+        PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
+        player.addAmmo(ammoType, amount);
         Network.AddAmmo addAmmo = new Network.AddAmmo();
         addAmmo.ammoType = ammoType;
         addAmmo.amount = amount;
@@ -1104,6 +1106,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         spawnProjectile.ownerID = ownerID;
         spawnProjectile.team = team;
         sendTCPtoAll(spawnProjectile);
+    }
+
+    @Override
+    public void goldChangeForPlayer(int id, int amount) {
+        Network.GoldChange goldChange = new Network.GoldChange();
+        goldChange.amount = amount;
+        sendTCP(playerList.get(id),goldChange);
     }
 
     @Override

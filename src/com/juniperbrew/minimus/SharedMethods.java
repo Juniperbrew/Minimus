@@ -746,6 +746,9 @@ public class SharedMethods {
                 if(splits[0].equals("vision")){
                     enemyDefinition.vision = Float.parseFloat(splits[1]);
                 }
+                if(splits[0].equals("bounty")){
+                    enemyDefinition.bounty = Integer.parseInt(splits[1]);
+                }
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
