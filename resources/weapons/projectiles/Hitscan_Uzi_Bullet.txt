@@ -1,6 +1,6 @@
 name=Hitscan_Uzi_Bullet
 type=hitscan
 length=400
-damage=18
+damage=5
 onDestroy=Bullet_puff
 knockback=50

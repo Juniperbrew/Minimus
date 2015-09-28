@@ -1,8 +1,11 @@
 package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.math.Rectangle;
+import org.apache.commons.collections4.BidiMap;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -28,6 +31,9 @@ public class G {
     public static HashMap<Integer,Weapon> weaponList;
     public static HashSet<String> ammoList;
     public static ConsoleLogger consoleLogger;
+    public static BidiMap<Integer,ShopItem> shoplist;
+    public static BidiMap<String,Integer> weaponNameToID;
+    public static ArrayList<Rectangle> solidMapObjects;
 
     public static boolean debugFeatureToggle = true;
 

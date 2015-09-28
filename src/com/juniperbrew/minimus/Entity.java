@@ -166,6 +166,10 @@ public class Entity {
         return networkEntity.maxHealth;
     }
 
+    public void setMaxHealth(int health){
+        networkEntity.maxHealth = health;
+    }
+
 
     public void moveTo(double x, double y) {
         networkEntity.x = (float) x;

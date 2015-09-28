@@ -260,6 +260,14 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         }else if(object instanceof Network.GameClockCompare){
             Network.GameClockCompare gameClockCompare = (Network.GameClockCompare) object;
             showMessage("Received gameClockCompare("+playerList.getKey(connection)+"): "+gameClockCompare.serverTime + " Delta: "+(gameClockCompare.serverTime-getServerTime()));
+        }else if(object instanceof Network.BuyItem){
+            Network.BuyItem buyItem = (Network.BuyItem) object;
+            showMessage("Player "+playerList.getKey(connection)+" buying "+buyItem.amount+" of item "+G.shoplist.get(buyItem.id)+"("+buyItem.id+")");
+            world.buyItem(playerList.getKey(connection),buyItem.id,buyItem.amount);
+        }else if(object instanceof Network.SellItem){
+            Network.SellItem sellItem = (Network.SellItem) object;
+            showMessage("Player "+playerList.getKey(connection)+" selling "+sellItem.amount+" of item "+G.shoplist.get(sellItem.id)+"("+sellItem.id+")");
+            world.sellItem(playerList.getKey(connection),sellItem.id,sellItem.amount);
         }
     }
 
@@ -490,18 +498,18 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public void giveWeapon(int weaponID, int id){
         PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
         player.setWeapon(weaponID, true);
-        Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
-        weaponAdded.weapon = weaponID;
-        sendTCP(playerList.get(id),weaponAdded);
+        Network.WeaponUpdate weaponUpdate = new Network.WeaponUpdate();
+        weaponUpdate.weapon = weaponID;
+        sendTCP(playerList.get(id), weaponUpdate);
     }
 
     public void addAmmo(int id, String ammoType, int amount){
         PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
-        player.addAmmo(ammoType, amount);
-        Network.AddAmmo addAmmo = new Network.AddAmmo();
-        addAmmo.ammoType = ammoType;
-        addAmmo.amount = amount;
-        sendTCP(playerList.get(id), addAmmo);
+        player.changeAmmo(ammoType, amount);
+        Network.AmmoUpdate ammoUpdate = new Network.AmmoUpdate();
+        ammoUpdate.ammoType = ammoType;
+        ammoUpdate.amount = amount;
+        sendTCP(playerList.get(id), ammoUpdate);
     }
 
     public void startWaves(){
@@ -1083,18 +1091,19 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void ammoAddedChanged(int id, String ammoType, int value) {
-        Network.AddAmmo addAmmo = new Network.AddAmmo();
-        addAmmo.ammoType = ammoType;
-        addAmmo.amount = value;
-        sendTCP(playerList.get(id),addAmmo);
+    public void playerAmmoChanged(int id, String ammoType, int value) {
+        Network.AmmoUpdate ammoUpdate = new Network.AmmoUpdate();
+        ammoUpdate.ammoType = ammoType;
+        ammoUpdate.amount = value;
+        sendTCP(playerList.get(id), ammoUpdate);
     }
 
     @Override
-    public void weaponAdded(int id, int weapon) {
-        Network.WeaponAdded weaponAdded = new Network.WeaponAdded();
-        weaponAdded.weapon = weapon;
-        sendTCP(playerList.get(id), weaponAdded);
+    public void playerWeaponChanged(int id, int weapon, boolean state) {
+        Network.WeaponUpdate weaponUpdate = new Network.WeaponUpdate();
+        weaponUpdate.weapon = weapon;
+        weaponUpdate.state = state;
+        sendTCP(playerList.get(id), weaponUpdate);
     }
 
     @Override
@@ -1109,10 +1118,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     }
 
     @Override
-    public void goldChangeForPlayer(int id, int amount) {
-        Network.GoldChange goldChange = new Network.GoldChange();
-        goldChange.amount = amount;
-        sendTCP(playerList.get(id),goldChange);
+    public void playerCashChanged(int id, int cash) {
+        Network.CashUpdate cashUpdate = new Network.CashUpdate();
+        cashUpdate.amount = cash;
+        sendTCP(playerList.get(id), cashUpdate);
     }
 
     @Override

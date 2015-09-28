@@ -7,6 +7,7 @@ public interface EntityChangeListener {
 
     public void positionChanged(int id);
     public void healthChanged(int id);
+    public void maxHealthChanged(int id);
     public void rotationChanged(int id);
     public void teamChanged(int id);
     public void entityDied(int id, int sourceID);

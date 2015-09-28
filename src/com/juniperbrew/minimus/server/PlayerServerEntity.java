@@ -12,31 +12,35 @@ public class PlayerServerEntity extends ServerEntity {
 
     int lives;
     float respawnTimer;
-    int gold;
+    int cash;
     HashMap<Integer,Double> weaponCooldowns = new HashMap<>();
     HashMap<Integer,Boolean> weapons = new HashMap<>();
     HashMap<String,Integer> ammo = new HashMap<>();
     public int chargeWeapon;
+    World.WorldChangeListener worldChangeListener;
 
-    public PlayerServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer, Boolean> weapons, HashMap<String, Integer> ammo, float velocity, float vision, EntityChangeListener listener) {
+    public PlayerServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer, Boolean> weapons, HashMap<String, Integer> ammo, float velocity, float vision, EntityChangeListener listener, World.WorldChangeListener worldChangeListener) {
         super(id, x, y, width, height, maxHealth, team, image, velocity, listener);
         this.weapons = weapons;
         this.ammo = ammo;
         for(int weapon : weapons.keySet()){
             weaponCooldowns.put(weapon,-1d);
         }
+        this.worldChangeListener = worldChangeListener;
     }
 
-    public int getGold() {
-        return gold;
+    public int getCash() {
+        return cash;
     }
 
-    public void setGold(int gold) {
-        this.gold = gold;
+    public void setCash(int cash) {
+        this.cash = cash;
+        worldChangeListener.playerCashChanged(getID(),this.cash);
     }
 
-    public void addGold(int gold){
-        this.gold += gold;
+    public void changeCash(int cash){
+        this.cash += cash;
+        worldChangeListener.playerCashChanged(getID(),this.cash);
     }
 
     public float getRespawnTimer() {
@@ -64,6 +68,14 @@ public class PlayerServerEntity extends ServerEntity {
         return weapons.get(weaponID);
     }
 
+    public int getAmmo(String ammoType){
+        if(ammo.containsKey(ammoType)){
+            return ammo.get(ammoType);
+        }else{
+            return 0;
+        }
+    }
+
     public boolean hasAmmo(String ammoType) {
         if(ammo.containsKey(ammoType)){
             return ammo.get(ammoType)>0;
@@ -86,7 +98,7 @@ public class PlayerServerEntity extends ServerEntity {
         Weapon weapon = G.weaponList.get(weaponID);
         setWeaponCooldown(weaponID, weapon.cooldown);
         if(weapon.ammo!=null){
-            addAmmo(weapon.ammo, -1);
+            changeAmmo(weapon.ammo, -1);
         }
     }
 
@@ -109,19 +121,21 @@ public class PlayerServerEntity extends ServerEntity {
         listener.slot2WeaponChanged(getID());
     }
 
-    public void addAmmo(String ammoType, int amount){
+    public void addAmmoToWeapon(int weapon, int amount){
+        String ammoType = G.weaponList.get(weapon).ammo;
+        changeAmmo(ammoType, amount);
+    }
+
+    public void changeAmmo(String ammoType, int amount){
         int weaponAmmo = ammo.get(ammoType);
         weaponAmmo += amount;
         ammo.put(ammoType, weaponAmmo);
+        worldChangeListener.playerAmmoChanged(getID(), ammoType, ammo.get(ammoType));
     }
 
-    public void addAmmoToWeapon(int weapon, int amount){
-        String ammoType = G.weaponList.get(weapon).ammo;
-        addAmmo(ammoType, amount);
-    }
-
-    public void setWeapon(int weapon, boolean state){
-        weapons.put(weapon, state);
+    public void setWeapon(int weaponID, boolean state){
+        weapons.put(weaponID, state);
+        worldChangeListener.playerWeaponChanged(getID(),weaponID, state);
     }
 
     @Override

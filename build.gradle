@@ -10,7 +10,7 @@ applicationName = "Minimus"
 
 ext {
     appName = 'Minimus'
-    gdxVersion = '1.6.4'
+    gdxVersion = '1.7.0'
     texturePacker = ["resources/images/raw", "resources/images", "sprites"]
 }
 

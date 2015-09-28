@@ -30,6 +30,11 @@ public abstract class ServerEntity extends Entity {
         listener.healthChanged(getID());
     }
 
+    public void setMaxHealth(int health){
+        super.setMaxHealth(health);
+        listener.maxHealthChanged(getID());
+    }
+
     public void setRotation(float degrees) {
         super.setRotation(degrees);
         listener.rotationChanged(getID());

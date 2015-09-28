@@ -13,6 +13,8 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
@@ -185,6 +187,12 @@ public class SharedMethods {
 
 
     public static boolean checkMapCollision(Rectangle bounds) {
+
+            for(Rectangle o : G.solidMapObjects){
+                if(bounds.overlaps(o)){
+                    return true;
+                }
+            }
 
         int minX = (int) Math.floor(bounds.x / G.tileWidth);
         int maxX = (int) Math.floor((bounds.x + bounds.width) / G.tileWidth);
@@ -651,7 +659,7 @@ public class SharedMethods {
     }
 
     public static ArrayList<Integer> getEntitiesWithinRange(Collection<? extends Entity> entities, Entity origin, float range){
-        double squaredDistance = Math.pow(range,2);
+        double squaredDistance = Math.pow(range, 2);
         ArrayList<Integer> entityIDs = new ArrayList<>();
         for(Entity e:entities){
             float distance = Tools.getSquaredDistance(origin.getCenterX(), origin.getCenterY(), e.getCenterX(), e.getCenterY());
@@ -1167,6 +1175,43 @@ public class SharedMethods {
         return weapons;
     }
 
+    public static BidiMap<String,Integer> createWeaponNameToIDMapping(HashMap<Integer,Weapon> weaponList){
+        BidiMap<String,Integer> nameToID = new DualHashBidiMap<>();
+
+        for(int weaponID:weaponList.keySet()){
+            nameToID.put(weaponList.get(weaponID).name, weaponID);
+        }
+        return nameToID;
+    }
+
+    public static BidiMap<Integer,ShopItem> readShopList(){
+        File file = new File("resources"+File.separator+"shoplist.txt");
+        G.consoleLogger.log("\nLoading shoplist from file:" + file);
+        BidiMap<Integer,ShopItem> shoplist = new DualHashBidiMap<>();
+        int id = 0;
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty() || line.charAt(0) == '#' || line.charAt(0) == ' ') {
+                    continue;
+                }
+                String[] splits = line.split(":");
+                shoplist.put(id,new ShopItem(splits[0],splits[1],Integer.parseInt(splits[2])));
+                id++;
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for(int i: shoplist.keySet()){
+            G.consoleLogger.log(i + ":" + shoplist.get(i));
+        }
+
+        return shoplist;
+    }
+
     public static HashSet<String> getAmmoList(HashMap<Integer,Weapon> weaponList){
         HashSet<String> ammoList = new HashSet<>();
         for(Weapon w : weaponList.values()){
@@ -1177,6 +1222,15 @@ public class SharedMethods {
         return ammoList;
     }
 
+    public static Rectangle getMapShop(ArrayList<RectangleMapObject> mapObjects){
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("shop")){
+                return o.getRectangle();
+            }
+        }
+        return null;
+    }
+
     public static Rectangle getMapExit(ArrayList<RectangleMapObject> mapObjects){
         for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("exit")){
@@ -1184,6 +1238,29 @@ public class SharedMethods {
             }
         }
         return null;
+    }
+
+    public static ArrayList<RectangleMapObject> getMessageObjects(ArrayList<RectangleMapObject> mapObjects){
+        ArrayList<RectangleMapObject> messageObjects = new ArrayList<>();
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("message")){
+                messageObjects.add(o);
+            }
+        }
+        return messageObjects;
+    }
+
+    public static ArrayList<Rectangle> getSolidMapObjects(ArrayList<RectangleMapObject> mapObjects){
+        ArrayList<Rectangle> solidObjects = new ArrayList<>();
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type")) {
+                String type = o.getProperties().get("type", String.class);
+                if(type.equals("shop")||type.equals("message")){
+                    solidObjects.add(o.getRectangle());
+                }
+            }
+        }
+        return solidObjects;
     }
 
     public static ArrayList<RectangleMapObject> getScaledMapobjects(TiledMap map){
@@ -1201,4 +1278,21 @@ public class SharedMethods {
         }
         return mapObjects;
     }
+
+    public static ArrayList<RectangleMapObject> getClientMapObjects(TiledMap map){
+        ArrayList<RectangleMapObject> mapObjects = getScaledMapobjects(map);
+        Iterator<RectangleMapObject> iter = mapObjects.iterator();
+        while(iter.hasNext()){
+            RectangleMapObject o = iter.next();
+            if(o.getProperties().containsKey("type")){
+                String type = o.getProperties().get("type",String.class);
+                if(type.equals("spawn")||type.equals("enemySpawn")||type.equals("powerup")||type.equals("enemy")){
+                    iter.remove();
+                }
+            }
+        }
+        return mapObjects;
+    }
+
+
 }

@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
+import com.juniperbrew.minimus.components.MaxHealth;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Slot1;
 import com.juniperbrew.minimus.components.Slot2;
@@ -56,6 +57,7 @@ public class Network {
         kryo.register(Team.class);
         kryo.register(Slot1.class);
         kryo.register(Slot2.class);
+        kryo.register(MaxHealth.class);
         kryo.register(FakePing.class);
         kryo.register(SendFile.class);
         kryo.register(FileReceived.class);
@@ -75,21 +77,25 @@ public class Network {
         kryo.register(GameClockCompare.class);
         kryo.register(Color.class);
         kryo.register(MapChange.class);
-        kryo.register(AddAmmo.class);
-        kryo.register(WeaponAdded.class);
+        kryo.register(AmmoUpdate.class);
+        kryo.register(WeaponUpdate.class);
         kryo.register(Rectangle.class);
         kryo.register(SpawnProjectile.class);
         kryo.register(ChangeWeapon.class);
         kryo.register(MapCleared.class);
         kryo.register(RespawnPlayer.class);
-        kryo.register(GoldChange.class);
+        kryo.register(CashUpdate.class);
+        kryo.register(ShopItem.class);
+        kryo.register(BuyItem.class);
+        kryo.register(SellItem.class);
     }
 
-    public static class WeaponAdded{
+    public static class WeaponUpdate {
         public int weapon;
+        public boolean state;
     }
 
-    public static class AddAmmo{
+    public static class AmmoUpdate {
         public String ammoType;
         public int amount;
     }
@@ -191,6 +197,7 @@ public class Network {
         public ArrayList<Integer> playerList;
         public HashMap<Integer,Powerup> powerups;
         public HashMap<Integer,Weapon> weaponList;
+        public HashMap<Integer,ShopItem> shoplist;
         public int primaryWeaponCount;
         public HashMap<String,ProjectileDefinition> projectileList;
         public HashMap<String,Integer> ammo;
@@ -291,7 +298,17 @@ public class Network {
         public float y;
     }
 
-    public static class GoldChange{
+    public static class CashUpdate {
+        public int amount;
+    }
+
+    public static class BuyItem{
+        public int id;
+        public int amount;
+    }
+
+    public static class SellItem{
+        public int id;
         public int amount;
     }
 }

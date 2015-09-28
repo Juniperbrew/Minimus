@@ -1,6 +1,7 @@
 package com.juniperbrew.minimus.windows;
 
 import com.juniperbrew.minimus.ConVars;
+import com.juniperbrew.minimus.G;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.client.MinimusClient;
 import com.juniperbrew.minimus.server.MinimusServer;
@@ -244,7 +245,7 @@ public class ConsoleFrame extends JFrame {
         }
         if(splits[0].equals("ammo")){
             if(minimusServer!=null){
-                minimusServer.addAmmo(Integer.parseInt(splits[1]),splits[2],Integer.parseInt(splits[3]));
+                minimusServer.addAmmo(Integer.parseInt(splits[1]), splits[2], Integer.parseInt(splits[3]));
             }else{
                 addLine("The " + splits[0] + " command can only be used on server");
             }
@@ -283,6 +284,44 @@ public class ConsoleFrame extends JFrame {
         if(splits[0].equals("weapon")){
             if(minimusClient!=null){
                 minimusClient.selectWeapon(Integer.parseInt(splits[1]));
+            }else{
+                addLine("The "+splits[0]+" command can only be used on client");
+            }
+            return;
+        }
+        if(splits[0].equals("buy")){
+            if(minimusClient!=null){
+                if(splits.length>2){
+                    minimusClient.buyItem(Integer.parseInt(splits[1]),Integer.parseInt(splits[2]));
+                }else{
+                    minimusClient.buyItem(Integer.parseInt(splits[1]),1);
+                }
+            }else{
+                addLine("The "+splits[0]+" command can only be used on client");
+            }
+            return;
+        }
+        if(splits[0].equals("sell")){
+            if(minimusClient!=null){
+                if(splits.length>2){
+                    minimusClient.sellItem(Integer.parseInt(splits[1]), Integer.parseInt(splits[2]));
+                }else{
+                    minimusClient.sellItem(Integer.parseInt(splits[1]), 1);
+                }
+            }else{
+                addLine("The "+splits[0]+" command can only be used on client");
+            }
+            return;
+        }
+        if(splits[0].equals("shop")){
+            for(int id : G.shoplist.keySet()){
+                addLine(id+":"+G.shoplist.get(id));
+            }
+            return;
+        }
+        if(splits[0].equals("verkkokauppa")){
+            if(minimusClient!=null){
+                minimusClient.openShop();
             }else{
                 addLine("The "+splits[0]+" command can only be used on client");
             }

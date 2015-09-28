@@ -3,6 +3,7 @@ package com.juniperbrew.minimus.client;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
@@ -16,7 +17,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.*;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
@@ -27,8 +28,28 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Event;
+import com.badlogic.gdx.scenes.scene2d.EventListener;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.ui.Window;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -36,6 +57,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
+import com.juniperbrew.minimus.components.MaxHealth;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Slot1;
@@ -45,6 +67,8 @@ import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.geom.Line2D;
 import java.io.File;
 import java.io.IOException;
@@ -58,6 +82,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 /**
@@ -192,10 +218,21 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private boolean showGraphs;
 
     Rectangle mapExit;
+    Rectangle shop;
+    ArrayList<RectangleMapObject> messageObjects;
     private float mapChangeTimer;
     private boolean mapCleared;
 
     Animation deathAnimation;
+
+    Stage stage;
+    Window shopWindow;
+    Window messageWindow;
+    GlyphLayout messageGlyphLayout = new GlyphLayout();
+    private final int MESSAGE_WINDOW_WIDTH = 400;
+    Label messageArea;
+    Skin skin;
+    Table table;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -223,26 +260,192 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         windowWidth = Gdx.graphics.getWidth();
         windowHeight = Gdx.graphics.getHeight();
         showMessage("Window size: " + windowWidth + "x" + windowHeight);
+
+        loadSounds();
+        loadTextures();
+
         camera = new OrthographicCamera(windowWidth,windowHeight);
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
         camera.zoom = ConVars.getFloat("cl_zoom");
-        hudCamera.position.set(windowWidth/2,windowHeight/2,0);
+        hudCamera.position.set(windowWidth / 2, windowHeight / 2, 0);
         hudCamera.update();
 
-        Gdx.input.setInputProcessor(this);
+        createGUI();
+
+        InputMultiplexer inputMultiplexer = new InputMultiplexer();
+        inputMultiplexer.addProcessor(stage);
+        inputMultiplexer.addProcessor(this);
+        Gdx.input.setInputProcessor(inputMultiplexer);
 
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
         font = new BitmapFont();
         font.setColor(Color.RED);
-
-        loadSounds();
-        loadTextures();
+;
 
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.setVolume(musicVolume);
         backgroundMusic.play();
+    }
+
+    public void openShop(){
+        shopWindow.setVisible(true);
+    }
+
+    private void createGUI(){
+        stage = new Stage(new ScreenViewport());
+        Gdx.input.setInputProcessor(stage);
+        table = new Table();
+        table.setFillParent(true);
+        //table.setDebug(true);
+
+        skin = new Skin(Gdx.files.internal("resources"+File.separator+"skin"+File.separator+"uiskin.json"));
+
+        messageWindow = new Window("Message",skin);
+        messageArea = new Label("",skin);
+        messageArea.setWrap(true);
+        messageArea.setAlignment(Align.topLeft);
+
+        messageWindow.add(messageArea).width(MESSAGE_WINDOW_WIDTH);
+        messageWindow.setVisible(false);
+        messageWindow.setKeepWithinStage(false);
+
+        messageWindow.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                if (event.getTarget().getClass() == Window.class) {
+                    //Consume clicks on window
+                } else {
+                    super.clicked(event, x, y);
+                }
+            }
+        });
+        ImageButton.ImageButtonStyle closeButtonStyle = new ImageButton.ImageButtonStyle(skin.get(Button.ButtonStyle.class));
+        closeButtonStyle.imageUp = skin.getDrawable("tree-plus");
+        ImageButton closeButton = new ImageButton(closeButtonStyle);
+        closeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                messageWindow.setVisible(false);
+            }
+        });
+        messageWindow.getTitleTable().add(closeButton).right();
+
+        table.add(messageWindow);
+        table.row();
+
+        stage.addActor(table);
+    }
+
+    private void createShopGUI(){
+
+        shopWindow = new Window("Shop",skin);
+        table.add(shopWindow);
+        //shopWindow.setDebug(true);
+
+        shopWindow.setVisible(false);
+        shopWindow.setKeepWithinStage(false);
+
+        shopWindow.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                if (event.getTarget().getClass() == Window.class) {
+                    //Consume clicks on window
+                } else {
+                    super.clicked(event, x, y);
+                }
+            }
+        });
+
+        ImageButton.ImageButtonStyle closeButtonStyle = new ImageButton.ImageButtonStyle(skin.get(Button.ButtonStyle.class));
+        closeButtonStyle.imageUp = skin.getDrawable("tree-plus");
+        ImageButton closeButton = new ImageButton(closeButtonStyle);
+        closeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                shopWindow.setVisible(false);
+            }
+        });
+        shopWindow.getTitleTable().add(closeButton).right();
+
+        Label itemName = new Label("",skin);
+        ButtonGroup<ImageButton> shopSelection = new ButtonGroup<>();
+        final int[] shopItemSelection = new int[1];
+        for(int id : G.shoplist.keySet()){
+            ShopItem item = G.shoplist.get(id);
+            ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle(skin.get("toggle",Button.ButtonStyle.class));
+            if(item.type.equals("weapon")){
+                int weaponID = G.weaponNameToID.get(item.name);
+                Weapon weapon = G.weaponList.get(weaponID);
+                style.imageUp = new TextureRegionDrawable(getTexture(weapon.image));
+            }else if(item.type.equals("ammo")){
+                style.imageUp = new TextureRegionDrawable(getTexture(item.name));
+            }else if(item.type.equals("health")){
+                style.imageUp = new TextureRegionDrawable(getTexture("healthpack"));
+            }else if(item.type.equals("maxHealth")){
+                style.imageUp = new TextureRegionDrawable(getTexture("berserkBox"));
+            }
+            if(item.type.equals("row")){
+                shopWindow.row();
+            }else{
+                ImageButton imageButton = new ImageButton(style);
+                imageButton.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        shopItemSelection[0] = id;
+                        itemName.setText(item.type+":"+item.name+" Price: "+item.value+"$");
+                    }
+                });
+                shopSelection.add(imageButton);
+                shopWindow.add(imageButton);
+            }
+        }
+        shopWindow.row();
+        TextButton buyButton = new TextButton("Buy",skin, "toggle");
+        buyButton.toggle();
+        TextButton sellButton = new TextButton("Sell",skin, "toggle");
+        ButtonGroup<TextButton> buyOrSell = new ButtonGroup<>(buyButton,sellButton);
+        shopWindow.add(buyButton).width(100).center().colspan(2);
+        shopWindow.add(sellButton).width(100).center().colspan(2);
+
+        TextButton one = new TextButton("1",skin);
+        one.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (buyOrSell.getCheckedIndex() == 0) {
+                    buyItem(shopItemSelection[0], 1);
+                } else if (buyOrSell.getCheckedIndex() == 1) {
+                    sellItem(shopItemSelection[0], 1);
+                }
+            }
+        });
+        TextButton ten = new TextButton("10",skin);
+        ten.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (buyOrSell.getCheckedIndex() == 0) {
+                    buyItem(shopItemSelection[0], 10);
+                } else if (buyOrSell.getCheckedIndex() == 1) {
+                    sellItem(shopItemSelection[0], 10);
+                }
+            }
+        });
+        TextButton oneHundred = new TextButton("100",skin);
+        oneHundred.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (buyOrSell.getCheckedIndex() == 0) {
+                    buyItem(shopItemSelection[0], 100);
+                } else if (buyOrSell.getCheckedIndex() == 1) {
+                    sellItem(shopItemSelection[0], 100);
+                }
+            }
+        });
+        shopWindow.add(one).width(50);
+        shopWindow.add(ten).width(50);
+        shopWindow.add(oneHundred).width(50);
+        shopWindow.add(itemName).colspan(shopWindow.getColumns()).left();
     }
 
     private void handlePacket(Object object){
@@ -315,8 +518,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             currentWave = assign.wave;
             weaponList = assign.weaponList;
             G.weaponList = weaponList;
+            G.shoplist = new DualHashBidiMap<>(assign.shoplist);
             primaryWeaponCount = assign.primaryWeaponCount;
             G.primaryWeaponCount = primaryWeaponCount;
+            G.weaponNameToID = SharedMethods.createWeaponNameToIDMapping(G.weaponList);
+            createShopGUI();
             projectileList = assign.projectileList;
             player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
             ghostPlayer = new ClientEntity();
@@ -347,14 +553,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.MapChange){
             Network.MapChange mapChange = (Network.MapChange) object;
             changeMap(mapChange);
-        }else if(object instanceof Network.AddAmmo){
-            Network.AddAmmo addAmmo = (Network.AddAmmo) object;
-            int a = player.ammo.get(addAmmo.ammoType);
-            a += addAmmo.amount;
-            player.ammo.put(addAmmo.ammoType,a);
-        }else if(object instanceof Network.WeaponAdded){
-            Network.WeaponAdded weaponAdded = (Network.WeaponAdded) object;
-            player.weapons.put(weaponAdded.weapon,true);
+        }else if(object instanceof Network.AmmoUpdate){
+            Network.AmmoUpdate ammoUpdate = (Network.AmmoUpdate) object;
+            player.ammo.put(ammoUpdate.ammoType,ammoUpdate.amount);
+        }else if(object instanceof Network.WeaponUpdate){
+            Network.WeaponUpdate weaponUpdate = (Network.WeaponUpdate) object;
+            player.weapons.put(weaponUpdate.weapon,weaponUpdate.state);
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
             ProjectileDefinition def = projectileList.get(spawnProjectile.projectileName);
@@ -378,10 +582,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.RespawnPlayer){
             Network.RespawnPlayer respawnPlayer = (Network.RespawnPlayer) object;
             playerDeathAnimations.remove(respawnPlayer.id);
-        }else if(object instanceof Network.GoldChange){
-            Network.GoldChange goldChange = (Network.GoldChange) object;
-            showMessage("Player gold changed by "+goldChange.amount);
-            player.gold += goldChange.amount;
+        }else if(object instanceof Network.CashUpdate){
+            Network.CashUpdate cashUpdate = (Network.CashUpdate) object;
+            showMessage("Player gold updated to "+ cashUpdate.amount);
+            player.gold = cashUpdate.amount;
         }else if(object instanceof Packet){
             Packet p = (Packet) object;
             if(p.name.equals("Disconnected")){
@@ -537,11 +741,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     private void pollInput(float delta){
 
-        float mouseX = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
-        float mouseY = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
+        Vector2 mouse = Tools.screenToWorldCoordinates(camera,Gdx.input.getX(),Gdx.input.getY());
         if(lastMouseX==-1&&lastMouseY==-1){
-            lastMouseX = mouseX;
-            lastMouseY = mouseY;
+            lastMouseX = mouse.x;
+            lastMouseY = mouse.y;
         }
         if(!buttons.contains(Enums.Buttons.W)
                 && !buttons.contains(Enums.Buttons.A)
@@ -559,10 +762,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(autoWalk) input.buttons.add(Enums.Buttons.W);
 
         input.inputID = inputRequestID;
-        input.mouseX = mouseX;
-        input.mouseY = mouseY;
-        lastMouseX = mouseX;
-        lastMouseY = mouseY;
+        input.mouseX = mouse.x;
+        input.mouseY = mouse.y;
+        lastMouseX = mouse.x;
+        lastMouseY = mouse.y;
         inputQueue.add(input);
         pendingInputPacket.add(input);
 
@@ -710,7 +913,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             float velocity = weapon.minChargeVelocity+(weapon.maxChargeVelocity-weapon.minChargeVelocity)*charge;
             attack.projectileModifiers.put("velocity",velocity);
             if(weapon.projectile.duration>0){
-                attack.projectileModifiers.put("duration",weapon.projectile.duration-player.chargeMeter);
+                attack.projectileModifiers.put("duration", weapon.projectile.duration - player.chargeMeter);
             }
             player.chargeMeter = 0;
         }
@@ -881,6 +1084,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     //Here we update the fields that are not interpolated
                     ClientEntity old = entities.get(id);
                     old.setHealth(e.health);
+                    old.setMaxHealth(e.maxHealth);
                     old.setTeam(e.team);
                     old.setSlot1Weapon(e.slot1Weapon);
                     old.setSlot2Weapon(e.slot2Weapon);
@@ -1193,6 +1397,18 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 shapeRenderer.end();
             }
 
+            batch.setColor(1, 1, 1, 1);
+            batch.begin();
+            if(shop!=null){
+                batch.draw(getTexture("shopkeeper"), shop.x, shop.y, shop.width, shop.height);
+            }
+
+            for(RectangleMapObject messageObject : messageObjects){
+                Rectangle r = messageObject.getRectangle();
+                batch.draw(getTexture(messageObject.getProperties().get("image",String.class)),r.x,r.y,r.width,r.height);
+            }
+            batch.end();
+
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1, 0, 0, 1); //red
@@ -1350,6 +1566,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 batch.setProjectionMatrix(hudCamera.combined);
             }
         }
+        font.draw(batch, "Health: " + player.getHealth()+"/"+player.getMaxHealth(), 5, 80);
         font.draw(batch, "Cash: " + player.gold+"$", 5, 60);
         font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
         font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
@@ -1396,6 +1613,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         batch.end();
 
+        stage.act(delta);
+        stage.draw();
+
         if(showGraphs) {
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
             Gdx.gl.glLineWidth(1);
@@ -1436,7 +1656,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float x2 = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
         float y2 = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
 
-        SharedMethods.debugRaytrace(x1,y1,x2,y2);
+        SharedMethods.debugRaytrace(x1, y1, x2, y2);
 
         tracer = new Line2D.Float(x1,y1,x2,y2);
     }
@@ -1539,6 +1759,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if(component instanceof Slot2){
                         Slot2 slot2 = (Slot2) component;
                         changedEntity.slot2Weapon = slot2.weaponID;
+                    }
+                    if(component instanceof MaxHealth){
+                        MaxHealth maxHealth = (MaxHealth) component;
+                        changedEntity.maxHealth = maxHealth.health;
                     }
                 }
                 newEntityList.put(id,changedEntity);
@@ -1969,6 +2193,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float mapScale = SharedMethods.getMapScale(map);
         ArrayList<RectangleMapObject> mapObjects = SharedMethods.getScaledMapobjects(map);
         mapExit = SharedMethods.getMapExit(mapObjects);
+        shop = SharedMethods.getMapShop(mapObjects);
+        messageObjects = SharedMethods.getMessageObjects(mapObjects);
         MapProperties p = map.getProperties();
         G.mapWidthTiles = p.get("width", Integer.class);
         G.mapHeightTiles = p.get("height", Integer.class);
@@ -1982,6 +2208,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
         G.collisionMap = SharedMethods.createCollisionMap(map, G.mapWidthTiles, G.mapHeightTiles);
+        G.solidMapObjects = SharedMethods.getSolidMapObjects(mapObjects);
         createMinimap();
     }
 
@@ -2024,7 +2251,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80,120)));
         }
 
-        playSoundInLocation(sounds.get("death.wav"),e.getCenterX(),e.getCenterY());
+        playSoundInLocation(sounds.get("death.wav"), e.getCenterX(), e.getCenterY());
 
         //We are not removing it from older states, should not matter, they get removed once interpolation catches up to them
         authoritativeState.entities.remove(id);
@@ -2057,6 +2284,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
+    public void buyItem(int id, int amount){
+        Network.BuyItem buyItem = new Network.BuyItem();
+        buyItem.id = id;
+        buyItem.amount = amount;
+        sendTCP(buyItem);
+    }
+
+    public void sellItem(int id, int amount){
+        Network.SellItem sellItem = new Network.SellItem();
+        sellItem.id = id;
+        sellItem.amount = amount;
+        sendTCP(sellItem);
+    }
+
     @Override
     public void resize(int width, int height) {
         windowWidth = width;
@@ -2068,6 +2309,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         hudCamera.position.set(windowWidth/2,windowHeight / 2,0);
         hudCamera.update();
         centerCameraOnPlayer();
+
+        stage.getViewport().update(width, height, true);
     }
 
     @Override
@@ -2079,11 +2322,30 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public void dispose() {
         statusData.writeLog(false);
+        stage.dispose();
     }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if(button == 0){
+            Vector2 mouse = Tools.screenToWorldCoordinates(camera,Gdx.input.getX(),Gdx.input.getY());
+            for(RectangleMapObject messageObject : messageObjects){
+                if(messageObject.getRectangle().contains(mouse)){
+                    String message = messageObject.getProperties().get("message", String.class).replace("\\n","\n");
+                    messageArea.setText(message);
+                    System.out.println(messageArea.getPrefHeight());
+                    System.out.println(messageArea.getPrefWidth());
+                    System.out.println(messageArea.getGlyphLayout().height);
+                    System.out.println(messageArea.getGlyphLayout().width);
+                    System.out.println(message);
+                    messageWindow.setVisible(true);
+                    return false;
+                }
+            }
+            if(shop!=null&&shop.contains(mouse)){
+                shopWindow.setVisible(!shopWindow.isVisible());
+                return false;
+            }
             buttons.add(Enums.Buttons.MOUSE1);
         }
         if(button == 1){

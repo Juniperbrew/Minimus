@@ -16,6 +16,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.components.Health;
+import com.juniperbrew.minimus.components.MaxHealth;
 import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.components.Rotation;
 import com.juniperbrew.minimus.components.Slot1;
@@ -37,6 +38,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.regex.Pattern;
 
 /**
  * Created by Juniperbrew on 1.8.2015.
@@ -58,6 +60,7 @@ public class World implements EntityChangeListener{
     Set<Integer> teamChangedEntities = new HashSet<>();
     Set<Integer> slot1ChangedEntities = new HashSet<>();
     Set<Integer> slot2ChangedEntities = new HashSet<>();
+    Set<Integer> maxHealthChangedEntities = new HashSet<>();
 
     ArrayList<Integer> pendingEntityRemovals = new ArrayList<>();
 
@@ -108,19 +111,22 @@ public class World implements EntityChangeListener{
     boolean mapCleared;
 
     Rectangle mapExit;
+    private ArrayList<Rectangle> solidMapObjects;
 
     public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
         this.mapLoader = mapLoader;
         this.batch = batch;
-        //loadMaps();
         projectileList = SharedMethods.readSeperatedProjectileList();
         weaponList = readWeaponSlots(SharedMethods.readSeperatedWeaponList(projectileList));
         ammoList = SharedMethods.getAmmoList(weaponList);
 
         G.weaponList = weaponList;
         G.ammoList = ammoList;
+        G.shoplist = SharedMethods.readShopList();
         enemyList = SharedMethods.readEnemyList(weaponList);
+        G.weaponNameToID = SharedMethods.createWeaponNameToIDMapping(G.weaponList);
+
         loadImages();
 
         changeMap(ConVars.get("sv_map"));
@@ -131,6 +137,7 @@ public class World implements EntityChangeListener{
         String fileName = G.mapFolder+File.separator+mapName+File.separator+mapName+".tmx";
         map = mapLoader.load(fileName);
         mapObjects = SharedMethods.getScaledMapobjects(map);
+        G.solidMapObjects = SharedMethods.getSolidMapObjects(mapObjects);
     }
 
     public HashMap<Integer,NetworkEntity> getNetworkedEntities(){
@@ -543,15 +550,13 @@ public class World implements EntityChangeListener{
                         }
                     }else if(p instanceof AmmoPickup){
                         AmmoPickup ammoPickup = (AmmoPickup) p;
-                        player.addAmmo(ammoPickup.ammoType, ammoPickup.value);
-                        listener.ammoAddedChanged(playerID, ammoPickup.ammoType, ammoPickup.value);
+                        player.changeAmmo(ammoPickup.ammoType, ammoPickup.value);
                         despawnPowerup(powerupID);
                     }else if(p instanceof WeaponPickup){
                         WeaponPickup weaponPickup = (WeaponPickup) p;
                         int weapon = weaponPickup.weaponID;
                         if(!player.hasWeapon(weapon)){
                             player.setWeapon(weapon, true);
-                            listener.weaponAdded(playerID,weapon);
                             despawnPowerup(powerupID);
                         }
                     }
@@ -892,7 +897,7 @@ public class World implements EntityChangeListener{
 
         PlayerServerEntity newPlayer = new PlayerServerEntity(networkID,x,y,width,height,
                 ConVars.getInt("sv_player_max_health"),ConVars.getInt("sv_player_default_team"),
-                "rambo",entityWeapons,entityAmmo,ConVars.getFloat("sv_player_velocity"),0,this);
+                "rambo",entityWeapons,entityAmmo,ConVars.getFloat("sv_player_velocity"),0,this,listener);
         newPlayer.setLives(ConVars.getInt("sv_start_lives"));
         newPlayer.invulnerable = true;
         addEntity(newPlayer);
@@ -908,6 +913,7 @@ public class World implements EntityChangeListener{
         assign.weaponList = new HashMap<>(weaponList);
         assign.primaryWeaponCount = primaryWeaponCount;
         assign.projectileList = new HashMap<>(projectileList);
+        assign.shoplist = new HashMap<>(G.shoplist);
         assign.ammo = entityAmmo;
         assign.weapons = entityWeapons;
 
@@ -1051,6 +1057,7 @@ public class World implements EntityChangeListener{
         changedEntities.addAll(teamChangedEntities);
         changedEntities.addAll(slot1ChangedEntities);
         changedEntities.addAll(slot2ChangedEntities);
+        changedEntities.addAll(maxHealthChangedEntities);
 
         for(int id: changedEntities){
             ArrayList<Component> components = new ArrayList<>();
@@ -1079,6 +1086,10 @@ public class World implements EntityChangeListener{
                 ServerEntity e = entities.get(id);
                 components.add(new Slot2(e.getSlot2Weapon()));
             }
+            if(maxHealthChangedEntities.contains(id)){
+                ServerEntity e = entities.get(id);
+                components.add(new MaxHealth(e.getMaxHealth()));
+            }
         }
         posChangedEntities.clear();
         healthChangedEntities.clear();
@@ -1086,6 +1097,7 @@ public class World implements EntityChangeListener{
         teamChangedEntities.clear();
         slot1ChangedEntities.clear();
         slot2ChangedEntities.clear();
+        maxHealthChangedEntities.clear();
         return changedComponents;
     }
 
@@ -1154,6 +1166,7 @@ public class World implements EntityChangeListener{
         rotationChangedEntities.remove(networkID);
         slot1ChangedEntities.remove(networkID);
         slot2ChangedEntities.remove(networkID);
+        maxHealthChangedEntities.remove(networkID);
 
         if(playerList.remove(networkID)){
             listener.playerRemoved(networkID);
@@ -1169,6 +1182,84 @@ public class World implements EntityChangeListener{
         return entities.get(id);
     }
 
+    public void buyItem(int playerID, int itemID, int amount){
+        PlayerServerEntity player = (PlayerServerEntity) entities.get(playerID);
+        ShopItem item = G.shoplist.get(itemID);
+        //FIXME mapping shop item to weapon or ammo seems pretty unreliable
+        if(G.ammoList.contains(item.name)){
+            int price = item.value*amount;
+            if(player.getCash() >= price){
+                player.changeCash(-price);
+            }else if(player.getCash() >= item.value) {
+                //If cant buy all buy as many as can afford
+                amount = player.getCash()/item.value;
+                price = item.value*amount;
+                player.changeCash(-price);
+            }else{
+                return;
+            }
+            player.changeAmmo(item.name, amount);
+        } else if(G.weaponNameToID.containsKey(item.name)){
+            int weaponID = G.weaponNameToID.get(item.name);
+            if(player.hasWeapon(weaponID)){
+                return;
+            }
+            if(player.getCash()>= item.value){
+                player.changeCash(-item.value);
+            }else{
+                return;
+            }
+            player.setWeapon(weaponID,true);
+        } else {
+            if (item.type.equals("maxHealth")) {
+                if(player.getCash()>=item.value){
+                    player.changeCash(-item.value);
+                    int maxHealth = Integer.parseInt(item.name);
+                    player.setMaxHealth(player.getMaxHealth()+maxHealth);
+                }
+            }else if(item.type.equals("health")){
+                if(player.getHealth()==player.getMaxHealth()){
+                    return;
+                }
+                if(player.getCash()>=item.value){
+                    player.changeCash(-item.value);
+                    int health = Integer.parseInt(item.name);
+                    player.addHealth(health);
+                }
+            }
+        }
+    }
+
+    public void sellItem(int playerID, int itemID, int amount){
+        PlayerServerEntity player = (PlayerServerEntity) entities.get(playerID);
+        ShopItem item = G.shoplist.get(itemID);
+        //FIXME mapping shop item to weapon or ammo seems pretty unreliable
+        if(G.ammoList.contains(item.name)){
+            int value;
+            if(player.getAmmo(item.name) >= amount){
+                value = item.value*amount;
+            }else if(player.getAmmo(item.name)< amount && player.getAmmo(item.name) > 0){
+                amount = player.getAmmo(item.name);
+                value = item.value*amount;
+            }else{
+                return;
+            }
+            player.changeAmmo(item.name, -amount);
+            //Full sell price for ammo
+            player.changeCash(value);
+        }else if(G.weaponNameToID.containsKey(item.name)){
+            int weaponID = G.weaponNameToID.get(item.name);
+            if(!player.hasWeapon(weaponID)){
+                return;
+            }
+            player.setWeapon(weaponID,false);
+            //Half sell price for weapons
+            player.changeCash(item.value/2);
+        }else{
+
+        }
+    }
+
     @Override
     public void positionChanged(int id) {
         posChangedEntities.add(id);
@@ -1177,6 +1268,11 @@ public class World implements EntityChangeListener{
     @Override
     public void healthChanged(int id) {
         healthChangedEntities.add(id);
+    }
+
+    @Override
+    public void maxHealthChanged(int id) {
+        maxHealthChangedEntities.add(id);
     }
 
     @Override
@@ -1210,8 +1306,7 @@ public class World implements EntityChangeListener{
             ServerEntity target = entities.get(id);
             if(target instanceof NpcServerEntity){
                 NpcServerEntity npc = (NpcServerEntity) target;
-                player.addGold(npc.bounty);
-                listener.goldChangeForPlayer(sourceID, npc.bounty);
+                player.changeCash(npc.bounty);
             }
         }
     }
@@ -1240,9 +1335,9 @@ public class World implements EntityChangeListener{
         public void attackCreated(Network.EntityAttacking entityAttacking, Weapon weapon);
         public void mapChanged(String mapName);
         public void mapCleared(float timer);
-        public void ammoAddedChanged(int id, String ammoType, int value);
-        public void weaponAdded(int id, int weapon);
+        public void playerAmmoChanged(int id, String ammoType, int value);
+        public void playerWeaponChanged(int id, int weapon, boolean state);
         public void networkedProjectileSpawned(String projectileName, float x, float y, int ownerID, int team);
-        public void goldChangeForPlayer(int id, int amount);
+        public void playerCashChanged(int id, int amount);
     }
 }

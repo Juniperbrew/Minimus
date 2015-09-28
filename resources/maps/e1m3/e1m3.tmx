@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="80" height="40" tilewidth="20" tileheight="20" nextobjectid="103">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="80" height="40" tilewidth="20" tileheight="20" nextobjectid="106">
  <properties>
   <property name="mapScale" value="4"/>
   <property name="nextLevel" value="e1m4"/>
@@ -3031,5 +3031,7 @@
     <property name="value" value="10"/>
    </properties>
   </object>
+  <object id="103" name="shop" type="shop" x="140" y="740" width="16" height="25"/>
+  <object id="105" x="220" y="740"/>
  </objectgroup>
 </map>

@@ -1,7 +1,9 @@
 package com.juniperbrew.minimus;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.*;
 
@@ -157,5 +159,16 @@ public class Tools {
         float anglediff = (angle1 - angle2 + 180) % 360 - 180;
         if(anglediff<=-180) anglediff +=360;
         return anglediff;
+    }
+
+    public static Vector2 screenToWorldCoordinates(OrthographicCamera camera, float x, float y){
+        Vector2 worldCoord = new Vector2();
+        worldCoord.x = camera.position.x-(camera.viewportWidth/2)+x;
+        worldCoord.y = camera.position.y+(camera.viewportHeight/2)-y;
+        return worldCoord;
+    }
+
+    public static String wrapText(String text, int lineWidth){
+        return null;
     }
 }
