@@ -15,10 +15,20 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.soap.Text;
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -27,6 +37,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -1255,7 +1266,7 @@ public class SharedMethods {
         for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type")) {
                 String type = o.getProperties().get("type", String.class);
-                if(type.equals("shop")||type.equals("message")){
+                if(type.equals("message")||type.equals("dialogue")||type.equals("shop")){
                     solidObjects.add(o.getRectangle());
                 }
             }
@@ -1279,19 +1290,115 @@ public class SharedMethods {
         return mapObjects;
     }
 
-    public static ArrayList<RectangleMapObject> getClientMapObjects(TiledMap map){
-        ArrayList<RectangleMapObject> mapObjects = getScaledMapobjects(map);
-        Iterator<RectangleMapObject> iter = mapObjects.iterator();
-        while(iter.hasNext()){
-            RectangleMapObject o = iter.next();
-            if(o.getProperties().containsKey("type")){
-                String type = o.getProperties().get("type",String.class);
-                if(type.equals("spawn")||type.equals("enemySpawn")||type.equals("powerup")||type.equals("enemy")){
-                    iter.remove();
+    public static ArrayList<RectangleMapObject> getInteractableMapObjects(ArrayList<RectangleMapObject> mapObjects){
+        ArrayList<RectangleMapObject> interactableMapObjects = new ArrayList<>();
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type")) {
+                String type = o.getProperties().get("type", String.class);
+                if(type.equals("message")||type.equals("dialogue")||type.equals("shop")){
+                    interactableMapObjects.add(o);
                 }
             }
         }
-        return mapObjects;
+        return interactableMapObjects;
+    }
+
+    public static ArrayList<RectangleMapObject> getDrawableMapObjects(ArrayList<RectangleMapObject> mapObjects){
+        ArrayList<RectangleMapObject> drawableMapObjects = new ArrayList<>();
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type")) {
+                String type = o.getProperties().get("type", String.class);
+                if(type.equals("message")||type.equals("dialogue")||type.equals("shop")){
+                    drawableMapObjects.add(o);
+                }
+            }
+        }
+        return drawableMapObjects;
+    }
+
+    public static Tree<String> parseXmlDialogue(String filepath){
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = null;
+        Tree<String> dialogTree = null;
+        try {
+            builder = builderFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            Document document = builder.parse(new FileInputStream(filepath));
+            Element rootElement = document.getDocumentElement();
+            NodeList nodes = rootElement.getChildNodes();
+            String startText = null;
+            Element portrait;
+            Element options = null;
+            Element name;
+            for(int i=0; i<nodes.getLength(); i++) {
+                Node node = nodes.item(i);
+                if(node instanceof Element){
+                    System.out.println(node);
+                    Element element = (Element) node;
+                    if(element.getTagName().equals("text")){
+                        startText = element.getTextContent();
+                    }
+                    if(element.getTagName().equals("option_container")){
+                        options = element;
+                    }
+                    if(element.getTagName().equals("portrait")){
+                        portrait = element;
+                    }
+                    if(element.getTagName().equals("name")){
+                        name = element;
+                    }
+                }
+            }
+
+            dialogTree = new Tree<>("root");
+            Tree.Node<String> startNode = dialogTree.addToNode(dialogTree.getRoot(),"text:"+startText);
+            System.out.println("Start text:" + startText);
+            parseNode(options, "", dialogTree.getRoot(), dialogTree);
+            printTreeNode(dialogTree.getRoot(),"");
+
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return dialogTree;
+    }
+
+    public static void printTreeNode(Tree.Node node, String indent){
+        System.out.println(indent+node.getValue());
+        List<Tree.Node> children = node.getChildren();
+        for(Tree.Node childNode : children){
+            printTreeNode(childNode,indent+" ");
+        }
+    }
+
+    public static void parseNode(Element node, String indent, Tree.Node dialogNode, Tree dialogTree) {
+        System.out.println(indent + node);
+        if(node.getTagName().equals("option")){
+            String choiceText = node.getAttributes().getNamedItem("choice_text").getNodeValue();
+            dialogNode = dialogTree.addToNode(dialogNode,"choice:"+choiceText);
+        }else if(node.getTagName().equals("text")){
+            String text = node.getFirstChild().getNodeValue();
+            System.out.println("Adding text to node: " + text);
+            dialogTree.addToNode(dialogNode,"text:"+text);
+        }else if(node.getTagName().equals("goto")){
+            String goTo = node.getFirstChild().getNodeValue();
+            System.out.println("Adding goto to node: " + goTo);
+            dialogTree.addToNode(dialogNode, "goto:"+goTo);
+        }
+        NodeList nodeList = node.getChildNodes();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node currentNode = nodeList.item(i);
+            if(currentNode instanceof Element){
+                Element element = (Element) currentNode;
+                //calls this method for all the children which is Element
+                parseNode(element, indent + " ", dialogNode ,dialogTree);
+            }
+        }
     }
 
 

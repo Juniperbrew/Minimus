@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="75">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="20" tileheight="20" nextobjectid="77">
  <properties>
   <property name="mapScale" value="4"/>
   <property name="nextLevel" value="e1m2"/>
@@ -2606,7 +2606,11 @@
    </properties>
   </object>
   <object id="69" type="exit" x="800" y="580" width="60" height="100"/>
-  <object id="70" name="shop" type="shop" x="720" y="60" width="16" height="25"/>
+  <object id="70" name="shop" type="shop" x="720" y="60" width="16" height="25">
+   <properties>
+    <property name="image" value="shopkeeper"/>
+   </properties>
+  </object>
   <object id="73" type="message" x="60" y="420" width="20" height="20">
    <properties>
     <property name="image" value="sign"/>
@@ -2617,6 +2621,18 @@
    <properties>
     <property name="image" value="shopkeeper"/>
     <property name="message" value="fake shopsdfsd fsdfs fsdfsdf dsfsd fsdfhe56edfgd 5er \n fgfdgdfgfd"/>
+   </properties>
+  </object>
+  <object id="75" type="dialogue" x="120" y="400" width="20" height="20">
+   <properties>
+    <property name="dialogue" value="dialogue1"/>
+    <property name="image" value="shopkeeper"/>
+   </properties>
+  </object>
+  <object id="76" type="dialogue" x="40" y="340" width="20" height="20">
+   <properties>
+    <property name="dialogue" value="dialogue2"/>
+    <property name="image" value="shopkeeper"/>
    </properties>
   </object>
  </objectgroup>

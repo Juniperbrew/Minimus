@@ -3031,7 +3031,11 @@
     <property name="value" value="10"/>
    </properties>
   </object>
-  <object id="103" name="shop" type="shop" x="140" y="740" width="16" height="25"/>
+  <object id="103" name="shop" type="shop" x="140" y="740" width="16" height="25">
+   <properties>
+    <property name="image" value="shopkeeper"/>
+   </properties>
+  </object>
   <object id="105" x="220" y="740"/>
  </objectgroup>
 </map>

@@ -29,19 +29,16 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.Event;
-import com.badlogic.gdx.scenes.scene2d.EventListener;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -67,8 +64,6 @@ import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.geom.Line2D;
 import java.io.File;
 import java.io.IOException;
@@ -80,6 +75,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -218,8 +214,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private boolean showGraphs;
 
     Rectangle mapExit;
-    Rectangle shop;
-    ArrayList<RectangleMapObject> messageObjects;
+    ArrayList<RectangleMapObject> drawableMapObjects;
+    ArrayList<RectangleMapObject> interactableMapObjects;
     private float mapChangeTimer;
     private boolean mapCleared;
 
@@ -228,11 +224,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Stage stage;
     Window shopWindow;
     Window messageWindow;
-    GlyphLayout messageGlyphLayout = new GlyphLayout();
     private final int MESSAGE_WINDOW_WIDTH = 400;
     Label messageArea;
     Skin skin;
     Table table;
+
+    //DialogueWindow
+    Window dialogueWindow;
+    Label dialogueMessage;
+    ArrayList<TextButton> dialogueChoices = new ArrayList<>();
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -299,9 +299,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         table = new Table();
         table.setFillParent(true);
         //table.setDebug(true);
-
         skin = new Skin(Gdx.files.internal("resources"+File.separator+"skin"+File.separator+"uiskin.json"));
+        createMessageWindow();
+        createDialogueWindow();
+        stage.addActor(table);
+    }
 
+    private void createMessageWindow(){
         messageWindow = new Window("Message",skin);
         messageArea = new Label("",skin);
         messageArea.setWrap(true);
@@ -334,8 +338,83 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         table.add(messageWindow);
         table.row();
+    }
 
-        stage.addActor(table);
+    private void createDialogueWindow(){
+        dialogueWindow = new Window("Dialogue",skin);
+        dialogueWindow.setVisible(false);
+        dialogueWindow.setKeepWithinStage(false);
+        //dialogueWindow.debug();
+
+        Table leftTable = new Table();
+        dialogueWindow.add(leftTable).size(150);
+        Image image = new Image(getTexture("shopkeeper"));
+        leftTable.add(image);
+        leftTable.row();
+        leftTable.add(new Label("Shopkeeper", skin));
+
+        dialogueMessage = new Label("",skin);
+        dialogueMessage.setWrap(true);
+        dialogueWindow.add(dialogueMessage).width(400).expand().top();
+        dialogueWindow.row();
+
+        ImageButton.ImageButtonStyle closeButtonStyle = new ImageButton.ImageButtonStyle(skin.get(Button.ButtonStyle.class));
+        closeButtonStyle.imageUp = skin.getDrawable("tree-plus");
+        ImageButton closeButton = new ImageButton(closeButtonStyle);
+        closeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                dialogueWindow.setVisible(false);
+            }
+        });
+        dialogueWindow.getTitleTable().add(closeButton).right();
+
+        table.add(dialogueWindow);
+        table.row();
+    }
+
+    private void parseDialogCommand(String command){
+        if(command.equals("openShop()")){
+            shopWindow.setVisible(true);
+            dialogueWindow.setVisible(false);
+        }else if(command.equals("close()")){
+            dialogueWindow.setVisible(false);
+        }
+    }
+
+    private void updateDialogueWindow(Tree.Node<String> dialogNode){
+        dialogueMessage.setText(dialogNode.getFirstChild().getValue().split(":")[1]);
+        for(TextButton b : dialogueChoices){
+            dialogueWindow.removeActor(b);
+        }
+
+        List<Tree.Node<String>> options = dialogNode.getChildren();
+        for (int i = 0; i < options.size(); i++) {
+            String text = options.get(i).getValue();
+            String[] splits = text.split(":");
+            if(splits[0].equals("choice")){
+                TextButton choice = new TextButton(splits[1],skin);
+                final int choiceIndex = i;
+                choice.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        Tree.Node<String> choiceNode = options.get(choiceIndex);
+                        if(choiceNode.hasChildren()){
+                            String choice = choiceNode.getFirstChild().getValue();
+                            String[] choiceSplit = choice.split(":");
+                            if(choiceSplit[0].equals("goto")){
+                                parseDialogCommand(choiceSplit[1]);
+                            }else if(choiceSplit[0].equals("text")){
+                                updateDialogueWindow(choiceNode);
+                            }
+                        }
+                    }
+                });
+                dialogueChoices.add(choice);
+                dialogueWindow.add(choice).colspan(2).left();
+                dialogueWindow.row();
+            }
+        }
     }
 
     private void createShopGUI(){
@@ -1399,13 +1478,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             batch.setColor(1, 1, 1, 1);
             batch.begin();
-            if(shop!=null){
-                batch.draw(getTexture("shopkeeper"), shop.x, shop.y, shop.width, shop.height);
-            }
 
-            for(RectangleMapObject messageObject : messageObjects){
-                Rectangle r = messageObject.getRectangle();
-                batch.draw(getTexture(messageObject.getProperties().get("image",String.class)),r.x,r.y,r.width,r.height);
+            for(RectangleMapObject mapObject : drawableMapObjects){
+                Rectangle r = mapObject.getRectangle();
+                batch.draw(getTexture(mapObject.getProperties().get("image",String.class)),r.x,r.y,r.width,r.height);
             }
             batch.end();
 
@@ -2193,8 +2269,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float mapScale = SharedMethods.getMapScale(map);
         ArrayList<RectangleMapObject> mapObjects = SharedMethods.getScaledMapobjects(map);
         mapExit = SharedMethods.getMapExit(mapObjects);
-        shop = SharedMethods.getMapShop(mapObjects);
-        messageObjects = SharedMethods.getMessageObjects(mapObjects);
+        drawableMapObjects = SharedMethods.getDrawableMapObjects(mapObjects);
+        interactableMapObjects = SharedMethods.getInteractableMapObjects(mapObjects);
         MapProperties p = map.getProperties();
         G.mapWidthTiles = p.get("width", Integer.class);
         G.mapHeightTiles = p.get("height", Integer.class);
@@ -2329,22 +2405,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if(button == 0){
             Vector2 mouse = Tools.screenToWorldCoordinates(camera,Gdx.input.getX(),Gdx.input.getY());
-            for(RectangleMapObject messageObject : messageObjects){
-                if(messageObject.getRectangle().contains(mouse)){
-                    String message = messageObject.getProperties().get("message", String.class).replace("\\n","\n");
-                    messageArea.setText(message);
-                    System.out.println(messageArea.getPrefHeight());
-                    System.out.println(messageArea.getPrefWidth());
-                    System.out.println(messageArea.getGlyphLayout().height);
-                    System.out.println(messageArea.getGlyphLayout().width);
-                    System.out.println(message);
-                    messageWindow.setVisible(true);
+            for(RectangleMapObject o : interactableMapObjects){
+                if(o.getRectangle().contains(mouse)){
+                    String type = o.getProperties().get("type",String.class);
+                    if(type.equals("message")){
+                        String message = o.getProperties().get("message", String.class).replace("\\n","\n");
+                        messageArea.setText(message);
+                        messageWindow.setVisible(true);
+                    }else if(type.equals("dialogue")){
+                        String dialogue = o.getProperties().get("dialogue", String.class);
+                        Tree<String> dialogTree = SharedMethods.parseXmlDialogue("resources"+File.separator+dialogue);
+                        updateDialogueWindow(dialogTree.getRoot());
+                        dialogueWindow.setVisible(true);
+                    }else if(type.equals("shop")){
+                        shopWindow.setVisible(!shopWindow.isVisible());
+                    }
                     return false;
                 }
-            }
-            if(shop!=null&&shop.contains(mouse)){
-                shopWindow.setVisible(!shopWindow.isVisible());
-                return false;
             }
             buttons.add(Enums.Buttons.MOUSE1);
         }
