@@ -53,13 +53,6 @@ import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Health;
-import com.juniperbrew.minimus.components.MaxHealth;
-import com.juniperbrew.minimus.components.Position;
-import com.juniperbrew.minimus.components.Rotation;
-import com.juniperbrew.minimus.components.Slot1;
-import com.juniperbrew.minimus.components.Slot2;
-import com.juniperbrew.minimus.components.Team;
 import com.juniperbrew.minimus.windows.ClientStatusFrame;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -1811,33 +1804,33 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 ArrayList<Component> components = changedEntityComponents.get(id);
                 NetworkEntity changedEntity = new NetworkEntity(e);
                 for(Component component:components){
-                    if(component instanceof Position){
-                        Position pos = (Position) component;
+                    if(component instanceof Component.Position){
+                        Component.Position pos = (Component.Position) component;
                         changedEntity.x = pos.x;
                         changedEntity.y = pos.y;
                     }
-                    if(component instanceof Health) {
-                        Health health = (Health) component;
+                    if(component instanceof Component.Health) {
+                        Component.Health health = (Component.Health) component;
                         changedEntity.health = health.health;
                     }
-                    if(component instanceof Rotation){
-                        Rotation rotation = (Rotation) component;
+                    if(component instanceof Component.Rotation){
+                        Component.Rotation rotation = (Component.Rotation) component;
                         changedEntity.rotation=rotation.degrees;
                     }
-                    if(component instanceof Team){
-                        Team team = (Team) component;
+                    if(component instanceof Component.Team){
+                        Component.Team team = (Component.Team) component;
                         changedEntity.team = team.team;
                     }
-                    if(component instanceof Slot1){
-                        Slot1 slot1 = (Slot1) component;
+                    if(component instanceof Component.Slot1){
+                        Component.Slot1 slot1 = (Component.Slot1) component;
                         changedEntity.slot1Weapon = slot1.weaponID;
                     }
-                    if(component instanceof Slot2){
-                        Slot2 slot2 = (Slot2) component;
+                    if(component instanceof Component.Slot2){
+                        Component.Slot2 slot2 = (Component.Slot2) component;
                         changedEntity.slot2Weapon = slot2.weaponID;
                     }
-                    if(component instanceof MaxHealth){
-                        MaxHealth maxHealth = (MaxHealth) component;
+                    if(component instanceof Component.MaxHealth){
+                        Component.MaxHealth maxHealth = (Component.MaxHealth) component;
                         changedEntity.maxHealth = maxHealth.health;
                     }
                 }

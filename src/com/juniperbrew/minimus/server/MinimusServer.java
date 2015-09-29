@@ -31,8 +31,6 @@ import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
 import com.juniperbrew.minimus.Weapon;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Health;
-import com.juniperbrew.minimus.components.Position;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.ServerStatusFrame;
 import com.juniperbrew.minimus.windows.StatusData;
@@ -653,8 +651,8 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         HashMap<Integer,ArrayList<Component>> changedComponents = new HashMap<>();
         for (int i = 0; i < entityCount; i++) {
             ArrayList<Component> components = new ArrayList<>();
-            if(pos)components.add(new Position(50,50));
-            if(health)components.add(new Health(100));
+            if(pos)components.add(new Component.Position(50,50));
+            if(health)components.add(new Component.Health(100));
             changedComponents.put(i,components);
         }
         return changedComponents;

@@ -15,13 +15,6 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
-import com.juniperbrew.minimus.components.Health;
-import com.juniperbrew.minimus.components.MaxHealth;
-import com.juniperbrew.minimus.components.Position;
-import com.juniperbrew.minimus.components.Rotation;
-import com.juniperbrew.minimus.components.Slot1;
-import com.juniperbrew.minimus.components.Slot2;
-import com.juniperbrew.minimus.components.Team;
 
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
@@ -1064,31 +1057,31 @@ public class World implements EntityChangeListener{
             changedComponents.put(id,components);
             if(posChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Position(e.getX(),e.getY()));
+                components.add(new Component.Position(e.getX(),e.getY()));
             }
             if(healthChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Health(e.getHealth()));
+                components.add(new Component.Health(e.getHealth()));
             }
             if(rotationChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Rotation(e.getRotation()));
+                components.add(new Component.Rotation(e.getRotation()));
             }
             if(teamChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Team(e.getTeam()));
+                components.add(new Component.Team(e.getTeam()));
             }
             if(slot1ChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Slot1(e.getSlot1Weapon()));
+                components.add(new Component.Slot1(e.getSlot1Weapon()));
             }
             if(slot2ChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new Slot2(e.getSlot2Weapon()));
+                components.add(new Component.Slot2(e.getSlot2Weapon()));
             }
             if(maxHealthChangedEntities.contains(id)){
                 ServerEntity e = entities.get(id);
-                components.add(new MaxHealth(e.getMaxHealth()));
+                components.add(new Component.MaxHealth(e.getMaxHealth()));
             }
         }
         posChangedEntities.clear();
