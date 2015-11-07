@@ -21,7 +21,6 @@ cl_max_packet_delay 0
 sv_ping_update_delay 1
 cl_ping_update_delay 1
 cl_auto_send_errorlogs 1
-sv_map e1m1
 sv_npc_velocity 75
 sv_npc_target_search_radius 500
 sv_npc_destination_time_limit 5
@@ -37,4 +36,5 @@ cl_volume_music 0.5
 sv_idkfa 1
 cl_fps_max 60
 cl_fps_background_max 15
-sv_campaign default
+sv_campaign hohto
+sv_map e2m1
