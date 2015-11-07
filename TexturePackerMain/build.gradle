@@ -1,0 +1,15 @@
+version '0.01'
+
+apply plugin:'application'
+
+mainClassName = "com.juniperbrew.TexturePackerMain"
+sourceCompatibility = 1.5
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile 'com.badlogicgames.gdx:gdx-tools:1.6.4'
+}

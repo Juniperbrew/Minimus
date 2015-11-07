@@ -1,0 +1,66 @@
+<dialog>
+	<conversation id="dialogue1">
+		<name>Erich</name>
+		<portrait>npcErichPortrait</portrait>
+		
+		<text>Well met traveler. Name's Erich, used to be the captain of the fine 'ol ship Lucy back there. Seems we are 'bout to go our separate ways from now on.</text>
+		
+		<option_container>
+			<option choice_text="What happened to the ship?">
+				<text>That blasted Foern, decided to overtake 'me ship with guns blazing. Killed off all the crew and left me alive only to suffer... I've heard you've "dealt" with difficult situations before. Would you mind helping me out?</text>
+				<option_container>
+					<option choice_text="What's in it for me?">
+						<text>I heard officials are looking for you. Why is really none of my business, but I can get you off this island in good 'ol Lucy if you help me out.</text>
+						<option_container>
+							<option choice_text="Count me in!">
+								<text>Excellent! Clean out Foern's men aboard the ship and return to me once you're done.</text>
+								<option_container>
+									<option choice_text="Leave">
+										<goto>close()</goto>
+									</option>
+								</option_container>
+							</option>
+							<option choice_text="Not interested">
+								<goto>close()</goto>
+							</option>
+						</option_container>
+					</option>
+					<option choice_text="Not interested">
+						<goto>close()</goto>
+					</option>
+				</option_container>
+			</option>
+			<option choice_text="Not interested">
+				<text>Scram off then!</text>
+				<option_container>
+					<option choice_text="Leave">
+						<goto>close()</goto>
+					</option>
+				</option_container>
+			</option>
+		</option_container>
+		
+	</conversation>
+	
+	<conversation id="dialogue2">
+		<name>Erich</name>
+		<portrait>npcErichPortrait</portrait>
+		
+		<text>Ahh, splendid work! 'Was afraid I'd never set foot on 'me ship again. Ready to set sail?</text>
+		
+		<option_container>
+			<option choice_text="Ready">
+				<text>Time's a wastin', get to the bridge of the ship and we'll set sail!</text>
+				<option_container>
+					<option choice_text="Leave">
+						<goto>enableExit()</goto>
+					</option>
+				</option_container>
+			</option>
+			<option choice_text="Not yet">
+				<goto>close()</goto>
+			</option>
+		</option_container>
+		
+	</conversation>
+</dialog>
