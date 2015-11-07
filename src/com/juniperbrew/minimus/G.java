@@ -16,7 +16,7 @@ public class G {
 
 
     public static final int TIMEOUT = 0; //Default 12000
-    public static final String mapFolder = "resources"+ File.separator+ "maps";
+    public static final String campaignFolder = "resources"+ File.separator+ "campaign";
 
     public static int tileWidth;
     public static int tileHeight;

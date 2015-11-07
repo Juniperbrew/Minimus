@@ -1,0 +1,12 @@
+name=Animated_Flame
+type=projectile
+width=20
+length=20
+animation=fire
+frameDuration=0.1
+range=600
+velocity=150
+damage=35
+knockback=50
+looping
+networked

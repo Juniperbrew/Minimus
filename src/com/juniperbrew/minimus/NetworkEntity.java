@@ -21,6 +21,10 @@ public class NetworkEntity {
         this(-1,-1,-1,-1);
     }
 
+    public NetworkEntity(String image){
+        this(-1,-1,-1,-1,-1,-1,-1,-1,image);
+    }
+
     public NetworkEntity(NetworkEntity e){
         id = e.id;
         x = e.x;

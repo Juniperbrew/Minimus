@@ -1,0 +1,10 @@
+name=Grenade launcher
+projectile=Grenade
+spread=0
+projectileCount=1
+sound=projectile.ogg
+cooldown=0.5
+image=grenadeLauncher
+ammo=grenade
+sound=sinko.wav
+sprite=rifle

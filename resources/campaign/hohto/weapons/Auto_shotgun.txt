@@ -1,0 +1,9 @@
+name=Auto shotgun
+projectile=Hitscan_Shotgun_Bullet
+spread=30
+projectileCount=5
+cooldown=0.2
+image=UTK_autoShotgun
+ammo=smallShell
+sound=shotgun.wav
+sprite=rifle

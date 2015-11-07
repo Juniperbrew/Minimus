@@ -1,0 +1,14 @@
+name=Grenade
+type=projectile
+color=[190,190,190]
+width=5
+length=5
+duration=2
+velocity=600
+onDestroy=Explosion
+knockback=200
+bounce
+friction=300
+dontDestroyOnCollision
+stopOnCollision
+networked

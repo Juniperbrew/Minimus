@@ -1,0 +1,13 @@
+name=Explosion
+type=projectile
+damage=50
+width=200
+length=200
+animation=explosion
+frameDuration=0.1
+knockback=500
+sound=explosion.wav
+explosionKnockback
+ignoreMapCollision
+dontDestroyOnCollision
+networked

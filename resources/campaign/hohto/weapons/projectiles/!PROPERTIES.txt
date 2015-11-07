@@ -1,0 +1,30 @@
+#name={String}
+#type={projectile,hitscan,particle,tracer}
+#width={int}
+#length={int}
+#color={[r,g,b]}
+#image={String}
+#sound={String}
+#tracer={String}
+
+#[Primary attributes]#
+#damage={int}
+#range={int}
+#velocity={int}
+#duration={float}
+#friction={float}
+#bounce{flag}
+#knockback={float}
+#onDestroy={String}
+
+#[Animation]#
+#animation={String}
+#frameDuration={float}
+#looping={flag}		||If animation is not looping the projectile gets destroyed after animation finishes
+
+#[Flags]#
+#networked={flag}
+#ignoreMapCollision={flag}
+#ignoreEntityCollision={flag}
+#explosionKnockback={flag}
+#dontDestroyOnCollision{flag}

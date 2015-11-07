@@ -74,6 +74,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
+import org.w3c.dom.Element;
 
 /**
  * Created by Juniperbrew on 23.1.2015.
@@ -217,7 +218,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Stage stage;
     Window shopWindow;
     Window messageWindow;
-    private final int MESSAGE_WINDOW_WIDTH = 400;
     Label messageArea;
     Skin skin;
     Table table;
@@ -226,6 +226,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     Window dialogueWindow;
     Label dialogueMessage;
     ArrayList<TextButton> dialogueChoices = new ArrayList<>();
+    private String campaign;
+    private String currentMap;
+    private Image dialoguePortrait;
+    private Label dialogueName;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -254,9 +258,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         windowHeight = Gdx.graphics.getHeight();
         showMessage("Window size: " + windowWidth + "x" + windowHeight);
 
-        loadSounds();
-        loadTextures();
-
         camera = new OrthographicCamera(windowWidth,windowHeight);
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
         camera.zoom = ConVars.getFloat("cl_zoom");
@@ -274,12 +275,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         shapeRenderer = new ShapeRenderer();
         font = new BitmapFont();
         font.setColor(Color.RED);
-;
-
-        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("resources"+File.separator+"taustamuusik.mp3"));
-        backgroundMusic.setLooping(true);
-        backgroundMusic.setVolume(musicVolume);
-        backgroundMusic.play();
     }
 
     public void openShop(){
@@ -304,7 +299,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         messageArea.setWrap(true);
         messageArea.setAlignment(Align.topLeft);
 
-        messageWindow.add(messageArea).width(MESSAGE_WINDOW_WIDTH);
+        messageWindow.add(messageArea).width(400);
         messageWindow.setVisible(false);
         messageWindow.setKeepWithinStage(false);
 
@@ -341,10 +336,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         Table leftTable = new Table();
         dialogueWindow.add(leftTable).size(150);
-        Image image = new Image(getTexture("shopkeeper"));
-        leftTable.add(image);
+        dialoguePortrait = new Image();
+        leftTable.add(dialoguePortrait);
         leftTable.row();
-        leftTable.add(new Label("Shopkeeper", skin));
+        dialogueName = new Label("", skin);
+        leftTable.add(dialogueName);
 
         dialogueMessage = new Label("",skin);
         dialogueMessage.setWrap(true);
@@ -408,6 +404,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 dialogueWindow.row();
             }
         }
+    }
+
+    private void updateDialogueWindow(Tree.Node<String> dialogNode, String name, String portrait){
+        updateDialogueWindow(dialogNode);
+        dialogueName.setText(name);
+        dialoguePortrait.setDrawable(new TextureRegionDrawable(getTexture(portrait)));
     }
 
     private void createShopGUI(){
@@ -546,7 +548,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
         }else if(object instanceof Network.EntityAttacking){
             Network.EntityAttacking attack = (Network.EntityAttacking) object;
-            addAttack(attack);
+            createAttack(attack);
         }else if(object instanceof Network.AddDeath){
             Network.AddDeath addDeath = (Network.AddDeath) object;
             score.addDeath(addDeath.id);
@@ -570,11 +572,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             removeEntity(removeEntity.networkID);
         }else if(object instanceof Network.AssignEntity){
             Network.AssignEntity assign = (Network.AssignEntity) object;
-            showMessage("Assigning entity "+assign.networkID+" for player.");
+            showMessage("Assigning entity " + assign.networkID + " for player.");
             Gdx.graphics.setTitle(this.getClass().getSimpleName() + "[" + assign.networkID + "]");
             ConVars.set("sv_player_velocity", assign.velocity);
 
-            loadMap(assign.mapName);
+            campaign = assign.campaign;
+            currentMap = assign.mapName;
             lives = assign.lives;
 
             playerList = assign.playerList;
@@ -594,7 +597,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             primaryWeaponCount = assign.primaryWeaponCount;
             G.primaryWeaponCount = primaryWeaponCount;
             G.weaponNameToID = SharedMethods.createWeaponNameToIDMapping(G.weaponList);
-            createShopGUI();
             projectileList = assign.projectileList;
             player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
             ghostPlayer = new ClientEntity();
@@ -602,6 +604,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 showMessage("Adding entity " + id + " to score");
                 score.addPlayer(id);
             }
+            loadCampaign(campaign);
 
         }else if(object instanceof Network.WaveChanged){
             Network.WaveChanged waveChanged = (Network.WaveChanged) object;
@@ -704,7 +707,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         mapChangeTimer = 0;
         fadeScreen();
         SharedMethods.printCollisionMap();
-        loadMap(mapChange.mapName);
+        loadMap(mapChange.mapName, campaign);
         //powerups = mapChange.powerups;
         powerups.clear();
         projectiles.clear();
@@ -999,11 +1002,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 playSoundInLocation(sounds.get(weapon.sound),attack.x,attack.y);
             }
         }else{
-            addAttack(attack);
+            createAttack(attack);
         }
     }
 
-    private void addAttack(Network.EntityAttacking attack){
+    private void createAttack(Network.EntityAttacking attack){
         if(weaponList==null){
             return;
         }
@@ -2075,9 +2078,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         camera.update();
     }
 
-    private void loadSounds(){
+    private void loadSounds(String campaignName){
 
-        File soundFolder = new File("resources"+File.separator+"sounds");
+        File soundFolder = new File(G.campaignFolder+File.separator+campaignName+File.separator+"sounds");
         showMessage("Loading sounds from: " + soundFolder);
         for (File file : soundFolder.listFiles()) {
             if (!file.isDirectory()) {
@@ -2088,9 +2091,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void loadTextures(){
+    private void loadTextures(String campaignName){
         showMessage("Loading texture atlas");
-        atlas =  new TextureAtlas("resources"+File.separator+"images"+File.separator+"sprites.atlas");
+        atlas =  new TextureAtlas(G.campaignFolder+File.separator+campaignName+File.separator+"images"+File.separator+"sprites.atlas");
         G.atlas = atlas;
         showMessage("Loading textures");
         Array<TextureAtlas.AtlasRegion> regions = atlas.getRegions();
@@ -2256,8 +2259,19 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void loadMap(String mapName){
-        map = new TmxMapLoader().load(G.mapFolder+File.separator+mapName+File.separator+mapName+".tmx");
+    private void loadCampaign(String campaignName){
+        loadMap(currentMap, campaignName);
+        loadSounds(campaignName);
+        loadTextures(campaignName);
+        createShopGUI();
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal(G.campaignFolder+File.separator+campaignName+File.separator+"taustamuusik.mp3"));
+        backgroundMusic.setLooping(true);
+        backgroundMusic.setVolume(musicVolume);
+        backgroundMusic.play();
+    }
+
+    private void loadMap(String mapName, String campaignName){
+        map = new TmxMapLoader().load(G.campaignFolder+File.separator+campaignName+File.separator+"maps"+File.separator+mapName+File.separator+mapName+".tmx");
         fixTextureBleeding(map);
         float mapScale = SharedMethods.getMapScale(map);
         ArrayList<RectangleMapObject> mapObjects = SharedMethods.getScaledMapobjects(map);
@@ -2406,9 +2420,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         messageArea.setText(message);
                         messageWindow.setVisible(true);
                     }else if(type.equals("dialogue")){
-                        String dialogue = o.getProperties().get("dialogue", String.class);
-                        Tree<String> dialogTree = SharedMethods.parseXmlDialogue("resources"+File.separator+dialogue);
-                        updateDialogueWindow(dialogTree.getRoot());
+                        String dialogueID = o.getProperties().get("dialogue", String.class);
+                        Element conversation = SharedMethods.getConversation(G.campaignFolder + File.separator + campaign + File.separator + "maps" + File.separator + currentMap + File.separator + "dialogue.xml", dialogueID);
+                        Tree<String> dialogTree = SharedMethods.getDialogueNodes(conversation);
+                        String name = SharedMethods.getDialogueName(conversation);
+                        String portrait = SharedMethods.getDialoguePortrait(conversation);
+                        if(portrait==null){
+                            portrait = o.getProperties().get("image", String.class);
+                        }
+                        updateDialogueWindow(dialogTree.getRoot(),name,portrait);
                         dialogueWindow.setVisible(true);
                     }else if(type.equals("shop")){
                         shopWindow.setVisible(!shopWindow.isVisible());

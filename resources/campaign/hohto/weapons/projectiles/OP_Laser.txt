@@ -1,0 +1,6 @@
+name=OP_Laser
+type=hitscan
+tracer=OP_Laser_Tracer
+length=1000
+damage=50
+knockback=50

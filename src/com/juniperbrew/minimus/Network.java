@@ -20,6 +20,11 @@ public class Network {
 
     static public void register (EndPoint endPoint) {
         Kryo kryo = endPoint.getKryo();
+        register(kryo);
+    }
+
+    static public void register(Kryo kryo){
+
         kryo.register(Message.class);
         kryo.register(UserInput.class);
         kryo.register(UpdateRate.class);
@@ -186,6 +191,7 @@ public class Network {
         public int networkID;
         public float velocity;
         public String mapName;
+        public String campaign;
         public int lives;
         public int wave;
         public ArrayList<Integer> playerList;

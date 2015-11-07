@@ -11,7 +11,7 @@ applicationName = "Minimus"
 ext {
     appName = 'Minimus'
     gdxVersion = '1.7.0'
-    texturePacker = ["resources/images/raw", "resources/images", "sprites"]
+    texturePacker = ["images/raw", "images", "sprites"]
 }
 
 repositories {
@@ -53,10 +53,10 @@ sourceSets {
     }
 }
 
-task texturePacker << {
+task texturePacker(campaign) << {
     if (project.ext.has('texturePacker')) {
         logger.info "Calling TexturePacker: "+texturePacker
-        TexturePacker.process(texturePacker[0], texturePacker[1], texturePacker[2])
+        TexturePacker.process("resources/$campaign"+texturePacker[0], "resources/"+texturePacker[1], texturePacker[2])
     }
 }
 

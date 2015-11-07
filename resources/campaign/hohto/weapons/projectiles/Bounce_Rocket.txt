@@ -1,0 +1,12 @@
+name=Bounce_Rocket
+type=projectile
+color=[190,190,190]
+width=5
+length=15
+range=6000
+velocity=600
+damage=35
+onDestroy=Explosion
+knockback=200
+bounce
+networked

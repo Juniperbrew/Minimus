@@ -1,0 +1,6 @@
+name=Laser
+tracer=Laser_Tracer
+type=hitscan
+length=50
+damage=35
+knockback=50

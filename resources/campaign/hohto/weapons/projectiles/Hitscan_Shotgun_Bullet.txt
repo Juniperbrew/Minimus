@@ -1,0 +1,6 @@
+name=Hitscan_Shotgun_Bullet
+type=hitscan
+length=350
+damage=3
+onDestroy=Bullet_puff
+knockback=50

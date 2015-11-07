@@ -24,7 +24,6 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.soap.Text;
 import java.awt.geom.Line2D;
 import java.io.BufferedReader;
 import java.io.File;
@@ -721,11 +720,8 @@ public class SharedMethods {
         batch.end();
     }
 
-    public static HashMap<String,EnemyDefinition> readEnemyList(HashMap<Integer,Weapon> weaponList){
-        File file = new File(Tools.getUserDataDirectory()+ File.separator+"enemylist.txt");
-        if(!file.exists()){
-            file = new File("resources"+File.separator+"defaultenemylist.txt");
-        }
+    public static HashMap<String,EnemyDefinition> readEnemyList(HashMap<Integer,Weapon> weaponList, String campaignName){
+        File file = new File(G.campaignFolder+File.separator+campaignName+File.separator+"enemylist.txt");
         G.consoleLogger.log("\nLoading enemies from file:" + file);
         HashMap<String,EnemyDefinition> enemies = new HashMap<>();
         EnemyDefinition enemyDefinition = null;
@@ -781,8 +777,8 @@ public class SharedMethods {
         return enemies;
     }
 
-    public static HashMap<String,ProjectileDefinition> readSeperatedProjectileList(){
-        File projectileFolder = new File("resources"+File.separator+"weapons"+File.separator+"projectiles");
+    public static HashMap<String,ProjectileDefinition> readSeperatedProjectileList(String campaignName){
+        File projectileFolder = new File(G.campaignFolder+File.separator+campaignName+File.separator+"weapons"+File.separator+"projectiles");
         ArrayList<File> files = new ArrayList<>();
         G.consoleLogger.log("\nLoading projectiles from folder:" + projectileFolder);
         for (File fileEntry : projectileFolder.listFiles()) {
@@ -907,8 +903,8 @@ public class SharedMethods {
         return projectiles;
     }
 
-    public static HashMap<String,Weapon> readSeperatedWeaponList(HashMap<String,ProjectileDefinition> projectileList){
-        File weaponsFolder = new File("resources"+File.separator+"weapons");
+    public static HashMap<String,Weapon> readSeperatedWeaponList(HashMap<String,ProjectileDefinition> projectileList, String campaignName){
+        File weaponsFolder = new File(G.campaignFolder+File.separator+campaignName+File.separator+"weapons");
         ArrayList<File> files = new ArrayList<>();
         G.consoleLogger.log("\nLoading weapons from folder:" + weaponsFolder);
         for (File fileEntry : weaponsFolder.listFiles()) {
@@ -1195,8 +1191,8 @@ public class SharedMethods {
         return nameToID;
     }
 
-    public static BidiMap<Integer,ShopItem> readShopList(){
-        File file = new File("resources"+File.separator+"shoplist.txt");
+    public static BidiMap<Integer,ShopItem> readShopList(String campaignName){
+        File file = new File(G.campaignFolder+File.separator+campaignName+File.separator+"shoplist.txt");
         G.consoleLogger.log("\nLoading shoplist from file:" + file);
         BidiMap<Integer,ShopItem> shoplist = new DualHashBidiMap<>();
         int id = 0;
@@ -1316,10 +1312,9 @@ public class SharedMethods {
         return drawableMapObjects;
     }
 
-    public static Tree<String> parseXmlDialogue(String filepath){
+    public static Element getConversation(String filepath, String dialogueID){
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = null;
-        Tree<String> dialogTree = null;
         try {
             builder = builderFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
@@ -1330,10 +1325,69 @@ public class SharedMethods {
             Document document = builder.parse(new FileInputStream(filepath));
             Element rootElement = document.getDocumentElement();
             NodeList nodes = rootElement.getChildNodes();
+            for (int i = 0; i < nodes.getLength(); i++) {
+                Node node = nodes.item(i);
+                if (node instanceof Element) {
+                    System.out.println(node);
+                    Element element = (Element) node;
+                    if (element.getAttribute("id").equals(dialogueID)) {
+                        System.out.println("FOUND dialogue:" + element.getAttribute("id"));
+                        return element;
+                    }
+                }
+            }
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static String getDialogueName(Element dialogue){
+        NodeList nodes = dialogue.getChildNodes();
+
+        for(int i=0; i<nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            if (node instanceof Element) {
+                Element element = (Element) node;
+                if (element.getTagName().equals("name")) {
+                    return element.getFirstChild().getNodeValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    public static String getDialoguePortrait(Element dialogue){
+        NodeList nodes = dialogue.getChildNodes();
+
+        for(int i=0; i<nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            if (node instanceof Element) {
+                Element element = (Element) node;
+                if (element.getTagName().equals("portrait")) {
+                    if(element.getFirstChild()!=null){
+                        return element.getFirstChild().getNodeValue();
+                    }else{
+                        return null;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public static Tree<String> getDialogueNodes(Element dialogue){
+
+            NodeList nodes = dialogue.getChildNodes();
             String startText = null;
             Element portrait;
             Element options = null;
-            Element name;
+
+
             for(int i=0; i<nodes.getLength(); i++) {
                 Node node = nodes.item(i);
                 if(node instanceof Element){
@@ -1348,23 +1402,16 @@ public class SharedMethods {
                     if(element.getTagName().equals("portrait")){
                         portrait = element;
                     }
-                    if(element.getTagName().equals("name")){
-                        name = element;
-                    }
+
                 }
             }
 
-            dialogTree = new Tree<>("root");
-            Tree.Node<String> startNode = dialogTree.addToNode(dialogTree.getRoot(),"text:"+startText);
-            System.out.println("Start text:" + startText);
-            parseNode(options, "", dialogTree.getRoot(), dialogTree);
-            printTreeNode(dialogTree.getRoot(),"");
+        Tree<String> dialogTree = new Tree<>("root");
+        dialogTree.addToNode(dialogTree.getRoot(),"text:"+startText);
+        System.out.println("Start text:" + startText);
+        parseNode(options, "", dialogTree.getRoot(), dialogTree);
+        printTreeNode(dialogTree.getRoot(),"");
 
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         return dialogTree;
     }
 
@@ -1402,4 +1449,24 @@ public class SharedMethods {
     }
 
 
+
+    public static Rectangle getSpawnZone(ArrayList<RectangleMapObject> mapObjects){
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
+                G.consoleLogger.log("Spawn at:" + o.getRectangle());
+                return o.getRectangle();
+            }
+        }
+        return null;
+    }
+
+    public static ArrayList<Rectangle> getEnemySpawnZones(ArrayList<RectangleMapObject> mapObjects){
+        ArrayList<Rectangle> zones = new ArrayList<>();
+        for(RectangleMapObject o : mapObjects){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemySpawn")){
+                zones.add(o.getRectangle());
+            }
+        }
+        return zones;
+    }
 }

@@ -11,7 +11,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Registration;
 import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.util.ObjectMap;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
@@ -136,23 +138,40 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
         Gdx.input.setInputProcessor(this);
+        ObjectMap map = server.getKryo().getContext();
+        System.out.println("Position registration: " + server.getKryo().getRegistration(Component.Position.class));
+        for (int i = 0; i < server.getKryo().getNextRegistrationId(); i++) {
+            Registration r = server.getKryo().getRegistration(i);
+            System.out.print(r);
+            System.out.println(" "+r.getSerializer());
+        }
 
-        serverData.entitySize = measureObject(new NetworkEntity(-1, 1000000, 1000000,-1));
+        serverData.entitySize = measureObject(new NetworkEntity(-1, 1, 1,-1));
         showMessage("Kryo entity size:" + serverData.entitySize + "bytes");
-        showMessage("0 entityComponents size:" + measureObject(createComponentList(0,true,true,true)) + "bytes");
-        showMessage("pos entityComponents size:" + measureObject(createComponentList(1,true,false,false)) + "bytes");
-        showMessage("heading entityComponents size:" + measureObject(createComponentList(1,false,true,false)) + "bytes");
-        showMessage("health entityComponents size:" + measureObject(createComponentList(1,false,false,true)) + "bytes");
-        showMessage("1 entityComponents size:" + measureObject(createComponentList(1,true,true,true)) + "bytes");
-        showMessage("10 entityComponents size:" + measureObject(createComponentList(10,true,true,true)) + "bytes");
-        showMessage("100 entityComponents size:" + measureObject(createComponentList(100,true,true,true)) + "bytes");
-        showMessage("100 pos entityComponents size:" + measureObject(createComponentList(100, true, false, false)) + "bytes");
+        showMessage("0 (empty)entityComponents size:" + measureObject(createComponentList(0, false, false, false)) + "bytes");
+        showMessage("0 entityComponents size:" + measureObject(createComponentList(0, true, false, true)) + "bytes");
+
+        showMessage("Position size:" + measureObject(new Component.Position(1000000000, 1000000000)));
+        System.out.println(Float.floatToIntBits(1000000000));
+
+        showMessage("(empty)entityComponents size:" + measureObject(createComponentList(1, false, false, false)) + "bytes");
+        showMessage("(pos)entityComponents size:" + measureObject(createComponentList(1, true, false, false)) + "bytes");
+        showMessage("(health)entityComponents size:" + measureObject(createComponentList(1, false, false, true)) + "bytes");
+
+        showMessage("1 (pos+health)entityComponents size:" + measureObject(createComponentList(1, true, false, true)) + "bytes");
+        //showMessage("10 (pos+health)entityComponents size:" + measureObject(createComponentList(10,true,false, true)) + "bytes");
+        //showMessage("100 (pos+health)entityComponents size:" + measureObject(createComponentList(100,true,false, true)) + "bytes");
+
+        showMessage("1 entityFullComponents size:" + measureObject(createFullComponentList(1)) + "bytes");
+        //showMessage("10 entityFullComponents size:" + measureObject(createFullComponentList(10)) + "bytes");
+        //showMessage("100 entityFullComponents size:" + measureObject(createFullComponentList(100)) + "bytes");
+        //showMessage("100 (pos)entityComponents size:" + measureObject(createComponentList(100, true, false, false)) + "bytes");
 
 
         showMessage("0 entity position update size:" + measureObject(createPositionList(0)) + "bytes");
         showMessage("1 entity position update size:" + measureObject(createPositionList(1)) + "bytes");
-        showMessage("10 entity position update size:" + measureObject(createPositionList(10)) + "bytes");
-        showMessage("100 entity position update size:" + measureObject(createPositionList(100)) + "bytes");
+        //showMessage("10 entity position update size:" + measureObject(createPositionList(10)) + "bytes");
+        //showMessage("100 entity position update size:" + measureObject(createPositionList(100)) + "bytes");
     }
 
     private void sendFullStateUpdate(Connection c){
@@ -631,9 +650,10 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     private int measureKryoEntitySize(){
 
         Kryo kryo = new Kryo();
-        kryo.register(NetworkEntity.class);
+        Network.register(kryo);
+        //kryo.register(NetworkEntity.class);
         Output output = new Output(objectBuffer);
-        kryo.writeObject(output, new NetworkEntity(-1, 1000000, 1000000,-1));
+        kryo.writeObject(output, new NetworkEntity(-1, 1000000, 1000000, -1));
         int size = output.position();
         output.close();
         return size;
@@ -647,22 +667,47 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         return changedPositions;
     }
 
-    private HashMap<Integer,ArrayList<Component>> createComponentList(int entityCount, boolean pos, boolean heading, boolean health){
+    private HashMap<Integer,ArrayList<Component>> createFullComponentList(int entityCount) {
+        HashMap<Integer, ArrayList<Component>> changedComponents = new HashMap<>();
+        for (int i = 0; i < entityCount; i++) {
+            ArrayList<Component> components = new ArrayList<>();
+            components.add(new Component.Position(50, 50));
+            components.add(new Component.Health(100));
+            components.add(new Component.MaxHealth(150));
+            components.add(new Component.Rotation(100));
+            components.add(new Component.Team(2));
+            components.add(new Component.Slot1(4));
+            components.add(new Component.Slot2(8));
+            changedComponents.put(i, components);
+        }
+        return changedComponents;
+    }
+
+    private HashMap<Integer,ArrayList<Component>> createComponentList(int entityCount, boolean pos, boolean rotation, boolean health){
         HashMap<Integer,ArrayList<Component>> changedComponents = new HashMap<>();
         for (int i = 0; i < entityCount; i++) {
             ArrayList<Component> components = new ArrayList<>();
             if(pos)components.add(new Component.Position(50,50));
+            if(rotation)components.add(new Component.Rotation(100));
             if(health)components.add(new Component.Health(100));
-            changedComponents.put(i,components);
+            changedComponents.put(i, components);
         }
         return changedComponents;
     }
 
     private int measureObject(Object o){
         KryoSerialization s = (KryoSerialization) server.getSerialization();
-        s.write(new Client(), buffer, o);
-        int size = buffer.position();
-        buffer.clear();
+        ByteBuffer measureBuffer = ByteBuffer.allocate(objectBuffer);
+        s.write(new Client(), measureBuffer, o);
+        int size = measureBuffer.position();
+        System.out.println(measureBuffer);
+        for (int i = 0; i < size; i++) {
+            System.out.println(measureBuffer.array()[i]);
+        }
+        //System.out.println("last:"+measureBuffer.array()[size]);
+        //System.out.println("last+:"+measureBuffer.array()[size+1]);
+        //System.out.println("last++:"+measureBuffer.array()[size+2]);
+        measureBuffer.clear();
         return size;
     }
 

@@ -1,0 +1,8 @@
+name=bloodsplat
+type=particle
+width=24
+length=24
+animation=bloodsplat
+frameDuration=0.125
+ignoreMapCollision
+ignoreEntityCollision

@@ -167,8 +167,4 @@ public class Tools {
         worldCoord.y = camera.position.y+(camera.viewportHeight/2)-y;
         return worldCoord;
     }
-
-    public static String wrapText(String text, int lineWidth){
-        return null;
-    }
 }
