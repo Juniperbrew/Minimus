@@ -1,9 +1,9 @@
 #Weapons
 weapon:Pistol:400
-weapon:Dual pistol:800
+weapon:Dual pistols:800
 weapon:Shotgun:1000
 weapon:Uzi:2000
-weapon:Rifle:4000
+weapon:Auto rifle:4000
 weapon:Rocket launcher:4000
 weapon:Auto shotgun:6000
 weapon:Flamethrower:3000
