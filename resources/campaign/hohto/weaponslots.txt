@@ -2,10 +2,10 @@
 
 Primary
 1:Pistol
-2:Dual pistol
+2:Dual pistols
 3:Shotgun
 4:Uzi
-5:Rifle
+5:Auto rifle
 6:Auto shotgun
 7:Grenade launcher
 8:Rocket launcher
