@@ -13,7 +13,7 @@ weapon:Flamethrower:3000
 weapon:Grenade launcher:2000
 
 #Custom weapons
-weapon:Bounce launcher:3000
+#weapon:Bounce launcher:3000
 
 #OLD WEAPONS
 #weapon:Grenade:100
