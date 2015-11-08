@@ -54,6 +54,7 @@
 				<option_container>
 					<option choice_text="Leave">
 						<goto>completeQuest()</goto>
+						<goto>close()</goto>
 					</option>
 				</option_container>
 			</option>

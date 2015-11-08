@@ -96,3 +96,13 @@ velocity=75
 vision=800
 bounty=700
 }
+
+{
+name=assassin
+weapon=Dual pistol
+image=assassin
+health=50
+velocity=75
+vision=600
+bounty=500
+}

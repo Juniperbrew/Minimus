@@ -1018,6 +1018,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                 Gdx.app.postRunnable(() -> world.changeMap(varValue));
             }
         }
+        if(varName.equals("sv_campaign")){
+            if(world!=null){
+                Gdx.app.postRunnable(() -> world.loadCampaign(varValue));
+            }
+        }
     }
 
     @Override
@@ -1171,6 +1176,13 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         Network.CashUpdate cashUpdate = new Network.CashUpdate();
         cashUpdate.amount = cash;
         sendTCP(playerList.get(id), cashUpdate);
+    }
+
+    @Override
+    public void reassignPlayers() {
+        for(Connection c : playerList.values()){
+            world.addPlayer(c);
+        }
     }
 
     @Override

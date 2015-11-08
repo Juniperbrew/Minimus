@@ -8,7 +8,7 @@ Primary
 5:Rifle
 6:Grenade launcher
 7:Rocket launcher
-8:Bounce launcher
+8:Dual pistol
 9:Auto shotgun
 
 Secondary

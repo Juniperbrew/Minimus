@@ -45,7 +45,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.SerializationException;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
@@ -392,12 +394,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     public void changed(ChangeEvent event, Actor actor) {
                         Tree.Node<String> choiceNode = options.get(choiceIndex);
                         if(choiceNode.hasChildren()){
-                            String choice = choiceNode.getFirstChild().getValue();
-                            String[] choiceSplit = choice.split(":");
-                            if(choiceSplit[0].equals("goto")){
-                                parseDialogCommand(choiceSplit[1]);
-                            }else if(choiceSplit[0].equals("text")){
-                                updateDialogueWindow(choiceNode);
+                            for(Tree.Node<String> childNode : choiceNode.getChildren()){
+                                String choice = childNode.getValue();
+                                String[] choiceSplit = choice.split(":");
+                                if(choiceSplit[0].equals("goto")){
+                                    parseDialogCommand(choiceSplit[1]);
+                                }else if(choiceSplit[0].equals("text")){
+                                    updateDialogueWindow(choiceNode);
+                                }
                             }
                         }
                     }
@@ -653,11 +657,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Network.MapCleared mapClearedPacket = (Network.MapCleared) object;
             mapChangeTimer = mapClearedPacket.timer;
             mapCleared = true;
-            if(mapChangeTimer>0){
-                showMessage("Map cleared changing map in "+ mapChangeTimer + " seconds");
+            if(!questCompleted){
+                showMessage("Map cleared complete the quest");
             }else{
-                showMessage("Map cleared find the exit.");
+                if(mapChangeTimer>0){
+                    showMessage("Map cleared changing map in "+ mapChangeTimer + " seconds");
+                }else{
+                    showMessage("Map cleared find the exit.");
+                }
             }
+
         }else if(object instanceof Network.RespawnPlayer){
             Network.RespawnPlayer respawnPlayer = (Network.RespawnPlayer) object;
             playerDeathAnimations.remove(respawnPlayer.id);
@@ -759,7 +768,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         for(Object o;(o = pendingPackets.poll())!=null;){
             handlePacket(o);
         }
-        if(mapChangeTimer>0){
+        if(mapChangeTimer>0&&questCompleted){
             mapChangeTimer-=delta;
         }
 
@@ -1624,7 +1633,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     + " Deaths: "+score.getDeaths(id) + " Team: "+entities.get(id).getTeam(), 5, windowHeight-5-offset);
             offset += 20;
         }
-        if(mapCleared){
+        if(mapCleared && questCompleted){
             if(mapChangeTimer>0){
                 glyphLayout.setText(font, "Map cleared, changing map in: "+String.format("%.1f", mapChangeTimer) + " seconds.");
                 font.draw(batch, "Map cleared, changing map in: "+String.format("%.1f", mapChangeTimer) + " seconds.", windowWidth / 2 - glyphLayout.width/2 ,windowHeight/2-glyphLayout.height/2);
@@ -2271,6 +2280,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         loadSounds(campaignName);
         loadTextures(campaignName);
         createShopGUI();
+        if(backgroundMusic!=null){
+            backgroundMusic.stop();
+        }
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal(G.campaignFolder+File.separator+campaignName+File.separator+"taustamuusik.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.setVolume(musicVolume);
@@ -2278,7 +2290,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void loadMap(String mapName, String campaignName){
-        map = new TmxMapLoader().load(G.campaignFolder+File.separator+campaignName+File.separator+"maps"+File.separator+mapName+File.separator+mapName+".tmx");
+        String mapPath = G.campaignFolder+File.separator+campaignName+File.separator+"maps"+File.separator+mapName+File.separator+mapName+".tmx";
+        try{
+            map = new TmxMapLoader().load(mapPath);
+        }catch (SerializationException e){
+            showMessage("ERROR: Could not load map: "+mapPath);
+            return;
+        }
         fixTextureBleeding(map);
         float mapScale = SharedMethods.getMapScale(map);
         ArrayList<RectangleMapObject> mapObjects = SharedMethods.getScaledMapobjects(map);
@@ -2433,7 +2451,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         messageWindow.setVisible(true);
                     }else if(type.equals("dialogue")){
                         String dialogueID;
-                        if(o.getProperties().containsKey("endDialogue") && questCompleted){
+                        if(o.getProperties().containsKey("endDialogue") && mapCleared){
                             dialogueID = o.getProperties().get("endDialogue", String.class);
                         }else{
                             dialogueID = o.getProperties().get("dialogue", String.class);

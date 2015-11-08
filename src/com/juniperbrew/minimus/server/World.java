@@ -115,8 +115,11 @@ public class World implements EntityChangeListener{
         loadCampaign(ConVars.get("sv_campaign"));
     }
 
-    private void loadCampaign(String campaign){
-        G.consoleLogger.log("Loading campaign: "+campaign);
+    public void loadCampaign(String campaign){
+        G.consoleLogger.log("Loading campaign: " + campaign);
+        for(int playerID : playerList){
+            removePlayer(playerID);
+        }
         campaignName = campaign;
         G.console.runConsoleScript(G.campaignFolder+File.separator+campaign+File.separator+"autoexec.txt");
         projectileList = SharedMethods.readSeperatedProjectileList(campaignName);
@@ -130,6 +133,7 @@ public class World implements EntityChangeListener{
         G.weaponNameToID = SharedMethods.createWeaponNameToIDMapping(G.weaponList);
         loadImages();
         changeMap(ConVars.get("sv_map"));
+        listener.reassignPlayers();
     }
 
     private void loadMap(String mapName){
@@ -341,9 +345,6 @@ public class World implements EntityChangeListener{
             if (entityAIs.isEmpty()){
                 if(!mapCleared){
                     mapCleared = true;
-                }
-
-                if(mapCleared && questComplete){
                     if(mapExit==null){
                         mapEndTimer = 10f;
                         listener.mapCleared(mapEndTimer);
@@ -352,7 +353,7 @@ public class World implements EntityChangeListener{
                     }
                 }
 
-                if(mapExit == null){
+                if(mapExit == null && questComplete){
                     if(mapEndTimer<=0){
                         String nextMap = map.getProperties().get("nextLevel",String.class);
                         if(nextMap!=null){
@@ -456,7 +457,7 @@ public class World implements EntityChangeListener{
     private void checkPlayerCollisions(){
         for(int id : playerList){
             ServerEntity player = entities.get(id);
-            if(mapCleared&&mapExit!=null){
+            if(mapCleared&&questComplete&&mapExit!=null){
                 if(player.getGdxBounds().overlaps(mapExit)){
                     String nextMap = map.getProperties().get("nextLevel",String.class);
                     if(nextMap!=null){
@@ -875,7 +876,7 @@ public class World implements EntityChangeListener{
             for(int weaponID : weaponList.keySet()){
                 entityWeapons.put(weaponID, true);
             }
-            for(String ammoType : entityAmmo.keySet()){
+            for(String ammoType : entityAmmo.keySet()) {
                 entityAmmo.put(ammoType, 999999999);
             }
         }
@@ -1330,5 +1331,6 @@ public class World implements EntityChangeListener{
         public void playerWeaponChanged(int id, int weapon, boolean state);
         public void networkedProjectileSpawned(String projectileName, float x, float y, int ownerID, int team);
         public void playerCashChanged(int id, int amount);
+        public void reassignPlayers();
     }
 }
