@@ -122,6 +122,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
+        G.console = consoleFrame;
         new ConsoleReader(consoleFrame);
         shapeRenderer = new ShapeRenderer();
         batch = new SpriteBatch();
@@ -285,6 +286,11 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             Network.SellItem sellItem = (Network.SellItem) object;
             showMessage("Player "+playerList.getKey(connection)+" selling "+sellItem.amount+" of item "+G.shoplist.get(sellItem.id)+"("+sellItem.id+")");
             world.sellItem(playerList.getKey(connection),sellItem.id,sellItem.amount);
+        }else if(object instanceof Network.CompleteQuest){
+            showMessage("Player "+playerList.getKey(connection)+" completed the quest.");
+            world.completeQuest();
+            //Confirm quest completion for all clients
+            sendTCPtoAll(object);
         }
     }
 

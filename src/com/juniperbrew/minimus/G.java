@@ -2,6 +2,7 @@ package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.math.Rectangle;
+import com.juniperbrew.minimus.windows.ConsoleFrame;
 import org.apache.commons.collections4.BidiMap;
 
 import java.io.File;
@@ -36,6 +37,8 @@ public class G {
     public static ArrayList<Rectangle> solidMapObjects;
 
     public static boolean debugFeatureToggle = true;
+
+    public static ConsoleFrame console;
 
     public interface ConsoleLogger{
         void log(String message);

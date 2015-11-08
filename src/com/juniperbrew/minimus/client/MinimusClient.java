@@ -230,6 +230,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private String currentMap;
     private Image dialoguePortrait;
     private Label dialogueName;
+    private boolean questCompleted;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -368,6 +369,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             dialogueWindow.setVisible(false);
         }else if(command.equals("close()")){
             dialogueWindow.setVisible(false);
+        }else if(command.equals("completeQuest()")){
+            sendTCP(new Network.CompleteQuest());
         }
     }
 
@@ -578,6 +581,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
             campaign = assign.campaign;
             currentMap = assign.mapName;
+            questCompleted = assign.questCompleted;
             lives = assign.lives;
 
             playerList = assign.playerList;
@@ -661,6 +665,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             Network.CashUpdate cashUpdate = (Network.CashUpdate) object;
             showMessage("Player gold updated to "+ cashUpdate.amount);
             player.gold = cashUpdate.amount;
+        }else if(object instanceof Network.CompleteQuest){
+            showMessage("Quest has been completed");
+            questCompleted = true;
         }else if(object instanceof Packet){
             Packet p = (Packet) object;
             if(p.name.equals("Disconnected")){
@@ -2283,6 +2290,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         G.mapHeightTiles = p.get("height", Integer.class);
         G.tileWidth = (int) (p.get("tilewidth", Integer.class)* mapScale);
         G.tileHeight = (int) (p.get("tileheight",Integer.class)* mapScale);
+        if(p.containsKey("quest")){
+            questCompleted = false;
+        }else{
+            questCompleted = true;
+        }
 
         mapHeight = G.mapHeightTiles * G.tileHeight;
         mapWidth = G.mapWidthTiles * G.tileWidth;
@@ -2420,7 +2432,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         messageArea.setText(message);
                         messageWindow.setVisible(true);
                     }else if(type.equals("dialogue")){
-                        String dialogueID = o.getProperties().get("dialogue", String.class);
+                        String dialogueID;
+                        if(o.getProperties().containsKey("endDialogue") && questCompleted){
+                            dialogueID = o.getProperties().get("endDialogue", String.class);
+                        }else{
+                            dialogueID = o.getProperties().get("dialogue", String.class);
+                        }
                         Element conversation = SharedMethods.getConversation(G.campaignFolder + File.separator + campaign + File.separator + "maps" + File.separator + currentMap + File.separator + "dialogue.xml", dialogueID);
                         Tree<String> dialogTree = SharedMethods.getDialogueNodes(conversation);
                         String name = SharedMethods.getDialogueName(conversation);

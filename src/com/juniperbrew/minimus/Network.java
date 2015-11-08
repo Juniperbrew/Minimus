@@ -87,6 +87,7 @@ public class Network {
         kryo.register(ShopItem.class);
         kryo.register(BuyItem.class);
         kryo.register(SellItem.class);
+        kryo.register(CompleteQuest.class);
     }
 
     public static class WeaponUpdate {
@@ -194,6 +195,7 @@ public class Network {
         public String campaign;
         public int lives;
         public int wave;
+        public boolean questCompleted;
         public ArrayList<Integer> playerList;
         public HashMap<Integer,Powerup> powerups;
         public HashMap<Integer,Weapon> weaponList;
@@ -310,5 +312,9 @@ public class Network {
     public static class SellItem{
         public int id;
         public int amount;
+    }
+
+    public static class CompleteQuest{
+
     }
 }

@@ -158,7 +158,24 @@ public class ConsoleFrame extends JFrame {
 
     public void runAutoexec(){
         addLine("Running autoexec..");
-        File file = new File(Tools.getUserDataDirectory()+"autoexec.txt");
+        String autoexecPath = Tools.getUserDataDirectory()+"autoexec.txt";
+        File file = new File(autoexecPath);
+        if(!file.exists()){
+            addLine("autoexec.txt doesn't exist, creating default autoexec.txt");
+            try(PrintWriter writer = new PrintWriter(new FileWriter(file))){
+                for(String line : ConVars.getVarListWithValues()){
+                    writer.println(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else{
+            runConsoleScript(autoexecPath);
+        }
+    }
+
+    public void runConsoleScript(String filePath){
+        File file = new File(filePath);
         if(file.exists()){
             try(BufferedReader reader = new BufferedReader(new FileReader(file))){
                 String line;
@@ -173,16 +190,9 @@ public class ConsoleFrame extends JFrame {
                 e.printStackTrace();
             }
         }else{
-            addLine("autoexec.txt doesn't exist, creating default autoexec.txt");
-            try(PrintWriter writer = new PrintWriter(new FileWriter(file))){
-                for(String line : ConVars.getVarListWithValues()){
-                    writer.println(line);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            addLine("Can't find script "+filePath);
         }
-        addLine(ConVars.getVarDump());
+        addLine("");
     }
 
     private void parseCommand(String command){

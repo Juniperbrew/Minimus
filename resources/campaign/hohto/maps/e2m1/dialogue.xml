@@ -53,7 +53,7 @@
 				<text>Time's a wastin', get to the bridge of the ship and we'll set sail!</text>
 				<option_container>
 					<option choice_text="Leave">
-						<goto>enableExit()</goto>
+						<goto>completeQuest()</goto>
 					</option>
 				</option_container>
 			</option>

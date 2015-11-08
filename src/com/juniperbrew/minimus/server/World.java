@@ -105,15 +105,22 @@ public class World implements EntityChangeListener{
     Rectangle playerSpawn;
 
     String campaignName;
+    private boolean questComplete;
 
     public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
         this.listener = listener;
         this.mapLoader = mapLoader;
         this.batch = batch;
 
-        campaignName = ConVars.get("sv_campaign");
+        loadCampaign(ConVars.get("sv_campaign"));
+    }
+
+    private void loadCampaign(String campaign){
+        G.consoleLogger.log("Loading campaign: "+campaign);
+        campaignName = campaign;
+        G.console.runConsoleScript(G.campaignFolder+File.separator+campaign+File.separator+"autoexec.txt");
         projectileList = SharedMethods.readSeperatedProjectileList(campaignName);
-        weaponList = readWeaponSlots(SharedMethods.readSeperatedWeaponList(projectileList,campaignName));
+        weaponList = readWeaponSlots(SharedMethods.readSeperatedWeaponList(projectileList, campaignName));
         ammoList = SharedMethods.getAmmoList(weaponList);
 
         G.weaponList = weaponList;
@@ -121,9 +128,7 @@ public class World implements EntityChangeListener{
         G.shoplist = SharedMethods.readShopList(campaignName);
         enemyList = SharedMethods.readEnemyList(weaponList, campaignName);
         G.weaponNameToID = SharedMethods.createWeaponNameToIDMapping(G.weaponList);
-
         loadImages();
-
         changeMap(ConVars.get("sv_map"));
     }
 
@@ -148,6 +153,7 @@ public class World implements EntityChangeListener{
         cachedMap = null;
         mapExit = null;
         mapCleared = false;
+        questComplete = true;
         removeAllNpcs();
         powerups.clear();
         projectiles.clear();
@@ -156,6 +162,10 @@ public class World implements EntityChangeListener{
 
         this.mapName = mapName;
         float mapScale = SharedMethods.getMapScale(map);
+
+        if(map.getProperties().containsKey("quest")){
+            questComplete = false;
+        }
 
         G.mapScale = mapScale;
         G.mapWidthTiles = map.getProperties().get("width",Integer.class);
@@ -300,6 +310,10 @@ public class World implements EntityChangeListener{
         }
     }
 
+    public void completeQuest(){
+        questComplete = true;
+    }
+
     private void updateGameState(float delta){
         if(spawnWaves) {
             if (entityAIs.isEmpty() && (spawnedEnemiesCounter == waveEnemyCount)) {
@@ -326,13 +340,16 @@ public class World implements EntityChangeListener{
         }else{
             if (entityAIs.isEmpty()){
                 if(!mapCleared){
+                    mapCleared = true;
+                }
+
+                if(mapCleared && questComplete){
                     if(mapExit==null){
                         mapEndTimer = 10f;
                         listener.mapCleared(mapEndTimer);
                     }else{
                         listener.mapCleared(0);
                     }
-                    mapCleared = true;
                 }
 
                 if(mapExit == null){
@@ -883,6 +900,7 @@ public class World implements EntityChangeListener{
         assign.playerList = new ArrayList<>(playerList);
         assign.powerups = new HashMap<>(powerups);
         assign.wave = wave;
+        assign.questCompleted = questComplete;
         assign.weaponList = new HashMap<>(weaponList);
         assign.primaryWeaponCount = primaryWeaponCount;
         assign.projectileList = new HashMap<>(projectileList);
