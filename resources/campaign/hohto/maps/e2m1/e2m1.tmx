@@ -2543,13 +2543,13 @@
   </object>
   <object id="238" name="ammo_9mm (40)" type="powerup" x="340" y="1120" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_9mmBullets"/>
+    <property name="ammo" value="9mmBullets"/>
     <property name="value" value="40"/>
    </properties>
   </object>
   <object id="239" name="ammo_9mm (40)" type="powerup" x="380" y="1120" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_9mmBullets"/>
+    <property name="ammo" value="9mmBullets"/>
     <property name="value" value="40"/>
    </properties>
   </object>
@@ -2633,37 +2633,37 @@
   </object>
   <object id="261" name="ammo_9mm (40)" type="powerup" x="760" y="320" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_9mmBullets"/>
+    <property name="ammo" value="9mmBullets"/>
     <property name="value" value="40"/>
    </properties>
   </object>
   <object id="262" name="ammo_9mm (40)" type="powerup" x="1420" y="580" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_9mmBullets"/>
+    <property name="ammo" value="9mmBullets"/>
     <property name="value" value="40"/>
    </properties>
   </object>
   <object id="263" name="ammo_9mm (40)" type="powerup" x="1640" y="700" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_9mmBullets"/>
+    <property name="ammo" value="9mmBullets"/>
     <property name="value" value="40"/>
    </properties>
   </object>
   <object id="264" name="ammo_shotgun (25)" type="powerup" x="940" y="500" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_shotgunShells"/>
+    <property name="ammo" value="shotgunShells"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="265" name="ammo_shotgun (25)" type="powerup" x="1660" y="240" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_shotgunShells"/>
+    <property name="ammo" value="shotgunShells"/>
     <property name="value" value="25"/>
    </properties>
   </object>
   <object id="266" name="ammo_shotgun (25)" type="powerup" x="560" y="600" width="20" height="20">
    <properties>
-    <property name="ammo" value="UTK_shotgunShells"/>
+    <property name="ammo" value="shotgunShells"/>
     <property name="value" value="25"/>
    </properties>
   </object>

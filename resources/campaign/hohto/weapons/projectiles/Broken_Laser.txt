@@ -1,7 +1,0 @@
-name=Broken_Laser
-type=hitscan
-tracer=Laser_Tracer
-width=3
-length=1000
-damage=1
-knockback=50

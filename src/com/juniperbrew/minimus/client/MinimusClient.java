@@ -466,7 +466,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }else if(item.type.equals("health")){
                 style.imageUp = new TextureRegionDrawable(getTexture("healthpack"));
             }else if(item.type.equals("maxHealth")){
-                style.imageUp = new TextureRegionDrawable(getTexture("berserkBox"));
+                style.imageUp = new TextureRegionDrawable(getTexture("maxHealth"));
             }
             if(item.type.equals("row")){
                 shopWindow.row();
@@ -643,7 +643,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.WeaponUpdate){
             Network.WeaponUpdate weaponUpdate = (Network.WeaponUpdate) object;
             showMessage("["+weaponUpdate.weapon +"]"+G.weaponNameToID.getKey(weaponUpdate.weapon)+":"+ weaponUpdate.state);
-            player.weapons.put(weaponUpdate.weapon,weaponUpdate.state);
+            player.weapons.put(weaponUpdate.weapon, weaponUpdate.state);
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
             ProjectileDefinition def = projectileList.get(spawnProjectile.projectileName);
@@ -1666,10 +1666,15 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         font.draw(batch, "Cash: " + player.gold+"$", 5, 60);
         font.draw(batch, "Primary: " + getWeaponLine(player.getSlot1Weapon()), 5, 40);
         font.draw(batch, "Secondary: " + getWeaponLine(player.getSlot2Weapon()), 5, 20);
-        glyphLayout.setText(font, "Wave " + currentWave);
-        font.draw(batch, "Wave " + currentWave, windowWidth / 2 - glyphLayout.width / 2, windowHeight - 5);
-        glyphLayout.setText(font, "Lives: " + lives);
-        font.draw(batch, "Lives: " + lives, windowWidth - glyphLayout.width, windowHeight - 5);
+        String line = "Wave " + currentWave;
+        glyphLayout.setText(font, line);
+        font.draw(batch, line, windowWidth / 2 - glyphLayout.width / 2, windowHeight - 5);
+        line = "Enemies left: " + (entities.size()-playerList.size());
+        glyphLayout.setText(font, line);
+        font.draw(batch, line, windowWidth / 2 - glyphLayout.width / 2, windowHeight - 20);
+        line =  "Lives: " + lives;
+        glyphLayout.setText(font, line);
+        font.draw(batch, line, windowWidth - glyphLayout.width, windowHeight - 5);
 
         if(!client.isConnected()){
             if(System.nanoTime()-lastDotAdded > Tools.secondsToNano(2)){

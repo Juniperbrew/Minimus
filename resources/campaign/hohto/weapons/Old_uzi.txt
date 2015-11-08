@@ -1,8 +1,0 @@
-name=Old uzi
-projectile=Uzi_Bullet
-spread=0
-projectileCount=1
-cooldown=0.1
-image=chainGun
-ammo=smallAmmo
-sprite=pistol

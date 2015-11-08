@@ -1,8 +1,0 @@
-name=Laser_Tracer
-type=tracer
-color=[255,0,0]
-width=3
-duration=0.5
-ignoreMapCollision
-ignoreEntityCollision
-dontDestroyOnCollision

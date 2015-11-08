@@ -1,9 +1,9 @@
 name=Uzi
-projectile=Hitscan_Uzi_Bullet
+projectile=Uzi_Bullet
 spread=0
 projectileCount=1
 cooldown=0.15
-image=UTK_uzi
-ammo=UTK_9mmBullets
+image=uzi
+ammo=9mmBullets
 sound=uzi.wav
 sprite=pistol

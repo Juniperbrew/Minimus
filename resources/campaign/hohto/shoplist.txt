@@ -1,50 +1,25 @@
 #Weapons
 weapon:Pistol:400
+weapon:Dual pistol:800
 weapon:Shotgun:1000
 weapon:Uzi:2000
 weapon:Rifle:4000
 weapon:Rocket launcher:4000
-#weapon:Auto launcher:6000
-#weapon:Heavy launcher:6000
 weapon:Auto shotgun:6000
-#weapon:C4-Activator:1000
 weapon:Flamethrower:3000
-#weapon:Mine dropper:1000
 weapon:Grenade launcher:2000
 
-#Custom weapons
-#weapon:Bounce launcher:3000
-
-#OLD WEAPONS
-#weapon:Grenade:100
-#weapon:Old shotgun:100
-#weapon:Old uzi:100
-#weapon:Broken laser:100
-#weapon:Flamer:100
-#weapon:Animated flamer:100
-#weapon:OP laser:100
 row::0
 
 
 #Ammo
-ammo:UTK_9mmBullets:3
-ammo:rifleAmmo:5
-ammo:UTK_shotgunShells:6
-#ammo:lightRockets:70
-ammo:largeRocket:100
-#ammo:heavyRockets:200
-#ammo:C4-Exposives:150
-ammo:fire:6
-#ammo:mines:150
-ammo:throwGrenade:60
+ammo:9mmBullets:3
+ammo:12mmBullets:5
+ammo:shotgunShells:6
+ammo:mediumRockets:100
+ammo:gas:6
 ammo:grenade:60
 
-#Custom ammo
-ammo:smallRocket:150
-
-#Old ammo
-#ammo:smallCell:100
-#ammo:largeCell:100
 row::0
 
 #Misc

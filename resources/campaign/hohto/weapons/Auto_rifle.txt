@@ -1,0 +1,9 @@
+name=Auto rifle
+projectile=Rifle_Bullet
+spread=0
+projectileCount=1
+cooldown=0.2
+image=autoRifle
+ammo=12mmBullets
+sound=rifle.wav
+sprite=rifle

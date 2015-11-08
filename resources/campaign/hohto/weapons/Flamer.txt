@@ -1,8 +1,0 @@
-name=Flamer
-projectile=Flame
-spread=10
-projectileCount=3
-cooldown=0.1
-image=flame
-ammo=fire
-sprite=rifle

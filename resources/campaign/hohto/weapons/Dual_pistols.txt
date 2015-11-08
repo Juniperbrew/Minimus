@@ -1,9 +1,9 @@
-name=Pistol
+name=Dual pistols
 projectile=Pistol_Bullet
-spread=0
-projectileCount=1
+spread=10
+projectileCount=2
 cooldown=0.3
-image=pistol
+image=dual_pistols
 ammo=9mmBullets
 sound=pistol.wav
 sprite=pistol

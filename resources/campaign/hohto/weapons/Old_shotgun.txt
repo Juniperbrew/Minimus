@@ -1,8 +1,0 @@
-name=Old shotgun
-projectile=Shotgun_Bullet
-spread=40
-projectileCount=5
-cooldown=0.5
-image=superShotgun
-ammo=smallShell
-sprite=rifle

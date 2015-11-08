@@ -1,7 +1,0 @@
-name=OP_Laser_Tracer
-type=tracer
-duration=0.5
-width=3
-ignoreMapCollision
-ignoreEntityCollision
-dontDestroyOnCollision

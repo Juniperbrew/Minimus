@@ -1,9 +1,9 @@
 name=Shotgun
-projectile=Hitscan_Shotgun_Bullet
+projectile=Shotgun_Bullet
 spread=30
 projectileCount=5
 cooldown=0.5
-image=UTK_shotgun
-ammo=UTK_shotgunShells
+image=shotgun
+ammo=shotgunShells
 sound=shotgun.wav
 sprite=rifle

@@ -1,9 +1,0 @@
-name=Rifle
-projectile=Hitscan_Rifle_Bullet
-spread=0
-projectileCount=1
-cooldown=0.2
-image=UTK_autoRifle
-ammo=rifleAmmo
-sound=rifle.wav
-sprite=rifle

@@ -1,11 +1,6 @@
-name=Uzi_Bullet
-type=projectile
-color=[255,204,51]
-width=2
-length=2
-range=500
-velocity=400
+name=Hitscan_Uzi_Bullet
+type=hitscan
+length=400
 damage=5
-knockback=50
 onDestroy=Bullet_puff
-networked
+knockback=50

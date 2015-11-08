@@ -1,9 +1,0 @@
-name=Dual pistol
-projectile=Hitscan_Pistol_Bullet
-spread=10
-projectileCount=2
-cooldown=0.3
-image=UTK_dual_pistol
-ammo=UTK_9mmBullets
-sound=pistol.wav
-sprite=pistol
