@@ -233,6 +233,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private Image dialoguePortrait;
     private Label dialogueName;
     private boolean questCompleted;
+    private Rectangle highlightRectangle;
 
     public MinimusClient(String ip) throws IOException {
         serverIP = ip;
@@ -641,6 +642,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             player.ammo.put(ammoUpdate.ammoType,ammoUpdate.amount);
         }else if(object instanceof Network.WeaponUpdate){
             Network.WeaponUpdate weaponUpdate = (Network.WeaponUpdate) object;
+            showMessage("["+weaponUpdate.weapon +"]"+G.weaponNameToID.getKey(weaponUpdate.weapon)+":"+ weaponUpdate.state);
             player.weapons.put(weaponUpdate.weapon,weaponUpdate.state);
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
@@ -1485,6 +1487,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 shapeRenderer.setColor(1, 1, 0, 0.2f);
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
                 shapeRenderer.rect(mapExit.x, mapExit.y, mapExit.width, mapExit.height);
+                shapeRenderer.end();
+            }
+            if(highlightRectangle!=null){
+                shapeRenderer.setColor(1,1,0,1);
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                shapeRenderer.rect(highlightRectangle.x, highlightRectangle.y, highlightRectangle.width, highlightRectangle.height);
                 shapeRenderer.end();
             }
 
@@ -2497,6 +2505,16 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
+        Vector2 mouse = Tools.screenToWorldCoordinates(camera,Gdx.input.getX(),Gdx.input.getY());
+        if(interactableMapObjects!=null){
+            for(RectangleMapObject o : interactableMapObjects){
+                if(o.getRectangle().contains(mouse)){
+                    highlightRectangle = o.getRectangle();
+                    return false;
+                }
+            }
+        }
+        highlightRectangle = null;
         return false;
     }
 

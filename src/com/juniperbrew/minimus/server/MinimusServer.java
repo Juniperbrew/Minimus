@@ -521,9 +521,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public void giveWeapon(int weaponID, int id){
         PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
         player.setWeapon(weaponID, true);
-        Network.WeaponUpdate weaponUpdate = new Network.WeaponUpdate();
-        weaponUpdate.weapon = weaponID;
-        sendTCP(playerList.get(id), weaponUpdate);
     }
 
     public void addAmmo(int id, String ammoType, int amount){
@@ -1180,7 +1177,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     @Override
     public void reassignPlayers() {
-        for(Connection c : playerList.values()){
+        for(Connection c : playerList.values().toArray(new Connection[playerList.values().size()])){
             world.addPlayer(c);
         }
     }

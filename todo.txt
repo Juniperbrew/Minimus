@@ -1,3 +1,7 @@
+#Modding problems
+-Removing weapon from weaponlist causes crash if its not also removed from shoplist
+
+
 TODO support for variable/random projectile velocity,rotation,range,size?,projectilecount?,damage?,knockback?,friction?
 TODO consider proper pathfinding
 TODO stamina bar for running, fast regen, no regen when getting hit or shooting
