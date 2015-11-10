@@ -1,4 +1,4 @@
-name=Hitscan_Rifle_Bullet
+name=Rifle_Bullet
 type=hitscan
 length=450
 damage=9

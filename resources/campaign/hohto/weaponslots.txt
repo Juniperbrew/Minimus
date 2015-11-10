@@ -1,8 +1,8 @@
 #The lines Primary and Secondary are necessary to read this file
 
 Primary
-1:Pistol
-2:Dual pistols
+1:Melee
+2:Pistol
 3:Shotgun
 4:Uzi
 5:Auto rifle
@@ -12,5 +12,5 @@ Primary
 9:Flamethrower
 
 Secondary
-1:Melee
-2:Grenade
+1:Grenade
+2:Dual pistols

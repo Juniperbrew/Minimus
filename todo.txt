@@ -1,5 +1,6 @@
 #Modding problems
 -Removing weapon from weaponlist causes crash if its not also removed from shoplist
+-Weapon projectile name is seperate from projectile filename
 
 
 TODO support for variable/random projectile velocity,rotation,range,size?,projectilecount?,damage?,knockback?,friction?

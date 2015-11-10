@@ -59,7 +59,7 @@ bounty=500
 
 {
 name=commando
-weapon=Rifle
+weapon=Auto rifle
 image=commando
 health=50
 velocity=100
@@ -99,7 +99,7 @@ bounty=700
 
 {
 name=assassin
-weapon=Dual pistol
+weapon=Dual pistols
 image=assassin
 health=50
 velocity=75
