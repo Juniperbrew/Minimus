@@ -12,7 +12,7 @@ import java.util.logging.ConsoleHandler;
 public class ConsoleReader {
 
 
-    public ConsoleReader(final ConsoleFrame console){
+    public ConsoleReader(final Console console){
         new Thread(new Runnable() {
             @Override
             public void run() {

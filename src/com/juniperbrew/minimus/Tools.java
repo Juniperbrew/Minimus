@@ -8,23 +8,36 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.*;
 
 import java.awt.geom.Line2D;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by Juniperbrew on 20.6.2015.
  */
 public class Tools {
-
     private static SimpleDateFormat timeStamp = new SimpleDateFormat("HH:mm:ss");
     private static SimpleDateFormat milliTimeStamp = new SimpleDateFormat("HH:mm:ss.SSS");
 
     static{
         timeStamp.setTimeZone(TimeZone.getTimeZone("UTC"));
         milliTimeStamp.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
+
+    public static double getArea(Rectangle2D r){
+        return r.getWidth()*r.getHeight();
+    }
+
+    public static double rand(double from, double to){
+        return ThreadLocalRandom.current().nextDouble(from, to);
+    }
+
+    public static double rand(double to){
+        return ThreadLocalRandom.current().nextDouble(to);
     }
 
     public static int nanoToMilli(long nano){
@@ -162,9 +175,11 @@ public class Tools {
     }
 
     public static Vector2 screenToWorldCoordinates(OrthographicCamera camera, float x, float y){
-        Vector2 worldCoord = new Vector2();
-        worldCoord.x = camera.position.x-(camera.viewportWidth/2)+x;
-        worldCoord.y = camera.position.y+(camera.viewportHeight/2)-y;
-        return worldCoord;
+        Vector3 v = camera.unproject(new Vector3(x,y,0));
+        return new Vector2(v.x,v.y);
+    }
+
+    public static Rectangle javaToGdxRectangle(Rectangle2D rect){
+        return new Rectangle((float)rect.getX(),(float)rect.getY(),(float)rect.getWidth(),(float)rect.getHeight());
     }
 }

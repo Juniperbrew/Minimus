@@ -1,48 +1,46 @@
 package com.juniperbrew.minimus.server;
 
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.MapProperties;
-import com.badlogic.gdx.maps.objects.RectangleMapObject;
-import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.TmxMapLoader;
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
-import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.esotericsoftware.kryonet.Connection;
 import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
+import tiled.core.Map;
+import tiled.core.MapObject;
+import tiled.io.TMXMapReader;
 
 import java.awt.geom.Line2D;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.awt.geom.Rectangle2D;
+import java.io.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Juniperbrew on 1.8.2015.
  */
-public class World implements EntityChangeListener{
+public class WorldHeadless implements EntityChangeListener{
 
     private final float KNOCKBACK_VELOCITY = 200;
 
     Set<Integer> playerList = new HashSet<>();
 
+    public String mapName;
+    public String campaignName;
+
+    //Rendered state
+    Map map;
+    ArrayList<MapObject> mapObjects;
+    //ArrayList<Rectangle> solidMapObjects;
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
+    public ConcurrentLinkedQueue<Particle> projectiles = new ConcurrentLinkedQueue<>();
+    public ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
+
+
+
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
     ArrayList<Knockback> knockbacks = new ArrayList<>();
 
@@ -58,13 +56,6 @@ public class World implements EntityChangeListener{
 
     private int networkIDCounter = 1;
 
-    private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
-
-    TiledMap map;
-    ArrayList<RectangleMapObject> mapObjects;
-
-    String mapName;
     private int wave;
     private int spawnedHealthPacksCounter;
     private int spawnedEnemiesCounter;
@@ -88,34 +79,25 @@ public class World implements EntityChangeListener{
 
     Timer timer = new Timer();
 
-    TextureAtlas atlas;
-    TmxMapLoader mapLoader;
-
-    OrthogonalTiledMapRenderer mapRenderer;
-    SpriteBatch batch;
 
     ArrayList<Rectangle> enemySpawnZones;
 
-    TextureRegion cachedMap;
     private float mapEndTimer;
     boolean mapCleared;
 
     Rectangle mapExit;
     Rectangle playerSpawn;
 
-    String campaignName;
     private boolean questComplete;
 
-    public World(WorldChangeListener listener, TmxMapLoader mapLoader, SpriteBatch batch){
+    public WorldHeadless(WorldChangeListener listener){
         this.listener = listener;
-        this.mapLoader = mapLoader;
-        this.batch = batch;
 
         loadCampaign(ConVars.get("sv_campaign"));
     }
 
     public void loadCampaign(String campaign){
-        G.consoleLogger.log("Loading campaign: " + campaign);
+        G.console.log("Loading campaign: " + campaign);
         for(int playerID : playerList){
             removePlayer(playerID);
         }
@@ -130,17 +112,20 @@ public class World implements EntityChangeListener{
         G.shoplist = F.readShopList(campaignName);
         enemyList = F.readEnemyList(weaponList, campaignName);
         G.weaponNameToID = F.createWeaponNameToIDMapping(G.weaponList);
-        loadImages();
+        //loadImages();
         changeMap(ConVars.get("sv_map"));
         listener.reassignPlayers();
     }
 
     private void loadMap(String mapName){
-        G.consoleLogger.log("Loading map: " + mapName);
+        TMXMapReader mapReader = new TMXMapReader();
+        G.console.log("Loading map: " + mapName);
         String fileName = G.campaignFolder+File.separator+campaignName+File.separator+"maps"+File.separator+mapName+File.separator+mapName+".tmx";
-        map = mapLoader.load(fileName);
-        mapObjects = F.getScaledMapobjects(map);
-        G.solidMapObjects = F.getSolidMapObjects(mapObjects);
+        try {
+            map = mapReader.readMap(fileName);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public HashMap<Integer,NetworkEntity> getNetworkedEntities(){
@@ -152,8 +137,7 @@ public class World implements EntityChangeListener{
     }
 
     public void changeMap(String mapName){
-        G.consoleLogger.log("\nChanging map to " + mapName);
-        cachedMap = null;
+        G.console.log("\nChanging map to " + mapName);
         mapExit = null;
         mapCleared = false;
         questComplete = true;
@@ -164,29 +148,41 @@ public class World implements EntityChangeListener{
         loadMap(mapName);
 
         this.mapName = mapName;
-        float mapScale = F.getMapScale(map);
+        G.mapScale = 1;
 
         if(map.getProperties().containsKey("quest")){
             questComplete = false;
         }
-
-        G.mapScale = mapScale;
-        G.mapWidthTiles = map.getProperties().get("width",Integer.class);
-        G.mapHeightTiles = map.getProperties().get("height",Integer.class);
-        G.tileWidth = (int) (map.getProperties().get("tilewidth",Integer.class)* mapScale);
-        G.tileHeight = (int) (map.getProperties().get("tileheight",Integer.class)* mapScale);
+        G.mapWidthTiles = map.getWidth();
+        G.mapHeightTiles = map.getHeight();
+        G.tileWidth = map.getTileWidth();
+        G.tileHeight = map.getTileHeight();
 
         G.mapWidth = G.mapWidthTiles * G.tileWidth;
         G.mapHeight = G.mapHeightTiles * G.tileHeight;
 
-        G.consoleLogger.log("Mapsize: "+G.mapWidthTiles+"x"+G.mapHeightTiles);
+        G.console.log("MapSize: "+G.mapWidth+"x"+G.mapHeight);
+        G.console.log("Mapsize(tiles): "+G.mapWidthTiles+"x"+G.mapHeightTiles);
 
-        G.collisionMap = F.createCollisionMap(map, G.mapWidthTiles, G.mapHeightTiles);
+        mapObjects = MapFunctions.getMapObjects(map);
+        G.solidMapObjects = MapFunctions.getSolidMapObjects(mapObjects);
+
+        G.collisionMap = MapFunctions.createCollisionMap(map);
+        for (int row = 0; row < G.collisionMap[0].length; row++) {
+            for (int col = 0; col < G.collisionMap.length; col++) {
+                if(G.collisionMap[col][row]){
+                    System.out.print("#");
+                }else{
+                    System.out.print("O");
+                }
+            }
+            System.out.println();
+        }
         movePlayersToSpawn();
 
-        enemySpawnZones = F.getEnemySpawnZones(mapObjects);
-        mapExit = F.getMapExit(mapObjects);
-        playerSpawn = F.getSpawnZone(mapObjects);
+        enemySpawnZones = MapFunctions.getEnemySpawnZones(mapObjects);
+        mapExit = MapFunctions.getMapExit(mapObjects);
+        playerSpawn = MapFunctions.getSpawnZone(mapObjects);
 
         Network.MapChange mapChange = new Network.MapChange();
         mapChange.mapName=mapName;
@@ -194,45 +190,44 @@ public class World implements EntityChangeListener{
 
         spawnMapPowerups(mapObjects);
         spawnMapEnemies(mapObjects);
-
-        mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
     }
 
-    private void spawnMapPowerups(ArrayList<RectangleMapObject> mapObjects){
-        G.consoleLogger.log("\nSpawning map powerups");
-        for(RectangleMapObject o : mapObjects){
-            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("powerup")){
-                Rectangle r = o.getRectangle();
-                MapProperties p = o.getProperties();
+    private void spawnMapPowerups(ArrayList<MapObject> mapObjects){
+        G.console.log("\nSpawning map powerups");
+        for(MapObject o : mapObjects){
+            if(o.getProperties().containsKey("type") && o.getProperties().get("type").equals("powerup")){
+                Rectangle r = Tools.javaToGdxRectangle(o.getBounds());
+                Properties p = o.getProperties();
                 if(p.containsKey("weapon")){
-                    String weaponName = p.get("weapon",String.class);
+                    String weaponName = p.getProperty("weapon");
                     int weaponID = F.getWeaponID(weaponList, weaponName);
                     if(weaponID==-1){
-                        G.consoleLogger.log("ERROR Cannot find weapon named "+weaponName);
+                        G.console.log("ERROR Cannot find weapon named "+weaponName);
                     }
                     spawnPowerup(new WeaponPickup(r.x, r.y, r.width, r.height, weaponID));
                 }else if(p.containsKey("health")){
-                    int value = Integer.parseInt(p.get("value",String.class));
+                    int value = Integer.parseInt(p.getProperty("value"));
                     spawnPowerup(new HealthPack(r.x, r.y, r.width, r.height, value));
                 }else if(p.containsKey("ammo")){
-                    String ammoType = p.get("ammo", String.class);
+                    String ammoType = p.getProperty("ammo");
                     if(!G.ammoList.contains(ammoType)){
-                        G.consoleLogger.log("ERROR Cannot find ammo named "+ammoType);
+                        G.console.log("ERROR Cannot find ammo named "+ammoType);
                     }
-                    int value = Integer.parseInt(p.get("value",String.class));
+                    int value = Integer.parseInt(p.getProperty("value"));
                     spawnPowerup(new AmmoPickup(r.x, r.y, r.width, r.height, ammoType, value));
                 }
             }
         }
     }
 
-    private void spawnMapEnemies(ArrayList<RectangleMapObject> mapObjects){
-        G.consoleLogger.log("\nSpawning map enemies");
-        for(RectangleMapObject o : mapObjects){
-            if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("enemy")){
-                Rectangle r = o.getRectangle();
-                MapProperties p = o.getProperties();
-                String enemy = p.get("enemy", String.class);
+    private void spawnMapEnemies(ArrayList<MapObject> mapObjects){
+        G.console.log("\nSpawning map enemies");
+        for(MapObject o : mapObjects){
+            if(o.getType().equals("enemy")){
+                Rectangle r = Tools.javaToGdxRectangle(o.getBounds());
+                Properties p = o.getProperties();
+                String enemy = p.getProperty("enemy");
+                G.console.log("Spawning: " + enemy);
                 addNPC(enemyList.get(enemy), r);
             }
         }
@@ -354,7 +349,7 @@ public class World implements EntityChangeListener{
 
                 if(mapExit == null && questComplete){
                     if(mapEndTimer<=0){
-                        String nextMap = map.getProperties().get("nextLevel",String.class);
+                        String nextMap = map.getProperties().getProperty("nextLevel");
                         if(nextMap!=null){
                             changeMap(nextMap);
                         }
@@ -370,9 +365,9 @@ public class World implements EntityChangeListener{
     private void movePlayerToSpawn(int id){
         ServerEntity e = entities.get(id);
         if(playerSpawn!=null){
-            e.moveTo(MathUtils.random(playerSpawn.getX(),playerSpawn.getX()+playerSpawn.getWidth()-e.getWidth()),MathUtils.random(playerSpawn.getY(),playerSpawn.getY()+playerSpawn.getHeight()-e.getHeight()));
+            e.moveTo(Tools.rand(playerSpawn.getX(), playerSpawn.getX() + playerSpawn.getWidth() - e.getWidth()), Tools.rand(playerSpawn.getY(), playerSpawn.getY() + playerSpawn.getHeight() - e.getHeight()));
         }else{
-            e.moveTo(MathUtils.random(G.mapWidth-e.getWidth()),MathUtils.random(G.mapHeight-e.getHeight()));
+            e.moveTo(Tools.rand(G.mapWidth-e.getWidth()),Tools.rand(G.mapHeight - e.getHeight()));
         }
     }
 
@@ -383,9 +378,9 @@ public class World implements EntityChangeListener{
     }
 
     private void updateProjectiles(float delta){
-        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
+        ArrayList<Particle> destroyedProjectiles = new ArrayList<>();
         Rectangle intersection = new Rectangle();
-        for(Projectile projectile:projectiles){
+        for(Particle projectile:projectiles){
             Rectangle projectileBounds = projectile.getBoundingRectangle();
             projectile.update(delta);
             if(!projectile.ignoreEntityCollision){
@@ -457,8 +452,8 @@ public class World implements EntityChangeListener{
         for(int id : playerList){
             ServerEntity player = entities.get(id);
             if(mapCleared&&questComplete&&mapExit!=null){
-                if(player.getGdxBounds().overlaps(mapExit)){
-                    String nextMap = map.getProperties().get("nextLevel",String.class);
+                if(!player.getGdxBounds().overlaps(mapExit)){
+                    String nextMap = map.getProperties().getProperty("nextLevel");
                     if(nextMap!=null){
                         changeMap(nextMap);
                     }
@@ -487,14 +482,17 @@ public class World implements EntityChangeListener{
                         continue;
                     }
                 }
-                Rectangle bounds1 = e1.getGdxBounds();
-                Rectangle bounds2 = e2.getGdxBounds();
+                Rectangle2D.Double bounds1 = e1.getJavaBounds();
+                Rectangle2D.Double bounds2 = e2.getJavaBounds();
                 //if(bounds1.overlaps(bounds2)){
-                Rectangle intersection = new Rectangle();
-                if(Intersector.intersectRectangles(bounds1, bounds2, intersection)){
-                    float scale = intersection.area()/bounds1.area();
+
+                Rectangle2D intersection = bounds1.createIntersection(bounds2);
+
+
+                if(!intersection.isEmpty()){
+                    double scale = Tools.getArea(intersection)/Tools.getArea(bounds1);
                     Vector2 i = new Vector2(e1.getCenterX()-e2.getCenterX(),e1.getCenterY()-e2.getCenterY());
-                    Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
+                    Vector2 knockback = new Vector2((float) (KNOCKBACK_VELOCITY*scale),0);
                     knockback.setAngle(i.angle());
                     knockbacks.add(new Knockback(e1.getID(), knockback));
                 }
@@ -514,12 +512,18 @@ public class World implements EntityChangeListener{
                 if(e.getID() == playerID){
                     continue;
                 }
+
+                Rectangle2D.Double playerBounds = player.getJavaBounds();
+                Rectangle2D.Double entityBounds = e.getJavaBounds();
+
+
                 if(e.getTeam()!=player.getTeam()) {
-                    Rectangle intersection = new Rectangle();
-                    if(Intersector.intersectRectangles(player.getGdxBounds(),e.getGdxBounds(),intersection)){
-                        float scale = intersection.area()/player.getGdxBounds().area();
+                    Rectangle2D intersection = playerBounds.createIntersection(entityBounds);
+
+                    if(!intersection.isEmpty()){
+                        double scale = Tools.getArea(intersection)/Tools.getArea(playerBounds);
                         Vector2 i = new Vector2(player.getCenterX()-e.getCenterX(),player.getCenterY()-e.getCenterY());
-                        Vector2 knockback = new Vector2(KNOCKBACK_VELOCITY*scale,0);
+                        Vector2 knockback = new Vector2((float) (KNOCKBACK_VELOCITY*scale),0);
                         knockback.setAngle(i.angle());
                         knockbacks.add(new Knockback(player.getID(), knockback));
                     }
@@ -565,7 +569,7 @@ public class World implements EntityChangeListener{
             return;
         }
         if(player.invulnerable&&input.buttons.size()>0&&player.getRespawnTimer()<=0){
-            G.consoleLogger.log("Removing invulernability for " + player.getID());
+            G.console.log("Removing invulernability for " + player.getID());
             player.invulnerable = false;
         }
         F.applyInput(player, input);
@@ -767,7 +771,7 @@ public class World implements EntityChangeListener{
             }
         }else if (projectileDefinition.type == ProjectileDefinition.PROJECTILE){
             //TODO projectiles with no duration or range will never get removed
-            ArrayList<Projectile> newProjectiles = F.createProjectiles(weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.getID(), e.getTeam(), attack.projectileModifiers);
+            ArrayList<Particle> newProjectiles = F.createProjectiles(weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.getID(), e.getTeam(), attack.projectileModifiers);
             projectiles.addAll(newProjectiles);
         }
     }
@@ -786,7 +790,7 @@ public class World implements EntityChangeListener{
 
     private HashMap<Integer,Weapon> readWeaponSlots(HashMap<String,Weapon> weapons){
         File file = new File(G.campaignFolder+File.separator+campaignName+File.separator+"weaponslots.txt");
-        G.consoleLogger.log("\nLoading weapon slots from file:" + file);
+        G.console.log("\nLoading weapon slots from file:" + file);
         HashMap<Integer,Weapon> weaponList = new HashMap<>();
         HashMap<Integer,String> primaries = new HashMap<>();
         HashMap<Integer,String> secondaries = new HashMap<>();
@@ -816,30 +820,24 @@ public class World implements EntityChangeListener{
             e.printStackTrace();
         }
 
-        G.consoleLogger.log("Populating weaponlist");
-        G.consoleLogger.log("Primary weapons");
+        G.console.log("Populating weaponlist");
+        G.console.log("Primary weapons");
         int id = 1;
         for(int slot: primaries.keySet()){
-            G.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(primaries.get(slot)));
+            G.console.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(primaries.get(slot)));
             weaponList.put(id,weapons.get(primaries.get(slot)));
             id++;
         }
-        G.consoleLogger.log("Secondary weapons");
+        G.console.log("Secondary weapons");
         for(int slot: secondaries.keySet()){
-            G.consoleLogger.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(secondaries.get(slot)));
+            G.console.log("ID:" + id + "| Slot " + slot + ": " + weapons.get(secondaries.get(slot)));
             weaponList.put(id,weapons.get(secondaries.get(slot)));
             id++;
         }
-        G.consoleLogger.log("Storing primary weapon count: " + primaries.size());
+        G.console.log("Storing primary weapon count: " + primaries.size());
         primaryWeaponCount = primaries.size();
         G.primaryWeaponCount = primaryWeaponCount;
         return weaponList;
-    }
-
-    private void loadImages() {
-        G.consoleLogger.log("\nLoading texture atlas");
-        atlas =  new TextureAtlas(G.campaignFolder+File.separator+campaignName+File.separator+"images"+File.separator+"sprites.atlas");
-        G.atlas = atlas;
     }
 
     private void addEntity(ServerEntity e){
@@ -947,7 +945,7 @@ public class World implements EntityChangeListener{
 
     public void addNPC(EnemyDefinition def, Rectangle bounds){
 
-        G.consoleLogger.log("Adding npc:" + def + " at " + bounds);
+        G.console.log("Adding npc:" + def + " at " + bounds);
         int networkID = getNextNetworkID();
 
         HashMap<Integer,Boolean> entityWeapons = new HashMap<>();
@@ -1105,46 +1103,6 @@ public class World implements EntityChangeListener{
         for(int id:entityAIs.keySet()) {
             pendingEntityRemovals.add(id);
         }
-    }
-
-    public void render(float delta, ShapeRenderer shapeRenderer, SpriteBatch batch, OrthographicCamera camera,OrthographicCamera hudCamera){
-
-        batch.setColor(1, 1, 1, 1);
-        if(cachedMap==null){
-            mapRenderer.setView(camera);
-            mapRenderer.render();
-            cachedMap = ScreenUtils.getFrameBufferTexture();
-        }else{
-            batch.setProjectionMatrix(hudCamera.combined);
-            batch.begin();
-            batch.draw(cachedMap,0,0);
-            batch.end();
-            batch.setProjectionMatrix(camera.combined);
-        }
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        for(ServerEntity e : entities.values()) {
-            if(playerList.contains(e.getID())){
-                shapeRenderer.setColor(0,0,1,1);
-            }else{
-                shapeRenderer.setColor(1,1,1,1);
-            }
-            shapeRenderer.rect(e.getX(), e.getY(), e.getWidth() / 2, e.getHeight() / 2, e.getWidth(), e.getHeight(), 1, 1, e.getRotation());
-            int healthWidth = (int) (e.getWidth()*e.getHealthPercent());
-            shapeRenderer.setColor(1, 0, 0, 1); //red
-            shapeRenderer.rect(e.getX(),e.getY(),e.getWidth()/2,e.getHeight()/2,healthWidth,e.getHeight(),1,1,e.getRotation());
-        }
-        shapeRenderer.end();
-        batch.begin();
-        for(Powerup p : powerups.values()){
-            batch.setColor(1, 0.4f, 0, 1); //safety orange
-            batch.draw(atlas.findRegion("blank"),p.bounds.x,p.bounds.y,p.bounds.width,p.bounds.height);
-        }
-        batch.end();
-
-        F.renderParticles(delta, batch, projectiles);
-        F.renderParticles(delta, batch, particles);
     }
 
     private void removeEntity(int networkID) {

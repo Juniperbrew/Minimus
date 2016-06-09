@@ -1,5 +1,5 @@
 name=Uzi
-projectile=Uzi_Bullet
+projectile=Hitscan_Uzi_Bullet
 spread=0
 projectileCount=1
 cooldown=0.15

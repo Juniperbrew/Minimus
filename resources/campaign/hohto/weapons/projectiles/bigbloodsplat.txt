@@ -1,8 +1,8 @@
 name=bigbloodsplat
 type=particle
-width=96
-length=96
+width=24
+length=24
 animation=bloodsplat
-frameDuration=0.125
+duration=1
 ignoreMapCollision
 ignoreEntityCollision

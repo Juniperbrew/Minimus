@@ -1,5 +1,5 @@
 name=Dual pistols
-projectile=Pistol_Bullet
+projectile=Hitscan_Pistol_Bullet
 spread=10
 projectileCount=2
 cooldown=0.3

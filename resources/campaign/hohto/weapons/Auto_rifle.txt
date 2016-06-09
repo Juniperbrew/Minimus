@@ -1,5 +1,5 @@
 name=Auto rifle
-projectile=Rifle_Bullet
+projectile=Hitscan_Rifle_Bullet
 spread=0
 projectileCount=1
 cooldown=0.2

@@ -1,28 +1,39 @@
 package com.juniperbrew.minimus;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Polygon;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.*;
+
+import java.util.HashSet;
+
 
 /**
  * Created by Juniperbrew on 5.9.2015.
  */
 public class Particle {
 
+
+    //FROM PROJECTILE
+    public int ownerID;
+    public int team;
+    public int damage;
+    public float knockback;
+    public String onDestroy;
+    public boolean explosionKnockback;
+    public HashSet<Integer> entitiesHit = new HashSet<>();
+    //###########
+
+    public String name;
+
     public float rotation;
-    Sprite sprite;
-    Animation animation;
+    float originX;
+    float originY;
+    Polygon bounds;
+
+
+    //Sprite sprite;
+    //Animation animation;
     float stateTime;
     float duration;
     long spawnTime;
-    float originX;
-    float originY;
     float totalDistanceTraveled;
     public boolean destroyed;
     float range;
@@ -36,16 +47,40 @@ public class Particle {
     public boolean stopOnCollision;
     public boolean stopped;
 
+    public Particle(){};
+
     public Particle(ProjectileDefinition def, Rectangle rect){
-        this(def,rect,0,rect.x+rect.width/2,rect.y+rect.height/2,0);
+        this(def, rect, 0, rect.x + rect.width / 2, rect.y + rect.height / 2, 0);
     }
 
-    public Particle(ProjectileDefinition def, Rectangle rect, float rotation, float originX, float originY){
+    public Particle(ProjectileDefinition def, Rectangle rect, float rotation, float originX, float  originY){
         this(def,rect,rotation,originX,originY,def.velocity);
     }
 
-    public Particle(ProjectileDefinition def, Rectangle rect, float rotation, float originX, float originY, float velocity){
+    public Particle(ProjectileDefinition def, Rectangle rect, float rotation, float originX, float  originY, int ownerID, int team){
+        this(def,rect,rotation,originX,originY,def.velocity, ownerID, team);
+    }
+
+    public Particle(ProjectileDefinition def, Rectangle rect,  float rotation, float originX, float originY, float velocity){
+        this(def,rect,rotation,originX,originY,velocity,-1,-1);
+    }
+
+    public Particle(ProjectileDefinition def, Rectangle rect, int ownerID, int team) {
+        this(def,rect, 0, rect.x + rect.width / 2, rect.y + rect.height / 2, 0, ownerID, team);
+    }
+
+    public Particle(ProjectileDefinition def, Rectangle rect,  float rotation, float originX, float originY, float velocity, int ownerID, int team){
+        name = def.name;
         spawnTime = System.nanoTime();
+        float[] vertices = {rect.x, rect.y,
+                rect.x+rect.width, rect.y,
+                rect.x+rect.width, rect.y + rect.height,
+                rect.x, rect.y + rect.height};
+        bounds = new Polygon(vertices);
+
+        bounds.setOrigin(originX, originY);
+        bounds.setRotation(rotation);
+
         this.originX = originX;
         this.originY = originY;
         this.rotation = rotation;
@@ -58,69 +93,23 @@ public class Particle {
         this.dontDestroyOnCollision = def.dontDestroyOnCollision;
         this.hitboxScaling = def.hitboxScaling;
         this.stopOnCollision = def.stopOnCollision;
-        setImage(def, rect);
         setDuration(def.duration);
-    }
 
 
-    private void setImage(ProjectileDefinition def, Rectangle rect){
-        if (def.image != null) {
-            TextureRegion texture = G.atlas.findRegion(def.image);
-            setTexture(texture, rect);
-        } else if (def.animation != null) {
-            Animation animation = new Animation(def.frameDuration, G.atlas.findRegions(def.animation));
-            if(def.looping){
-                animation.setPlayMode(Animation.PlayMode.LOOP);
-            }
-            setAnimation(animation, rect);
-        } else {
-            TextureRegion texture = G.atlas.findRegion("blank");
-            Color color;
-            if (def.color == null) {
-                color = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
-            } else {
-                color = def.color;
-            }
-            setTexture(texture, rect, color);
-        }
-    }
-
-    public void setTexture(TextureRegion texture,Rectangle rect){
-        createSprite(texture, rect);
-    }
-    public void setTexture(TextureRegion texture,Rectangle rect,Color color){
-        createSprite(texture,rect);
-        sprite.setColor(color);
-    }
-    public void setAnimation(Animation animation,Rectangle rect){
-        this.animation = animation;
-        createSprite(animation.getKeyFrame(0), rect);
-    }
-
-    private void createSprite(TextureRegion texture, Rectangle rect){
-        sprite = new Sprite(texture);
-        sprite.setPosition(rect.x,rect.y);
-        sprite.setOrigin(originX-rect.x,originY-rect.y);
-        sprite.setSize(rect.width, rect.height);
-        sprite.setRotation(rotation);
+        //FROM PROJECTILE
+        this.ownerID = ownerID;
+        this.team = team;
+        this.damage = def.damage;
+        knockback = def.knockback;
+        onDestroy = def.onDestroy;
+        explosionKnockback = def.explosionKnockback;
+        //#############
     }
 
     public void setDuration(float duration){
         this.duration = duration;
     }
 
-    public void render(SpriteBatch batch, float delta){
-        //FIXME animation statetime goes ahead twice as fast when projectile has stopped this looks good with flamethrower but will be an unpredictable effect in general
-        if(animation!=null){
-            if(stopped){
-                stateTime += 2*delta;
-            }else{
-                stateTime += delta;
-            }
-            sprite.setRegion(animation.getKeyFrame(stateTime));
-        }
-        sprite.draw(batch);
-    }
 
     public void update(float delta) {
         if(friction!=0){
@@ -141,27 +130,25 @@ public class Particle {
             }
         }
 
-        if(animation!=null && animation.getPlayMode() == Animation.PlayMode.NORMAL){
-            if(animation.isAnimationFinished(stateTime)){
-                destroyed = true;
-            }
-        }else{
-            if(range==0&&System.nanoTime()-spawnTime > Tools.secondsToNano(duration)){
-                destroyed = true;
-            }
+        if(range==0&&System.nanoTime()-spawnTime > Tools.secondsToNano(duration)){
+            destroyed = true;
         }
+    }
+
+    public float getLifeTime(){
+        return Tools.nanoToSecondsFloat(System.nanoTime()-spawnTime);
     }
 
     private void moveDistance(float distance){
         float x = MathUtils.cosDeg(rotation)*distance;
         float y = MathUtils.sinDeg(rotation)*distance;
         if(!ignoreMapCollision){
-            Rectangle r = getBoundingRectangle();
-            r.setPosition(r.x + x, r.y);
-            if(SharedMethods.checkMapCollision(r)){
+            bounds.translate(x,0);
+            Rectangle r = bounds.getBoundingRectangle();
+            if(F.checkMapCollision(r)){
                 if(bounce){
                     rotation = 180 - rotation;
-                    sprite.setRotation(rotation);
+                    bounds.setRotation(rotation);
                     return;
                 }else if(stopOnCollision){
                     stopped = true;
@@ -171,11 +158,12 @@ public class Particle {
                     return;
                 }
             }
-            r.setPosition(r.x, r.y + y);
-            if(SharedMethods.checkMapCollision(r)){
+            bounds.translate(0,y);
+            r = bounds.getBoundingRectangle();
+            if(F.checkMapCollision(r)){
                 if(bounce){
                     rotation = 0 - rotation;
-                    sprite.setRotation(rotation);
+                    bounds.setRotation(rotation);
                     return;
                 }else if(stopOnCollision){
                     stopped = true;
@@ -185,30 +173,31 @@ public class Particle {
                     return;
                 }
             }
+        }else{
+            bounds.translate(x,y);
         }
-        sprite.translate(x, y);
     }
 
     public Polygon getBoundingPolygon(){
-        Polygon bounds = Tools.getBoundingPolygon(sprite);
+        Polygon b = bounds;
         if(hitboxScaling!=0){
             Vector2 center = new Vector2();
             getBoundingRectangle().getCenter(center);
-            bounds.setOrigin(center.x,center.y);
-            bounds.setScale(hitboxScaling,hitboxScaling);
+            b.setOrigin(center.x,center.y);
+            b.setScale(hitboxScaling,hitboxScaling);
         }
-        return bounds;
+        return b;
     }
 
     public Rectangle getBoundingRectangle(){
-        Rectangle bounds = sprite.getBoundingRectangle();
+        Rectangle b = bounds.getBoundingRectangle();
         if(hitboxScaling!=0){
-            float scaledWidth = bounds.width*hitboxScaling;
-            float scaledHeight = bounds.height*hitboxScaling;
-            float xOffset = (bounds.width-scaledWidth)/2;
-            float yOffset = (bounds.height-scaledHeight)/2;
-            bounds.set(bounds.x + xOffset, bounds.y + yOffset, scaledWidth, scaledHeight);
+            float scaledWidth = b.width*hitboxScaling;
+            float scaledHeight = b.height*hitboxScaling;
+            float xOffset = (b.width-scaledWidth)/2;
+            float yOffset = (b.height-scaledHeight)/2;
+            b.set(b.x + xOffset, b.y + yOffset, scaledWidth, scaledHeight);
         }
-        return bounds;
+        return b;
     }
 }

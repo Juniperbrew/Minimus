@@ -3,16 +3,15 @@ package com.juniperbrew.minimus;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.math.Intersector;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.*;
+import com.juniperbrew.minimus.server.WorldHeadless;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.w3c.dom.Document;
@@ -43,7 +42,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 24.6.2015.
  */
-public class SharedMethods {
+public class F {
 
     public static ArrayList<Line2D.Float> createHitscan(Weapon weapon, float centerX, float centerY, float deg){
         ProjectileDefinition projectileDefinition = weapon.projectile;
@@ -93,14 +92,23 @@ public class SharedMethods {
         return new Particle(def,bounds,rotation,x,y, velocity);
     }
 
-    public static Projectile createStationaryProjectile(ProjectileDefinition def, float x, float y, int entityId, int team) {
+    public static Particle createStationaryProjectile(ProjectileDefinition def, float x, float y, int entityId, int team) {
         Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
-        return new Projectile(def, bounds, entityId, team);
+        return new Particle(def, bounds, entityId, team);
     }
 
-    public static ArrayList<Projectile> createProjectiles(Weapon weapon, float centerX, float centerY, float deg, int entityId, int team, HashMap<String,Float> projectileModifiers) {
+    public static ArrayList<RenderedParticle> makeRenderedParticles(ArrayList<Particle> particles, ProjectileDefinition def){
+        ArrayList<RenderedParticle> renderedParticles = new ArrayList<>();
+        for(Particle p : particles){
+            renderedParticles.add(new RenderedParticle(p, def));
+        }
+        return renderedParticles;
+    }
+
+    public static ArrayList<Particle> createProjectiles(Weapon weapon, float centerX, float centerY, float deg, int entityId, int team, HashMap<String,Float> projectileModifiers) {
+        System.out.println("Creating projectiles: "+weapon.name);
         ProjectileDefinition def = weapon.projectile;
-        final ArrayList<Projectile> projectiles = new ArrayList<>();
+        final ArrayList<Particle> projectiles = new ArrayList<>();
         int length = def.length;
         int width = def.width;
         int startDistanceX = ConVars.getInt("sv_npc_default_size") / 2;
@@ -110,7 +118,7 @@ public class SharedMethods {
 
             Rectangle bounds = new Rectangle(centerX + startDistanceX, centerY - width / 2, length, width);
 
-            Projectile p = new Projectile(def, bounds, deg, centerX, centerY, entityId, team);
+            Particle p = new Particle(def, bounds, deg, centerX, centerY, entityId, team);
 
             if(projectileModifiers!=null){
                 if(projectileModifiers.containsKey("velocity")){
@@ -127,6 +135,7 @@ public class SharedMethods {
                 deg += weapon.spread / (weapon.projectileCount - 1);
             }
         }
+        System.out.println("Created "+projectiles.size()+" projectiles.");
         return projectiles;
     }
 
@@ -623,27 +632,27 @@ public class SharedMethods {
         e.setRotation(degrees);
     }
 
-    public static void renderAttackBoundingBox(ShapeRenderer renderer, ConcurrentLinkedQueue<Projectile> projectiles) {
+    public static void renderAttackBoundingBox(ShapeRenderer renderer, ConcurrentLinkedQueue<? extends Particle> projectiles) {
         renderer.begin(ShapeRenderer.ShapeType.Line);
-        for (Projectile projectile : projectiles) {
+        for (Particle projectile : projectiles) {
             Rectangle rect = projectile.getBoundingRectangle();
             renderer.rect(rect.x, rect.y, rect.width, rect.height);
         }
         renderer.end();
     }
 
-    public static void renderAttackPolygon(ShapeRenderer renderer, ConcurrentLinkedQueue<Projectile> projectiles) {
+    public static void renderAttackPolygon(ShapeRenderer renderer, ConcurrentLinkedQueue<? extends Particle> projectiles) {
         renderer.begin(ShapeRenderer.ShapeType.Line);
-        for (Projectile projectile : projectiles) {
+        for (Particle projectile : projectiles) {
             renderer.polygon(projectile.getBoundingPolygon().getTransformedVertices());
         }
         renderer.end();
     }
 
-    public static void renderParticles(float delta, SpriteBatch batch, ConcurrentLinkedQueue<? extends Particle> particles) {
+    public static void renderParticles(SpriteBatch batch, ConcurrentLinkedQueue<RenderedParticle> particles) {
         batch.begin();
-        for (Particle particle : particles) {
-            particle.render(batch, delta);
+        for (RenderedParticle particle : particles) {
+            F.renderPolygon(batch,particle.texture,particle.bounds);
         }
         batch.end();
     }
@@ -655,6 +664,40 @@ public class SharedMethods {
         } else {
             return 1;
         }
+    }
+
+    public static void renderPolygon(SpriteBatch batch, TextureRegion texture, Polygon bounds) {
+
+        float color = Color.WHITE.toFloatBits();
+        float[] vertices = new float[4 * 5];
+        float[] vBounds = bounds.getTransformedVertices();
+        int i = 0;
+
+        vertices[i++] = vBounds[0];
+        vertices[i++] = vBounds[1];
+        vertices[i++] = color;
+        vertices[i++] = texture.getU();
+        vertices[i++] = texture.getV();
+
+        vertices[i++] = vBounds[2];
+        vertices[i++] = vBounds[3];
+        vertices[i++] = color;
+        vertices[i++] = texture.getU();
+        vertices[i++] = texture.getV2();
+
+        vertices[i++] = vBounds[4];
+        vertices[i++] = vBounds[5];
+        vertices[i++] = color;
+        vertices[i++] = texture.getU2();
+        vertices[i++] = texture.getV2();
+
+        vertices[i++] = vBounds[6];
+        vertices[i++] = vBounds[7];
+        vertices[i++] = color;
+        vertices[i++] = texture.getU2();
+        vertices[i++] = texture.getV();
+
+        batch.draw(texture.getTexture(), vertices, 0, 4 * 5);
     }
 
     //TODO inefficient lookup of weapon by name
@@ -722,7 +765,7 @@ public class SharedMethods {
 
     public static HashMap<String,EnemyDefinition> readEnemyList(HashMap<Integer,Weapon> weaponList, String campaignName){
         File file = new File(G.campaignFolder+File.separator+campaignName+File.separator+"enemylist.txt");
-        G.consoleLogger.log("\nLoading enemies from file:" + file);
+        G.console.log("\nLoading enemies from file:" + file);
         HashMap<String,EnemyDefinition> enemies = new HashMap<>();
         EnemyDefinition enemyDefinition = null;
         String enemyName = null;
@@ -747,7 +790,7 @@ public class SharedMethods {
                     enemyName = splits[1];
                 }
                 if(splits[0].equals("weapon")){
-                    enemyDefinition.weapon = SharedMethods.getWeaponID(weaponList,splits[1]);
+                    enemyDefinition.weapon = F.getWeaponID(weaponList, splits[1]);
                 }
                 if(splits[0].equals("image")){
                     enemyDefinition.image = splits[1];
@@ -771,7 +814,7 @@ public class SharedMethods {
             e.printStackTrace();
         }
         for(EnemyDefinition e: enemies.values()){
-            G.consoleLogger.log(e.toString());
+            G.console.log(e.toString());
         }
 
         return enemies;
@@ -780,7 +823,7 @@ public class SharedMethods {
     public static HashMap<String,ProjectileDefinition> readSeperatedProjectileList(String campaignName){
         File projectileFolder = new File(G.campaignFolder+File.separator+campaignName+File.separator+"weapons"+File.separator+"projectiles");
         ArrayList<File> files = new ArrayList<>();
-        G.consoleLogger.log("\nLoading projectiles from folder:" + projectileFolder);
+        G.console.log("\nLoading projectiles from folder:" + projectileFolder);
         for (File fileEntry : projectileFolder.listFiles()) {
             if (!fileEntry.isDirectory()&&!fileEntry.isHidden()) {
                 if(!fileEntry.getName().equals("!PROPERTIES.txt")){
@@ -897,7 +940,7 @@ public class SharedMethods {
         }
 
         for(ProjectileDefinition def: projectiles.values()){
-            G.consoleLogger.log(def.toString());
+            G.console.log(def.toString());
         }
 
         return projectiles;
@@ -906,7 +949,7 @@ public class SharedMethods {
     public static HashMap<String,Weapon> readSeperatedWeaponList(HashMap<String,ProjectileDefinition> projectileList, String campaignName){
         File weaponsFolder = new File(G.campaignFolder+File.separator+campaignName+File.separator+"weapons");
         ArrayList<File> files = new ArrayList<>();
-        G.consoleLogger.log("\nLoading weapons from folder:" + weaponsFolder);
+        G.console.log("\nLoading weapons from folder:" + weaponsFolder);
         for (File fileEntry : weaponsFolder.listFiles()) {
             if (!fileEntry.isDirectory()&&!fileEntry.isHidden()) {
                 if(!fileEntry.getName().equals("!PROPERTIES.txt")){
@@ -956,6 +999,9 @@ public class SharedMethods {
                     }
                     if(splits[0].equals("projectile")){
                         weapon.projectile = projectileList.get(splits[1]);
+                        if(weapon.projectile==null){
+                            System.out.println(weapon.name+": PROJECTILE NULL");
+                        }
                     }
                     if(splits[0].equals("cooldown")){
                         weapon.cooldown = Float.parseFloat(splits[1]);
@@ -979,7 +1025,7 @@ public class SharedMethods {
         }
 
         for(Weapon w: weapons.values()){
-            G.consoleLogger.log(w.toString());
+            G.console.log(w.toString());
         }
 
         return weapons;
@@ -990,7 +1036,7 @@ public class SharedMethods {
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultprojectilelist.txt");
         }
-        G.consoleLogger.log("\nLoading projectiles from file:"+file);
+        G.console.log("\nLoading projectiles from file:"+file);
         HashMap<String,ProjectileDefinition> projectiles = new HashMap<>();
         ProjectileDefinition projectileDefinition = null;
         String projectileName = null;
@@ -1101,7 +1147,7 @@ public class SharedMethods {
         }
 
         for(ProjectileDefinition def: projectiles.values()){
-            G.consoleLogger.log(def.toString());
+            G.console.log(def.toString());
         }
 
         return projectiles;
@@ -1112,7 +1158,7 @@ public class SharedMethods {
         if(!file.exists()){
             file = new File("resources"+File.separator+"defaultweaponlist.txt");
         }
-        G.consoleLogger.log("\nLoading weapons from file:" + file);
+        G.console.log("\nLoading weapons from file:" + file);
         HashMap<String,Weapon> weapons = new HashMap<>();
         Weapon weapon = null;
         String name = null;
@@ -1176,7 +1222,7 @@ public class SharedMethods {
         }
 
         for(Weapon w: weapons.values()){
-            G.consoleLogger.log(w.toString());
+            G.console.log(w.toString());
         }
 
         return weapons;
@@ -1193,7 +1239,7 @@ public class SharedMethods {
 
     public static BidiMap<Integer,ShopItem> readShopList(String campaignName){
         File file = new File(G.campaignFolder+File.separator+campaignName+File.separator+"shoplist.txt");
-        G.consoleLogger.log("\nLoading shoplist from file:" + file);
+        G.console.log("\nLoading shoplist from file:" + file);
         BidiMap<Integer,ShopItem> shoplist = new DualHashBidiMap<>();
         int id = 0;
 
@@ -1213,7 +1259,7 @@ public class SharedMethods {
         }
 
         for(int i: shoplist.keySet()){
-            G.consoleLogger.log(i + ":" + shoplist.get(i));
+            G.console.log(i + ":" + shoplist.get(i));
         }
 
         return shoplist;
@@ -1270,15 +1316,14 @@ public class SharedMethods {
         return solidObjects;
     }
 
-    public static ArrayList<RectangleMapObject> getScaledMapobjects(TiledMap map){
-        float s = SharedMethods.getMapScale(map);
+    public static ArrayList<RectangleMapObject> getMapObjects(TiledMap map){
         ArrayList<RectangleMapObject> mapObjects = new ArrayList<>();
         for(MapLayer layer :map.getLayers().getByType(MapLayer.class)){
             for(MapObject o : layer.getObjects()){
                 if(o instanceof RectangleMapObject){
                     RectangleMapObject rectObject = (RectangleMapObject) o;
                     Rectangle bounds = rectObject.getRectangle();
-                    rectObject.getRectangle().set(bounds.x*s,bounds.y*s,bounds.width*s,bounds.height*s);
+                    rectObject.getRectangle().set(bounds.x,bounds.y,bounds.width,bounds.height);
                     mapObjects.add(rectObject);
                 }
             }
@@ -1453,7 +1498,7 @@ public class SharedMethods {
     public static Rectangle getSpawnZone(ArrayList<RectangleMapObject> mapObjects){
         for(RectangleMapObject o : mapObjects){
             if(o.getProperties().containsKey("type") && o.getProperties().get("type",String.class).equals("spawn")){
-                G.consoleLogger.log("Spawn at:" + o.getRectangle());
+                G.console.log("Spawn at:" + o.getRectangle());
                 return o.getRectangle();
             }
         }

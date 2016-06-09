@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus;
 
+
 import com.badlogic.gdx.math.Rectangle;
 
 /**

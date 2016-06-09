@@ -4,7 +4,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.juniperbrew.minimus.ConVars;
 import com.juniperbrew.minimus.G;
-import com.juniperbrew.minimus.SharedMethods;
+import com.juniperbrew.minimus.F;
 import com.juniperbrew.minimus.Tools;
 
 /**
@@ -12,7 +12,7 @@ import com.juniperbrew.minimus.Tools;
  */
 public class EntityAI {
 
-    World world;
+    WorldHeadless world;
 
     public static final int MOVING = 0;
     public static final int MOVING_AND_SHOOTING = 1;
@@ -38,7 +38,7 @@ public class EntityAI {
     private static final float TURNRATE = 180; //Deg/s
     private float targetRotation;
 
-    public EntityAI(NpcServerEntity entity, int aiType, int weapon, World world){
+    public EntityAI(NpcServerEntity entity, int aiType, int weapon, WorldHeadless world){
         this.entity = entity;
         this.world = world;
         this.aiType = aiType;
@@ -89,7 +89,7 @@ public class EntityAI {
             }
             float distance = Tools.getSquaredDistance(target.getCenterX(),target.getCenterY(),entity.getCenterX(),entity.getCenterY());
             if(distance < closestDistance){
-                if (!SharedMethods.isTileCollisionOnLine(entity.getCenterX(), entity.getCenterY(), target.getCenterX(), target.getCenterY())) {
+                if (!F.isTileCollisionOnLine(entity.getCenterX(), entity.getCenterY(), target.getCenterX(), target.getCenterY())) {
                     closestDistance = distance;
                     closestTarget = target;
                 }
@@ -217,7 +217,7 @@ public class EntityAI {
             offsetY += G.tileHeight +(entity.getHeight()/2)+ margin;
             destinationYTileCheck -= (entity.getHeight()/2);
         }
-        Vector2 tile = SharedMethods.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
+        Vector2 tile = F.raytrace(entity.getCenterX(), entity.getCenterY(), destinationXTileCheck, destinationYTileCheck);
         if(tile!=null) {
             setDestination(tile.x* G.tileWidth+offsetX,tile.y* G.tileHeight+offsetY);
         }else{

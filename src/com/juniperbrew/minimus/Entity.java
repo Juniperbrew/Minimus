@@ -73,13 +73,13 @@ public class Entity {
 
         //less precise collision correction
         bounds.setX(bounds.getX() + movement.x);
-        if (SharedMethods.checkMapCollision(bounds)) {
+        if (F.checkMapCollision(bounds)) {
             bounds.setX(bounds.getX() - movement.x);
             movement.x = 0;
             //TODO reduce movement so entity hits the wall
         }
         bounds.setY(bounds.getY() + movement.y);
-        if (SharedMethods.checkMapCollision(bounds)) {
+        if (F.checkMapCollision(bounds)) {
             bounds.setY(bounds.getY() - movement.y);
             movement.y = 0;
             //TODO reduce movement so entity hits the wall
@@ -130,8 +130,8 @@ public class Entity {
         return new Rectangle(networkEntity.x, networkEntity.y, networkEntity.width, networkEntity.height);
     }
 
-    public Rectangle2D.Float getJavaBounds() {
-        return new Rectangle2D.Float(networkEntity.x, networkEntity.y, networkEntity.width, networkEntity.height);
+    public Rectangle2D.Double getJavaBounds() {
+        return new Rectangle2D.Double(networkEntity.x, networkEntity.y, networkEntity.width, networkEntity.height);
     }
 
     public float getRotation() {

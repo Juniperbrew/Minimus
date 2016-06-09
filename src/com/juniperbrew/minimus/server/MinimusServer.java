@@ -1,10 +1,6 @@
 package com.juniperbrew.minimus.server;
 
-import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -19,19 +15,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.KryoSerialization;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
-import com.juniperbrew.minimus.ConVars;
-import com.juniperbrew.minimus.ConsoleReader;
-import com.juniperbrew.minimus.G;
-import com.juniperbrew.minimus.NetworkEntity;
-import com.juniperbrew.minimus.Enums;
-import com.juniperbrew.minimus.ExceptionLogger;
-import com.juniperbrew.minimus.Network;
-import com.juniperbrew.minimus.Powerup;
-import com.juniperbrew.minimus.ProjectileDefinition;
-import com.juniperbrew.minimus.Score;
-import com.juniperbrew.minimus.SharedMethods;
-import com.juniperbrew.minimus.Tools;
-import com.juniperbrew.minimus.Weapon;
+import com.juniperbrew.minimus.*;
 import com.juniperbrew.minimus.components.Component;
 import com.juniperbrew.minimus.windows.ConsoleFrame;
 import com.juniperbrew.minimus.windows.ServerStatusFrame;
@@ -55,7 +39,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusServer implements ApplicationListener, InputProcessor, Score.ScoreChangeListener, ConVars.ConVarChangeListener, World.WorldChangeListener, G.ConsoleLogger {
+public class MinimusServer implements Score.ScoreChangeListener, ConVars.ConVarChangeListener, WorldHeadless.WorldChangeListener, Console.ServerCommands{
 
     Server server;
     ShapeRenderer shapeRenderer;
@@ -101,7 +85,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     Score score = new Score(this);
 
-    World world;
+    WorldHeadless world;
 
     private final float TIMESTEP = (1/60f);
     private float ackumulator;
@@ -115,30 +99,25 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
     BitmapFont font;
 
-    @Override
-    public void create() {
+    public MinimusServer(){
         //Log.TRACE();
-        G.consoleLogger = this;
         ConVars.addListener(this);
         Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("server"));
         consoleFrame = new ConsoleFrame(this);
-        G.console = consoleFrame;
-        new ConsoleReader(consoleFrame);
+        new ConsoleReader(G.console);
         shapeRenderer = new ShapeRenderer();
         batch = new SpriteBatch();
-        world = new World(this, new TmxMapLoader(), batch);
+        world = new WorldHeadless(this);
         int h = Gdx.graphics.getHeight();
         int w = Gdx.graphics.getWidth();
         camera = new OrthographicCamera();
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
-        resize(h, w);
         font = new BitmapFont();
 
         serverStartTime = System.nanoTime();
         serverData = new StatusData(serverStartTime,ConVars.getInt("cl_log_interval_seconds"));
         serverStatusFrame = new ServerStatusFrame(serverData);
         startServer();
-        Gdx.input.setInputProcessor(this);
         ObjectMap map = server.getKryo().getContext();
         System.out.println("Position registration: " + server.getKryo().getRegistration(Component.Position.class));
         for (int i = 0; i < server.getKryo().getNextRegistrationId(); i++) {
@@ -448,7 +427,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         },"WorldSimulation");
         thread.start();
     }*/
-
+/*
     @Override
     public void render() {
         long frameStart = System.nanoTime();
@@ -492,7 +471,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
 
         renderLog.add(Tools.nanoToMilliFloat(System.nanoTime() - renderStart));
         frameTimeLog.add(Tools.nanoToMilliFloat(System.nanoTime() - frameStart));
-    }
+    }*/
 
     public void fillEveryonesAmmo(){
         for(int playerID:playerList.keySet()){
@@ -642,12 +621,12 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public void showMessage(String message){
         if(message.startsWith("\n")){
             System.out.println();
-            consoleFrame.addLine("");
+            G.console.log("");
             message = message.substring(1);
         }
         String line = "["+Tools.secondsToMilliTimestamp(getServerTime())+ "] " + message;
         System.out.println(line);
-        consoleFrame.addLine(line);
+        G.console.log("");
     }
 
     private int measureKryoEntitySize(){
@@ -792,7 +771,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             sendTCP(c,o);
         }
     }
-
+/*
     @Override
     public boolean keyTyped(char character) {
         if (character == 'u') {
@@ -866,6 +845,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
                 }
             }
             */
+    /*
             showMessage("Listing entities");
             for(ServerEntity e:world.entities.values()){
                 showMessage(e.toString());
@@ -1006,7 +986,7 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
     public boolean scrolled(int amount) {
         return false;
     }
-
+*/
 
     @Override
     public void conVarChanged(String varName, String varValue) {
@@ -1130,7 +1110,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
             mapChange.mapName=mapName;
             //mapChange.powerups = new HashMap<>(world.powerups);
             sendTCPtoAll(mapChange);
-            resize(windowWidth, windowHeight);
         }
     }
 
@@ -1195,11 +1174,6 @@ public class MinimusServer implements ApplicationListener, InputProcessor, Score
         if(playerList.keySet().contains(victimID)){
             addDeath(victimID);
         }
-    }
-
-    @Override
-    public void log(String message) {
-        showMessage(message);
     }
 
     private class Packet{

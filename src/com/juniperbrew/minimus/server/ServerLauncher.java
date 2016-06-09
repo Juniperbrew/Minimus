@@ -2,15 +2,11 @@ package com.juniperbrew.minimus.server;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.juniperbrew.minimus.ExceptionLogger;
-import com.juniperbrew.minimus.SharedMethods;
 import com.juniperbrew.minimus.Tools;
-import com.juniperbrew.minimus.server.MinimusServer;
+import com.juniperbrew.minimus.client.MinimusClient;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 
 /**
@@ -26,17 +22,17 @@ public class ServerLauncher {
         File file = new File(Tools.getUserDataDirectory());
         file.mkdirs();
 
-        final MinimusServer minimusServer = new MinimusServer();
+        final ServerGUI serverGUI = new ServerGUI();
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
-        cfg.title = minimusServer.getClass().getSimpleName();
+        cfg.title = serverGUI.getClass().getSimpleName();
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            frame.setTitle(minimusServer.getClass().getSimpleName());
+            frame.setTitle(serverGUI.getClass().getSimpleName());
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
 
@@ -44,9 +40,9 @@ public class ServerLauncher {
             menuBar.add(new JMenu("File"));
             JMenu windowsMenu = new JMenu("Windows");
             JMenuItem consoleItem = new JMenuItem("Console");
-            consoleItem.addActionListener(e -> minimusServer.showConsoleWindow());
+            //consoleItem.addActionListener(e -> serverGUI.showConsoleWindow());
             JMenuItem serverStatusItem = new JMenuItem("Server status");
-            serverStatusItem.addActionListener(e -> minimusServer.showServerStatusWindow());
+            //serverStatusItem.addActionListener(e -> serverGUI.showServerStatusWindow());
             windowsMenu.add(consoleItem);
             windowsMenu.add(serverStatusItem);
             menuBar.add(windowsMenu);
@@ -57,14 +53,14 @@ public class ServerLauncher {
             canvas.setSize(cfg.width, cfg.height);
             frame.add(canvas);
 
-            new LwjglApplication(minimusServer, cfg, canvas);
+            new LwjglApplication(serverGUI, cfg, canvas);
 
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setLocation(frame.getX(), 0);
             frame.setVisible(true);
         }else{
-            new LwjglApplication(new MinimusServer() ,cfg);
+            new LwjglApplication(serverGUI ,cfg);
         }
     }
 }

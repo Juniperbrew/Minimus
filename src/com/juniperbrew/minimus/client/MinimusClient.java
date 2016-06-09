@@ -45,7 +45,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.SerializationException;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -81,7 +80,7 @@ import org.w3c.dom.Element;
 /**
  * Created by Juniperbrew on 23.1.2015.
  */
-public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener, G.ConsoleLogger {
+public class MinimusClient implements ApplicationListener, InputProcessor,Score.ScoreChangeListener, ConVars.ConVarChangeListener, Console.ClientCommands {
 
     Client client;
     @SuppressWarnings("FieldCanBeLocal")
@@ -130,9 +129,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     int currentWave;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
-    private ConcurrentLinkedQueue<Projectile> projectiles = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<Particle> blood = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<RenderedParticle> projectiles = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<RenderedParticle> particles = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<RenderedParticle> blood = new ConcurrentLinkedQueue<>();
 
     long lastPingRequest;
     long renderStart;
@@ -241,7 +240,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         soundVolume = ConVars.getFloat("cl_volume_sound");
         musicVolume = ConVars.getFloat("cl_volume_music");
         consoleFrame = new ConsoleFrame(this);
-        new ConsoleReader(consoleFrame);
+        new ConsoleReader(G.console);
         clientStartTime = System.nanoTime();
         score = new Score(this);
         client = new Client(writeBuffer,objectBuffer);
@@ -252,7 +251,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     @Override
     public void create() {
-        G.consoleLogger = this;
         if(ConVars.getBool("cl_auto_send_errorlogs")){
             Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger("client", true, serverIP));
         }else{
@@ -264,7 +262,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         camera = new OrthographicCamera(windowWidth,windowHeight);
         hudCamera = new OrthographicCamera(windowWidth,windowHeight);
-        camera.zoom = ConVars.getFloat("cl_zoom");
+        //camera.zoom = ConVars.getFloat("cl_zoom");
+        camera.zoom = 0.25f;
         hudCamera.position.set(windowWidth / 2, windowHeight / 2, 0);
         hudCamera.update();
 
@@ -605,7 +604,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             G.shoplist = new DualHashBidiMap<>(assign.shoplist);
             primaryWeaponCount = assign.primaryWeaponCount;
             G.primaryWeaponCount = primaryWeaponCount;
-            G.weaponNameToID = SharedMethods.createWeaponNameToIDMapping(G.weaponList);
+            G.weaponNameToID = F.createWeaponNameToIDMapping(G.weaponList);
             projectileList = assign.projectileList;
             player = new PlayerClientEntity(assign.networkID,assign.weapons,assign.ammo);
             ghostPlayer = new ClientEntity();
@@ -647,14 +646,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
             ProjectileDefinition def = projectileList.get(spawnProjectile.projectileName);
-            projectiles.add(SharedMethods.createStationaryProjectile(def, spawnProjectile.x, spawnProjectile.y,
-                    spawnProjectile.ownerID, spawnProjectile.team));
+            projectiles.add(new RenderedParticle(F.createStationaryProjectile(def, spawnProjectile.x, spawnProjectile.y,
+                    spawnProjectile.ownerID, spawnProjectile.team),def));
             if(def.sound!=null){
                 playSoundInLocation(sounds.get(def.sound),spawnProjectile.x,spawnProjectile.y);
             }
         }else if(object instanceof String){
             String command = (String) object;
-            consoleFrame.giveCommand(command);
+            G.console.giveCommand(command);
         }else if(object instanceof Network.MapCleared){
             Network.MapCleared mapClearedPacket = (Network.MapCleared) object;
             mapChangeTimer = mapClearedPacket.timer;
@@ -724,7 +723,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         mapCleared = false;
         mapChangeTimer = 0;
         fadeScreen();
-        SharedMethods.printCollisionMap();
+        F.printCollisionMap();
         loadMap(mapChange.mapName, campaign);
         //powerups = mapChange.powerups;
         powerups.clear();
@@ -778,7 +777,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             e.update(delta);
 
             if(e.getHealthPercent()>0.5f && e.bleedTimer < 0) {
-                blood.add(SharedMethods.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)));
+                blood.add(new RenderedParticle(F.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)),projectileList.get("blood")));
                 e.bleedTimer = MathUtils.random(0.5f,2f);
             }
         }
@@ -788,7 +787,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         updateParticles(delta);
 
         //Dont pollInput or create snapshot if we have no state from server
-        if (authoritativeState != null){
+        if (authoritativeState != null && player != null){
+
             if(playerDeathAnimations.containsKey(player.id)){
                 inputQueue.clear();
                 predictedPositions.clear();
@@ -814,9 +814,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void updateParticles(float delta){
-        Iterator<Particle> iter = particles.iterator();
+        Iterator<RenderedParticle> iter = particles.iterator();
         while(iter.hasNext()){
-            Particle p = iter.next();
+            RenderedParticle p = iter.next();
             p.update(delta);
             if(p.destroyed){
                 iter.remove();
@@ -824,7 +824,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
         iter = blood.iterator();
         while(iter.hasNext()){
-            Particle p = iter.next();
+            RenderedParticle p = iter.next();
             p.update(delta);
             if(p.destroyed){
                 iter.remove();
@@ -869,7 +869,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         //TODO figure out some way to share this function with server
         //We need to move player here so we can spawn the potential projectiles at correct location
         if(player != null) {
-            SharedMethods.applyInput(player,input);
+            F.applyInput(player, input);
         }
 
         EnumSet<Enums.Buttons> buttons = input.buttons;
@@ -1043,8 +1043,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
 
             if(weapon.projectile.type == ProjectileDefinition.HITSCAN){
-                for(Line2D.Float hitscan :SharedMethods.createHitscan(weapon,attack.x,attack.y,attack.deg)){
-                    Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(hitscan.x1,hitscan.y1,hitscan.x2,hitscan.y2);
+                for(Line2D.Float hitscan : F.createHitscan(weapon, attack.x, attack.y, attack.deg)){
+                    Vector2 intersection = F.findLineIntersectionPointWithTile(hitscan.x1, hitscan.y1, hitscan.x2, hitscan.y2);
                     if(intersection!=null){
                         hitscan.x2 = intersection.x;
                         hitscan.y2 = intersection.y;
@@ -1068,26 +1068,27 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                             }
                         }
                         Entity t = entities.get((int)closestTarget.x);
-                        Vector2 i = SharedMethods.getLineIntersectionWithRectangle(hitscan,t.getGdxBounds());
+                        Vector2 i = F.getLineIntersectionWithRectangle(hitscan, t.getGdxBounds());
                         //FIXME i should never be null
                         if(i!=null){
                             hitscan.x2 = i.x;
                             hitscan.y2 = i.y;
                         }
-                        blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"),hitscan.x2,hitscan.y2,(int)Tools.getAngle(hitscan)+MathUtils.random(-10,10),MathUtils.random(60,100)));
+                        ProjectileDefinition def = projectileList.get("blood");
+                        blood.add(new RenderedParticle(F.createMovingParticle(def, hitscan.x2, hitscan.y2, (int) Tools.getAngle(hitscan) + MathUtils.random(-10, 10), MathUtils.random(60, 100)),def));
                     }
                     if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
                         ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
                         if(def.type == ProjectileDefinition.PARTICLE){
-                            particles.add(SharedMethods.createStationaryParticle(def,hitscan.x2,hitscan.y2));
+                            particles.add(new RenderedParticle(F.createStationaryParticle(def, hitscan.x2, hitscan.y2),def));
                         }
                     }
                     if(weapon.projectile.tracer!=null){
-                        particles.add(SharedMethods.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));
+                        particles.add(new RenderedParticle(F.createTracer(projectileList.get(weapon.projectile.tracer), hitscan),projectileList.get(weapon.projectile.tracer)));
                     }
                 }
             }else{
-                projectiles.addAll(SharedMethods.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1,attack.projectileModifiers));
+                projectiles.addAll(F.makeRenderedParticles(F.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1, attack.projectileModifiers), weapon.projectile));
             }
         }
     }
@@ -1153,8 +1154,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Collections.sort(inputQueue);
         for(Network.UserInput input:inputQueue){
             //System.out.println("Predicting player inputID:" + input.inputID);
-            SharedMethods.applyInput(player, input);
-            SharedMethods.applyInput(ghostPlayer, input);
+            F.applyInput(player, input);
+            F.applyInput(ghostPlayer, input);
             predictedPositions.put(input.inputID,new Vector2(player.getX(),player.getY()));
         }
     }
@@ -1350,8 +1351,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     }
 
     private void updateProjectiles(float delta){
-        ArrayList<Projectile> destroyedProjectiles = new ArrayList<>();
-        for(Projectile projectile:projectiles){
+        ArrayList<Particle> destroyedProjectiles = new ArrayList<>();
+        for(Particle projectile:projectiles){
+            System.out.println("updating " + projectile.name);
             projectile.update(delta);
             if(!projectile.ignoreEntityCollision) {
                 for (int id : entities.keySet()) {
@@ -1377,11 +1379,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                             Vector2 center = new Vector2();
                             projectile.getBoundingRectangle().getCenter(center);
                             projectile.entitiesHit.add(target.getID());
-                            particles.add(SharedMethods.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y));
+                            particles.add(new RenderedParticle(F.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y),projectileList.get("bloodsplat")));
                             if(projectile.explosionKnockback){
-                                blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"),target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x,center.y,target.getCenterX(),target.getCenterY())+MathUtils.random(-10,10)),MathUtils.random(60, 100)));
+                                blood.add(new RenderedParticle(F.createMovingParticle(projectileList.get("blood"), target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x, center.y, target.getCenterX(), target.getCenterY()) + MathUtils.random(-10, 10)), MathUtils.random(60, 100)),projectileList.get("blood")));
                             }else{
-                                blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"),center.x, center.y,projectile.rotation+MathUtils.random(-10,10),MathUtils.random(60,100)));
+                                blood.add(new RenderedParticle(F.createMovingParticle(projectileList.get("blood"), center.x, center.y, projectile.rotation + MathUtils.random(-10, 10), MathUtils.random(60, 100)),projectileList.get("blood")));
                             }
                         }
                     }
@@ -1397,7 +1399,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     if(def.type == ProjectileDefinition.PARTICLE){
                         Vector2 center = new Vector2();
                         projectile.getBoundingRectangle().getCenter(center);
-                        particles.add(SharedMethods.createStationaryParticle(def, center.x, center.y));
+                        particles.add(new RenderedParticle(F.createStationaryParticle(def, center.x, center.y),def));
                     }
                 }
             }
@@ -1450,8 +1452,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glLineWidth(3);
-        Gdx.gl.glScissor((int) (windowWidth / 2 - camera.position.x), (int) (windowHeight / 2 - camera.position.y), mapWidth, mapHeight);
-        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+
+        //## Camera zoom breaks scissors needs fixing
+        //Gdx.gl.glScissor((int) (windowWidth / 2 - camera.position.x), (int) (windowHeight / 2 - camera.position.y), mapWidth, mapHeight);
+        //Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+
         batch.setColor(1, 1, 1, 1);
 
         if(fadeOut){
@@ -1551,7 +1556,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             batch.end();
 
-            SharedMethods.renderParticles(delta, batch, blood);
+            F.renderParticles(batch, blood);
 
             //Render entities
             batch.begin();
@@ -1581,14 +1586,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     textureName.append("_");
                     textureName.append("hurt");
                 }
-                TextureRegion texture;
+                //TextureRegion texture;
                 if (e.fireAnimationTimer > 0) {
-                    texture = getTexture(textureName + "_attack");
+                    textureName.append("_attack");
                 } else if (e.aimingWeapon) {
-                    texture = getTexture(textureName + "_aim");
-                } else {
-                    texture = getTexture(textureName.toString(), e.getID());
+                    textureName.append("_aim");
                 }
+                TextureRegion texture = getTexture(textureName.toString(), e.getID());
+
                 Rectangle textureBounds = getCenteredScaledTextureSize(texture, e.getGdxBounds(), 1.8125f);
                 batch.draw(texture, textureBounds.x, textureBounds.y, textureBounds.width / 2, textureBounds.height / 2, textureBounds.width, textureBounds.height, 1, 1, e.getRotation() + 180, true);
                 batch.setColor(0, 1, 0, 1);
@@ -1605,13 +1610,14 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             batch.end();
 
-            SharedMethods.renderParticles(delta, batch, projectiles);
-            SharedMethods.renderParticles(delta, batch, particles);
+            F.renderParticles(batch, projectiles);
+            F.renderParticles(batch, particles);
+
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.setColor(1,1,1,1);
-                SharedMethods.renderAttackBoundingBox(shapeRenderer, projectiles);
+                F.renderAttackBoundingBox(shapeRenderer, projectiles);
                 shapeRenderer.setColor(1,1,0,1);
-                SharedMethods.renderAttackPolygon(shapeRenderer, projectiles);
+                F.renderAttackPolygon(shapeRenderer, projectiles);
             }
 
             drawTracer(shapeRenderer);
@@ -1720,13 +1726,13 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         if(showGraphs) {
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
             Gdx.gl.glLineWidth(1);
-            SharedMethods.drawLog("Fps", "fps", fpsLog, shapeRenderer, batch, font, 50, 100, 150, 100, 1, 60, 20);
-            SharedMethods.drawLog("Delta", "ms", deltaLog, shapeRenderer,batch,font, 250, 100, 150, 100, 4, (1000/60f),(1000/20f));
-            SharedMethods.drawLog("Logic", "ms", logicLog, shapeRenderer,batch,font, 450, 100, 150, 100, 20, 3,10);
-            SharedMethods.drawLog("Render", "ms", renderLog, shapeRenderer,batch,font, 650, 100, 150, 100, 20, 5,(1000/60f));
-            SharedMethods.drawLog("FrameTime", "ms", frameTimeLog, shapeRenderer,batch,font, 850, 100, 150, 100, 20, 5,(1000/60f));
-            SharedMethods.drawLog("Download", "kB/s", statusData.kiloBytesPerSecondReceivedLog, shapeRenderer,batch,font, 1050, 100, 150, 100, 2, 10,100);
-            SharedMethods.drawLog("Upload", "kB/s", statusData.kiloBytesPerSecondSentLog, shapeRenderer,batch,font, 1250, 100, 150, 100, 50, 1,5);
+            F.drawLog("Fps", "fps", fpsLog, shapeRenderer, batch, font, 50, 100, 150, 100, 1, 60, 20);
+            F.drawLog("Delta", "ms", deltaLog, shapeRenderer, batch, font, 250, 100, 150, 100, 4, (1000 / 60f), (1000 / 20f));
+            F.drawLog("Logic", "ms", logicLog, shapeRenderer, batch, font, 450, 100, 150, 100, 20, 3, 10);
+            F.drawLog("Render", "ms", renderLog, shapeRenderer, batch, font, 650, 100, 150, 100, 20, 5, (1000 / 60f));
+            F.drawLog("FrameTime", "ms", frameTimeLog, shapeRenderer, batch, font, 850, 100, 150, 100, 20, 5, (1000 / 60f));
+            F.drawLog("Download", "kB/s", statusData.kiloBytesPerSecondReceivedLog, shapeRenderer, batch, font, 1050, 100, 150, 100, 2, 10, 100);
+            F.drawLog("Upload", "kB/s", statusData.kiloBytesPerSecondSentLog, shapeRenderer, batch, font, 1250, 100, 150, 100, 50, 1, 5);
             shapeRenderer.setProjectionMatrix(camera.combined);
         }
 
@@ -1757,7 +1763,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         float x2 = camera.position.x-(camera.viewportWidth/2)+Gdx.input.getX();
         float y2 = camera.position.y+(camera.viewportHeight/2)-Gdx.input.getY();
 
-        SharedMethods.debugRaytrace(x1, y1, x2, y2);
+        F.debugRaytrace(x1, y1, x2, y2);
 
         tracer = new Line2D.Float(x1,y1,x2,y2);
     }
@@ -1769,8 +1775,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             shapeRenderer.line(tracer.x1,tracer.y1,tracer.x2,tracer.y2);
             shapeRenderer.end();
 
-            Vector2 intersection = SharedMethods.findLineIntersectionPointWithTile(tracer.x1,tracer.y1,tracer.x2,tracer.y2);
-            SharedMethods.debugDrawRaytrace(shapeRenderer,tracer.x1,tracer.y1,tracer.x2,tracer.y2);
+            Vector2 intersection = F.findLineIntersectionPointWithTile(tracer.x1, tracer.y1, tracer.x2, tracer.y2);
+            F.debugDrawRaytrace(shapeRenderer, tracer.x1, tracer.y1, tracer.x2, tracer.y2);
             if(intersection!=null){
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
                 shapeRenderer.setColor(1, 1, 0, 1);
@@ -1779,7 +1785,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
 
             for(Entity e : entities.values()){
-                Vector2 p = SharedMethods.getLineIntersectionWithRectangle(tracer,e.getGdxBounds());
+                Vector2 p = F.getLineIntersectionWithRectangle(tracer, e.getGdxBounds());
                 if(p!=null){
                     shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                     shapeRenderer.setColor(1,1,1,1);
@@ -1793,7 +1799,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 }
             }
 
-            Vector2 tile = SharedMethods.raytrace(tracer.x1, tracer.y1, tracer.x2, tracer.y2);
+            Vector2 tile = F.raytrace(tracer.x1, tracer.y1, tracer.x2, tracer.y2);
             if(tile!=null){
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 shapeRenderer.setColor(1,0,0,1);
@@ -1881,7 +1887,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     @Override
     public boolean keyDown(int keycode) {
         if(keycode == Input.Keys.F1){
-            consoleFrame.showHelp();
+            G.console.showHelp();
         }
         if(keycode == Input.Keys.F2){
             showGraphs = !showGraphs;
@@ -2096,6 +2102,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
         client.start();
         client.connect(5000, serverIP, Network.portTCP, Network.portUDP);
+        showMessage("Sending spawn request");
         client.sendTCP(new Network.SpawnRequest());
     }
 
@@ -2255,7 +2262,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     private void showMessage(String message){
         String line = "["+Tools.secondsToMilliTimestamp(getClientTime())+ "] " + message;
         System.out.println(line);
-        consoleFrame.addLine(line);
+        G.console.log(line);
     }
 
     private void logReceivedPackets(Connection connection, Object packet){
@@ -2311,11 +2318,12 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             return;
         }
         fixTextureBleeding(map);
-        float mapScale = SharedMethods.getMapScale(map);
-        ArrayList<RectangleMapObject> mapObjects = SharedMethods.getScaledMapobjects(map);
-        mapExit = SharedMethods.getMapExit(mapObjects);
-        drawableMapObjects = SharedMethods.getDrawableMapObjects(mapObjects);
-        interactableMapObjects = SharedMethods.getInteractableMapObjects(mapObjects);
+        float mapScale = 1;
+        ArrayList<RectangleMapObject> mapObjects = F.getMapObjects(map);
+        mapExit = F.getMapExit(mapObjects);
+        drawableMapObjects = F.getDrawableMapObjects(mapObjects);
+        interactableMapObjects = F.getInteractableMapObjects(mapObjects);
+        System.out.println(interactableMapObjects.size());
         MapProperties p = map.getProperties();
         G.mapWidthTiles = p.get("width", Integer.class);
         G.mapHeightTiles = p.get("height", Integer.class);
@@ -2333,8 +2341,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         G.mapHeight = mapHeight;
 
         mapRenderer = new OrthogonalTiledMapRenderer(map,mapScale,batch);
-        G.collisionMap = SharedMethods.createCollisionMap(map, G.mapWidthTiles, G.mapHeightTiles);
-        G.solidMapObjects = SharedMethods.getSolidMapObjects(mapObjects);
+        G.collisionMap = F.createCollisionMap(map, G.mapWidthTiles, G.mapHeightTiles);
+        G.solidMapObjects = F.getSolidMapObjects(mapObjects);
         createMinimap();
     }
 
@@ -2374,7 +2382,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         ClientEntity e = entities.get(id);
         showMessage("Removing entity:"+e);
         for (int rotation = 0; rotation < 360; rotation += MathUtils.random(35,65)) {
-            blood.add(SharedMethods.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80,120)));
+            Particle p = F.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80, 120));
+            blood.add(new RenderedParticle(p,projectileList.get("blood")));
         }
 
         playSoundInLocation(sounds.get("death.wav"), e.getCenterX(), e.getCenterY());
@@ -2455,7 +2464,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if(button == 0){
             Vector2 mouse = Tools.screenToWorldCoordinates(camera,Gdx.input.getX(),Gdx.input.getY());
+            System.out.println("pressed: "+mouse);
             for(RectangleMapObject o : interactableMapObjects){
+                System.out.println(o.getRectangle());
                 if(o.getRectangle().contains(mouse)){
                     String type = o.getProperties().get("type",String.class);
                     if(type.equals("message")){
@@ -2469,10 +2480,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                         }else{
                             dialogueID = o.getProperties().get("dialogue", String.class);
                         }
-                        Element conversation = SharedMethods.getConversation(G.campaignFolder + File.separator + campaign + File.separator + "maps" + File.separator + currentMap + File.separator + "dialogue.xml", dialogueID);
-                        Tree<String> dialogTree = SharedMethods.getDialogueNodes(conversation);
-                        String name = SharedMethods.getDialogueName(conversation);
-                        String portrait = SharedMethods.getDialoguePortrait(conversation);
+                        Element conversation = F.getConversation(G.campaignFolder + File.separator + campaign + File.separator + "maps" + File.separator + currentMap + File.separator + "dialogue.xml", dialogueID);
+                        Tree<String> dialogTree = F.getDialogueNodes(conversation);
+                        String name = F.getDialogueName(conversation);
+                        String portrait = F.getDialoguePortrait(conversation);
                         if(portrait==null){
                             portrait = o.getProperties().get("image", String.class);
                         }
@@ -2543,11 +2554,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                 backgroundMusic.setVolume(musicVolume);
             }
         }
-    }
-
-    @Override
-    public void log(String message) {
-        showMessage(message);
     }
 
     class Packet{

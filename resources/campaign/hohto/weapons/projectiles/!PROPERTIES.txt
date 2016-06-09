@@ -19,7 +19,7 @@
 
 #[Animation]#
 #animation={String}
-#frameDuration={float}
+#frameDuration={float} || REMOVE
 #looping={flag}		||If animation is not looping the projectile gets destroyed after animation finishes
 
 #[Flags]#

@@ -1,5 +1,5 @@
 name=Auto shotgun
-projectile=Shotgun_Bullet
+projectile=Hitscan_Shotgun_Bullet
 spread=30
 projectileCount=5
 cooldown=0.2

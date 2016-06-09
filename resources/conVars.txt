@@ -1,4 +1,4 @@
-sv_player_velocity 300
+sv_player_velocity 100
 sv_tickrate 60
 sv_updaterate 10
 cl_udp 1
@@ -21,7 +21,7 @@ cl_max_packet_delay 0
 sv_ping_update_delay 1
 cl_ping_update_delay 1
 cl_auto_send_errorlogs 1
-sv_npc_velocity 75
+sv_npc_velocity 50
 sv_npc_target_search_radius 500
 sv_npc_destination_time_limit 5
 sv_npc_default_size 16

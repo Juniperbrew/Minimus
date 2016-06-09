@@ -1,4 +1,4 @@
 sv_map e2m1
-sv_idkfa 0
+sv_idkfa 1
 sv_start_lives 3
 sv_player_max_health 300

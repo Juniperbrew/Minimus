@@ -1,8 +1,8 @@
 name=Bullet_puff
 type=particle
-width=24
-length=24
+width=5
+length=5
 animation=puff
-frameDuration=0.125
+duration=0.7
 ignoreMapCollision
 ignoreEntityCollision

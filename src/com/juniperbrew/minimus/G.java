@@ -2,7 +2,7 @@ package com.juniperbrew.minimus;
 
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.math.Rectangle;
-import com.juniperbrew.minimus.windows.ConsoleFrame;
+//import com.juniperbrew.minimus.windows.ConsoleFrame;
 import org.apache.commons.collections4.BidiMap;
 
 import java.io.File;
@@ -31,16 +31,13 @@ public class G {
     public static int primaryWeaponCount;
     public static HashMap<Integer,Weapon> weaponList;
     public static HashSet<String> ammoList;
-    public static ConsoleLogger consoleLogger;
+    public static Console console;
     public static BidiMap<Integer,ShopItem> shoplist;
     public static BidiMap<String,Integer> weaponNameToID;
     public static ArrayList<Rectangle> solidMapObjects;
 
     public static boolean debugFeatureToggle = true;
 
-    public static ConsoleFrame console;
+    //public static ConsoleFrame console;
 
-    public interface ConsoleLogger{
-        void log(String message);
-    }
 }
