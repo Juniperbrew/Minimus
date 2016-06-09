@@ -11,7 +11,6 @@ import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.*;
-import com.juniperbrew.minimus.server.WorldHeadless;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.w3c.dom.Document;
@@ -652,7 +651,7 @@ public class F {
     public static void renderParticles(SpriteBatch batch, ConcurrentLinkedQueue<RenderedParticle> particles) {
         batch.begin();
         for (RenderedParticle particle : particles) {
-            F.renderPolygon(batch,particle.texture,particle.bounds);
+            F.renderPolygon(batch, particle.texture, particle.bounds);
         }
         batch.end();
     }

@@ -12,7 +12,7 @@ import com.juniperbrew.minimus.Tools;
  */
 public class EntityAI {
 
-    WorldHeadless world;
+    Game game;
 
     public static final int MOVING = 0;
     public static final int MOVING_AND_SHOOTING = 1;
@@ -38,9 +38,9 @@ public class EntityAI {
     private static final float TURNRATE = 180; //Deg/s
     private float targetRotation;
 
-    public EntityAI(NpcServerEntity entity, int aiType, int weapon, WorldHeadless world){
+    public EntityAI(NpcServerEntity entity, int aiType, int weapon, Game game){
         this.entity = entity;
-        this.world = world;
+        this.game = game;
         this.aiType = aiType;
         this.weapon = weapon;
         lastAttackDone = System.nanoTime();
@@ -77,7 +77,7 @@ public class EntityAI {
         ServerEntity closestTarget = null;
 
 
-        for(ServerEntity target : world.entities.values()){
+        for(ServerEntity target : game.entities.values()){
             if (target.invulnerable ||  target.getTeam() == entity.getTeam()) {
                 continue;
             }
@@ -160,7 +160,7 @@ public class EntityAI {
 
     private void shoot(double delta){
         if(targetUpdated){
-            world.attack(entity, weapon, (short) (delta*1000));
+            game.attack(entity, weapon, (short) (delta*1000));
             targetUpdated = false;
         }
     }
@@ -186,7 +186,7 @@ public class EntityAI {
         if(hasDestination){
             return;
         }
-        if(world.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
+        if(game.posChangedEntities.size()>=ConVars.getInt("sv_max_moving_entities")){
             return;
         }
 

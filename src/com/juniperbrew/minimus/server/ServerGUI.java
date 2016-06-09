@@ -13,14 +13,10 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ScreenUtils;
 import com.juniperbrew.minimus.F;
 import com.juniperbrew.minimus.G;
 import com.juniperbrew.minimus.Particle;
 import com.juniperbrew.minimus.ProjectileDefinition;
-import com.juniperbrew.minimus.client.ClientEntity;
-import net.java.games.input.Component;
-import tiled.core.TileLayer;
 
 import java.io.File;
 import java.util.HashMap;
@@ -61,7 +57,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
         shapeRenderer = new ShapeRenderer();
         camera = new OrthographicCamera(Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         hudCamera = new OrthographicCamera();
-        loadTextures(server.world.campaignName);
+        loadTextures(server.game.campaignName);
     }
 
     @Override
@@ -77,8 +73,8 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
 
     @Override
     public void render() {
-        if(server.world.mapName!=mapName){
-            loadMap(server.world.mapName);
+        if(server.game.mapName!=mapName){
+            loadMap(server.game.mapName);
         }
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.view);
@@ -111,8 +107,8 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
         shapeRenderer.setProjectionMatrix(camera.combined);
         //Render dudes
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for(ServerEntity e : server.world.entities.values()) {
-            if(server.world.playerList.contains(e.getID())){
+        for(ServerEntity e : server.game.entities.values()) {
+            if(server.game.playerList.contains(e.getID())){
                 shapeRenderer.setColor(0,0,1,1);
             }else{
                 shapeRenderer.setColor(1,1,1,1);
@@ -125,7 +121,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
         shapeRenderer.end();
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        Rectangle spawn = server.world.playerSpawn;
+        Rectangle spawn = server.game.playerSpawn;
         shapeRenderer.setColor(0, 1, 0, 1);
         shapeRenderer.rect(spawn.x, spawn.y, spawn.width, spawn.height);
         shapeRenderer.setColor(1, 0, 1, 1);
@@ -149,7 +145,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
         batch.end();*/
 
         batch.begin();
-        for(Particle p : server.world.projectiles){
+        for(Particle p : server.game.projectiles){
             F.renderPolygon(batch,getParticleTexture(p),p.getBoundingPolygon());
         }
         batch.end();
@@ -163,7 +159,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
 
     private TextureRegion getParticleTexture(Particle p){
 
-        ProjectileDefinition def = server.world.projectileList.get(p.name);
+        ProjectileDefinition def = server.game.projectileList.get(p.name);
         if(textures.containsKey(def.image)){
             return textures.get(def.image);
         }else if(animations.containsKey(def.animation)){
@@ -200,7 +196,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
 
     private void loadMap(String mapName){
         this.mapName = mapName;
-        String mapPath = G.campaignFolder+File.separator+server.world.campaignName+File.separator+"maps"+File.separator+mapName+File.separator+mapName+".tmx";
+        String mapPath = G.campaignFolder+File.separator+server.game.campaignName+File.separator+"maps"+File.separator+mapName+File.separator+mapName+".tmx";
         map = new TmxMapLoader().load(mapPath);
         mapRenderer = new OrthogonalTiledMapRenderer(map,batch);
     }

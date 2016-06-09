@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 18/05/16.
  */
-public class HeadlessServer implements WorldHeadless.WorldChangeListener, Console.ServerCommands, Score.ScoreChangeListener, ConVars.ConVarChangeListener{
+public class HeadlessServer implements Game.WorldChangeListener, Console.ServerCommands, Score.ScoreChangeListener, ConVars.ConVarChangeListener{
 
     boolean running = true;
 
@@ -56,12 +56,12 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
     int pendingRandomNpcRemovals = 0;
     boolean set200Entities;
 
-    WorldHeadless world;
+    Game game;
 
     public HeadlessServer(){
         G.console = new Console(this);
         ConVars.addListener(this);
-        world = new WorldHeadless(this);
+        game = new Game(this);
         startServer();
         Scanner scanner = new Scanner(System.in);
         new Thread(() -> {
@@ -188,7 +188,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
         updatePing();
         processPendingEntityAddsAndRemovals();
         processCommands();
-        world.updateWorld(delta);
+        game.updateWorld(delta);
 
         if(System.nanoTime()-lastUpdateSent>(1000000000/ConVars.getInt("sv_updaterate"))){
             updateClients();
@@ -201,7 +201,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
         if(ConVars.getInt("sv_update_type")==0){
             Network.FullEntityUpdate update = new Network.FullEntityUpdate();
             update.serverTime = getServerTime();
-            update.entities = world.getNetworkedEntities();
+            update.entities = game.getNetworkedEntities();
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -213,7 +213,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
         }else if(ConVars.getInt("sv_update_type")==1){
             Network.EntityPositionUpdate update = new Network.EntityPositionUpdate();
             update.serverTime = getServerTime();
-            update.changedEntityPositions = world.getChangedEntityPositions();
+            update.changedEntityPositions = game.getChangedEntityPositions();
             for(Connection connection :server.getConnections()){
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -225,7 +225,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
         }else if(ConVars.getInt("sv_update_type")==2){
             Network.EntityComponentsUpdate update = new Network.EntityComponentsUpdate();
             update.serverTime = getServerTime();
-            update.changedEntityComponents = world.getChangedEntityComponents();
+            update.changedEntityComponents = game.getChangedEntityComponents();
             for(Connection connection :connections) {
                 update.lastProcessedInputID = getLastInputIDProcessed(connection);
                 if(ConVars.getBool("cl_udp")){
@@ -251,7 +251,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
         }
         //serverData.fps = Gdx.graphics.getFramesPerSecond();
         fpsLog.add((float) serverData.fps);
-        serverData.setEntityCount(world.getEntityCount());
+        serverData.setEntityCount(game.getEntityCount());
         serverData.currentTick = currentTick;
         serverData.setServerTime((System.nanoTime() - serverStartTime) / 1000000000f);
     }
@@ -277,19 +277,19 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
 
     private void processPendingEntityAddsAndRemovals(){
         for (int i = 0; i < pendingRandomNpcAdds; i++) {
-            world.addRandomNPC();
+            game.addRandomNPC();
         }
         pendingRandomNpcAdds = 0;
 
         if(set200Entities){
-            while(world.entities.size()<200){
-                world.addRandomNPC();
+            while(game.entities.size()<200){
+                game.addRandomNPC();
             }
             set200Entities = false;
         }
 
         for (int i = 0; i < pendingRandomNpcRemovals; i++) {
-            world.removeRandomNPC();
+            game.removeRandomNPC();
         }
         pendingRandomNpcRemovals = 0;
     }
@@ -305,7 +305,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
             int id = playerList.getKey(connection);
 
             for(Network.UserInput input : inputList){
-                world.processInput((PlayerServerEntity) world.entities.get(id), input);
+                game.processInput((PlayerServerEntity) game.entities.get(id), input);
                 lastInputIDProcessed.put(connection,input.inputID);
             }
             inputList.clear();
@@ -324,16 +324,16 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
             }
         }else if (object instanceof Network.SpawnRequest){
             showMessage("Got spawnrequest from "+connection);
-            if(world.playerList.contains(playerList.getKey(connection))){
-                world.removePlayer(playerList.getKey(connection));
+            if(game.playerList.contains(playerList.getKey(connection))){
+                game.removePlayer(playerList.getKey(connection));
             }
-            world.addPlayer(connection);
+            game.addPlayer(connection);
         }else if (object instanceof Network.TeamChangeRequest){
             Network.TeamChangeRequest teamChangeRequest = (Network.TeamChangeRequest) object;
-            world.getEntity(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
+            game.getEntity(playerList.getKey(connection)).setTeam(teamChangeRequest.team);
         }else if (object instanceof Network.ChangeWeapon){
             Network.ChangeWeapon changeWeapon = (Network.ChangeWeapon) object;
-            world.setPlayerWeapon(playerList.getKey(connection), changeWeapon.weapon);
+            game.setPlayerWeapon(playerList.getKey(connection), changeWeapon.weapon);
         }else if(object instanceof Disconnect){
             if(connectionStatus.containsKey(connection)){
                 connectionStatus.get(connection).disconnected();
@@ -341,7 +341,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
                 showMessage(connection + " disconnected but is not in the connectionlist");
             }
             if(playerList.containsValue(connection)) {
-                world.removePlayer(playerList.getKey(connection));
+                game.removePlayer(playerList.getKey(connection));
             }
             connections.remove(connection);
         }else if(object instanceof Network.GameClockCompare){
@@ -350,14 +350,14 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
         }else if(object instanceof Network.BuyItem){
             Network.BuyItem buyItem = (Network.BuyItem) object;
             showMessage("Player "+playerList.getKey(connection)+" buying "+buyItem.amount+" of item "+G.shoplist.get(buyItem.id)+"("+buyItem.id+")");
-            world.buyItem(playerList.getKey(connection),buyItem.id,buyItem.amount);
+            game.buyItem(playerList.getKey(connection),buyItem.id,buyItem.amount);
         }else if(object instanceof Network.SellItem){
             Network.SellItem sellItem = (Network.SellItem) object;
             showMessage("Player "+playerList.getKey(connection)+" selling "+sellItem.amount+" of item "+G.shoplist.get(sellItem.id)+"("+sellItem.id+")");
-            world.sellItem(playerList.getKey(connection),sellItem.id,sellItem.amount);
+            game.sellItem(playerList.getKey(connection),sellItem.id,sellItem.amount);
         }else if(object instanceof Network.CompleteQuest){
             showMessage("Player "+playerList.getKey(connection)+" completed the quest.");
-            world.completeQuest();
+            game.completeQuest();
             //Confirm quest completion for all clients
             sendTCPtoAll(object);
         }
@@ -365,7 +365,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
 
     private void sendFullStateUpdate(Connection c){
         Network.FullEntityUpdate fullUpdate = new Network.FullEntityUpdate();
-        fullUpdate.entities = world.getNetworkedEntities();
+        fullUpdate.entities = game.getNetworkedEntities();
         fullUpdate.serverTime = getServerTime();
         c.sendTCP(fullUpdate);
     }
@@ -446,13 +446,13 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
     @Override
     public void conVarChanged(String varName, String varValue) {
         if(varName.equals("sv_map")){
-            if(world!=null){
-                world.changeMap(varValue);
+            if(game !=null){
+                game.changeMap(varValue);
             }
         }
         if(varName.equals("sv_campaign")){
-            if(world!=null){
-                world.loadCampaign(varValue);
+            if(game !=null){
+                game.loadCampaign(varValue);
             }
         }
     }
@@ -626,7 +626,7 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
     @Override
     public void reassignPlayers() {
         for(Connection c : playerList.values().toArray(new Connection[playerList.values().size()])){
-            world.addPlayer(c);
+            game.addPlayer(c);
         }
     }
 
@@ -677,13 +677,13 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
 
     //Maybe add this to console commands too
     public void giveWeapon(int weaponID, int id){
-        PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
+        PlayerServerEntity player = (PlayerServerEntity) game.entities.get(id);
         player.setWeapon(weaponID, true);
     }
 
     @Override
     public void addAmmo(int id, String ammoType, int amount){
-        PlayerServerEntity player = (PlayerServerEntity) world.entities.get(id);
+        PlayerServerEntity player = (PlayerServerEntity) game.entities.get(id);
         player.changeAmmo(ammoType, amount);
         Network.AmmoUpdate ammoUpdate = new Network.AmmoUpdate();
         ammoUpdate.ammoType = ammoType;
@@ -693,19 +693,19 @@ public class HeadlessServer implements WorldHeadless.WorldChangeListener, Consol
 
     @Override
     public void startWaves(){
-        world.spawnWaves = true;
+        game.spawnWaves = true;
     }
 
     @Override
     public void stopWaves(){
-        world.spawnWaves = false;
+        game.spawnWaves = false;
     }
 
     @Override
     public void resetWaves(){
-        world.removeAllNpcs();
-        world.spawnWaves = false;
-        world.setWave(0);
+        game.removeAllNpcs();
+        game.spawnWaves = false;
+        game.setWave(0);
     }
 
     @Override

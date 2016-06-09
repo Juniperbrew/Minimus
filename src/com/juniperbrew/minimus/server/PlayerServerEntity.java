@@ -17,9 +17,9 @@ public class PlayerServerEntity extends ServerEntity {
     HashMap<Integer,Boolean> weapons = new HashMap<>();
     HashMap<String,Integer> ammo = new HashMap<>();
     public int chargeWeapon;
-    WorldHeadless.WorldChangeListener worldChangeListener;
+    Game.WorldChangeListener worldChangeListener;
 
-    public PlayerServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer, Boolean> weapons, HashMap<String, Integer> ammo, float velocity, float vision, EntityChangeListener listener, WorldHeadless.WorldChangeListener worldChangeListener) {
+    public PlayerServerEntity(int id, float x, float y, float width, float height, int maxHealth, int team, String image, HashMap<Integer, Boolean> weapons, HashMap<String, Integer> ammo, float velocity, float vision, EntityChangeListener listener, Game.WorldChangeListener worldChangeListener) {
         super(id, x, y, width, height, maxHealth, team, image, velocity, listener);
         this.weapons = weapons;
         this.ammo = ammo;
