@@ -43,6 +43,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class F {
 
+
+
     public static ArrayList<Line2D.Float> createHitscan(Weapon weapon, float centerX, float centerY, float deg){
         ProjectileDefinition projectileDefinition = weapon.projectile;
         final ArrayList<Line2D.Float> hitscans = new ArrayList<>();
@@ -76,11 +78,6 @@ public class F {
         return new Particle(def,bounds,rotation,line.x1,line.y1);
     }
 
-    public static Particle createStationaryParticle(ProjectileDefinition def, float x, float y) {
-        Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
-        return new Particle(def,bounds);
-    }
-
     public static Particle createRotatedParticle(ProjectileDefinition def, float x, float y, int rotation) {
         Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
         return new Particle(def,bounds,rotation,x,y,0);
@@ -91,21 +88,16 @@ public class F {
         return new Particle(def,bounds,rotation,x,y, velocity);
     }
 
-    public static Particle createStationaryProjectile(ProjectileDefinition def, float x, float y, int entityId, int team) {
+    public static Particle createStationaryParticle(ProjectileDefinition def, float x, float y, int entityId, int team) {
         Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
         return new Particle(def, bounds, entityId, team);
     }
-
-    public static ArrayList<RenderedParticle> makeRenderedParticles(ArrayList<Particle> particles, ProjectileDefinition def){
-        ArrayList<RenderedParticle> renderedParticles = new ArrayList<>();
-        for(Particle p : particles){
-            renderedParticles.add(new RenderedParticle(p, def));
-        }
-        return renderedParticles;
+    public static Particle createStationaryParticle(ProjectileDefinition def, float x, float y) {
+        Rectangle bounds = new Rectangle(x-def.width/2, y-def.length/2, def.length, def.width);
+        return new Particle(def, bounds, -1, -1);
     }
 
     public static ArrayList<Particle> createProjectiles(Weapon weapon, float centerX, float centerY, float deg, int entityId, int team, HashMap<String,Float> projectileModifiers) {
-        System.out.println("Creating projectiles: "+weapon.name);
         ProjectileDefinition def = weapon.projectile;
         final ArrayList<Particle> projectiles = new ArrayList<>();
         int length = def.length;
@@ -134,7 +126,6 @@ public class F {
                 deg += weapon.spread / (weapon.projectileCount - 1);
             }
         }
-        System.out.println("Created "+projectiles.size()+" projectiles.");
         return projectiles;
     }
 
@@ -646,14 +637,6 @@ public class F {
             renderer.polygon(projectile.getBoundingPolygon().getTransformedVertices());
         }
         renderer.end();
-    }
-
-    public static void renderParticles(SpriteBatch batch, ConcurrentLinkedQueue<RenderedParticle> particles) {
-        batch.begin();
-        for (RenderedParticle particle : particles) {
-            F.renderPolygon(batch, particle.texture, particle.bounds);
-        }
-        batch.end();
     }
 
     public static float getMapScale(TiledMap map) {

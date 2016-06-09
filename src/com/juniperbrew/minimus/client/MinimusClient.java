@@ -129,9 +129,9 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
 
     int currentWave;
     EnumSet<Enums.Buttons> buttons = EnumSet.noneOf(Enums.Buttons.class);
-    private ConcurrentLinkedQueue<RenderedParticle> projectiles = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<RenderedParticle> particles = new ConcurrentLinkedQueue<>();
-    private ConcurrentLinkedQueue<RenderedParticle> blood = new ConcurrentLinkedQueue<>();
+    //private ConcurrentLinkedQueue<Particle> projectiles = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Particle> blood = new ConcurrentLinkedQueue<>();
 
     long lastPingRequest;
     long renderStart;
@@ -646,8 +646,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }else if(object instanceof Network.SpawnProjectile){
             Network.SpawnProjectile spawnProjectile = (Network.SpawnProjectile) object;
             ProjectileDefinition def = projectileList.get(spawnProjectile.projectileName);
-            projectiles.add(new RenderedParticle(F.createStationaryProjectile(def, spawnProjectile.x, spawnProjectile.y,
-                    spawnProjectile.ownerID, spawnProjectile.team),def));
+            particles.add(F.createStationaryParticle(def, spawnProjectile.x, spawnProjectile.y,
+                    spawnProjectile.ownerID, spawnProjectile.team));
             if(def.sound!=null){
                 playSoundInLocation(sounds.get(def.sound),spawnProjectile.x,spawnProjectile.y);
             }
@@ -727,9 +727,8 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         loadMap(mapChange.mapName, campaign);
         //powerups = mapChange.powerups;
         powerups.clear();
-        projectiles.clear();
         particles.clear();
-        blood.clear();
+        //blood.clear();
     }
 
     private void createMinimap(){
@@ -777,14 +776,23 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             e.update(delta);
 
             if(e.getHealthPercent()>0.5f && e.bleedTimer < 0) {
-                blood.add(new RenderedParticle(F.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)),projectileList.get("blood")));
+                blood.add(F.createRotatedParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), MathUtils.random(360)));
                 e.bleedTimer = MathUtils.random(0.5f,2f);
             }
         }
 
         sendInputPackets();
-        updateProjectiles(delta);
+        //updateProjectiles(delta);
         updateParticles(delta);
+
+        Iterator<Particle> iter = blood.iterator();
+        while(iter.hasNext()){
+            Particle p = iter.next();
+            p.update(delta);
+            if(p.destroyed){
+                iter.remove();
+            }
+        }
 
         //Dont pollInput or create snapshot if we have no state from server
         if (authoritativeState != null && player != null){
@@ -811,25 +819,6 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         statusFrame.update();
 
         logicLog.add(Tools.nanoToMilliFloat(System.nanoTime() - startTime));
-    }
-
-    private void updateParticles(float delta){
-        Iterator<RenderedParticle> iter = particles.iterator();
-        while(iter.hasNext()){
-            RenderedParticle p = iter.next();
-            p.update(delta);
-            if(p.destroyed){
-                iter.remove();
-            }
-        }
-        iter = blood.iterator();
-        while(iter.hasNext()){
-            RenderedParticle p = iter.next();
-            p.update(delta);
-            if(p.destroyed){
-                iter.remove();
-            }
-        }
     }
 
     private void pollInput(float delta){
@@ -1075,20 +1064,20 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                             hitscan.y2 = i.y;
                         }
                         ProjectileDefinition def = projectileList.get("blood");
-                        blood.add(new RenderedParticle(F.createMovingParticle(def, hitscan.x2, hitscan.y2, (int) Tools.getAngle(hitscan) + MathUtils.random(-10, 10), MathUtils.random(60, 100)),def));
+                        blood.add(F.createMovingParticle(def, hitscan.x2, hitscan.y2, (int) Tools.getAngle(hitscan) + MathUtils.random(-10, 10), MathUtils.random(60, 100)));
                     }
                     if(weapon.projectile.onDestroy!=null && targetsHit.isEmpty()){
                         ProjectileDefinition def = projectileList.get(weapon.projectile.onDestroy);
-                        if(def.type == ProjectileDefinition.PARTICLE){
-                            particles.add(new RenderedParticle(F.createStationaryParticle(def, hitscan.x2, hitscan.y2),def));
+                        if(!def.networked){
+                            particles.add(F.createStationaryParticle(def, hitscan.x2, hitscan.y2,-1,-1));
                         }
                     }
                     if(weapon.projectile.tracer!=null){
-                        particles.add(new RenderedParticle(F.createTracer(projectileList.get(weapon.projectile.tracer), hitscan),projectileList.get(weapon.projectile.tracer)));
+                        particles.add(F.createTracer(projectileList.get(weapon.projectile.tracer), hitscan));
                     }
                 }
             }else{
-                projectiles.addAll(F.makeRenderedParticles(F.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1, attack.projectileModifiers), weapon.projectile));
+                particles.addAll(F.createProjectiles(weapon, attack.x, attack.y, attack.deg, attack.id, -1, attack.projectileModifiers));
             }
         }
     }
@@ -1350,26 +1339,25 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         }
     }
 
-    private void updateProjectiles(float delta){
-        ArrayList<Particle> destroyedProjectiles = new ArrayList<>();
-        for(Particle projectile:projectiles){
-            System.out.println("updating " + projectile.name);
-            projectile.update(delta);
-            if(!projectile.ignoreEntityCollision) {
+    private void updateParticles(float delta){
+        ArrayList<Particle> destroyedParticles = new ArrayList<>();
+        for(Particle particle:particles){
+            particle.update(delta);
+            if(!particle.ignoreEntityCollision) {
                 for (int id : entities.keySet()) {
-                    if (id == projectile.ownerID) {
+                    if (id == particle.ownerID) {
                         continue;
                     }
-                    if(projectile.entitiesHit.contains(id)){
+                    if(particle.entitiesHit.contains(id)){
                         continue;
                     }
                     ClientEntity target = entities.get(id);
-                    if(Intersector.overlaps(projectile.getBoundingRectangle(),target.getGdxBounds())){
-                        if (Intersector.overlapConvexPolygons(projectile.getBoundingPolygon(), target.getPolygonBounds())) {
-                            if(projectile.stopOnCollision){
-                                projectile.stopped = true;
-                            }else if(!projectile.dontDestroyOnCollision){
-                                projectile.destroyed = true;
+                    if(Intersector.overlaps(particle.getBoundingRectangle(),target.getGdxBounds())){
+                        if (Intersector.overlapConvexPolygons(particle.getBoundingPolygon(), target.getPolygonBounds())) {
+                            if(particle.stopOnCollision){
+                                particle.stopped = true;
+                            }else if(!particle.dontDestroyOnCollision){
+                                particle.destroyed = true;
                             }
                             if (id == player.id) {
                                 playSoundInLocation(sounds.get("hurt.ogg"),target.getCenterX(),target.getCenterY());
@@ -1377,34 +1365,45 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                                 playSoundInLocation(sounds.get("hit.ogg"),target.getCenterX(),target.getCenterY());
                             }
                             Vector2 center = new Vector2();
-                            projectile.getBoundingRectangle().getCenter(center);
-                            projectile.entitiesHit.add(target.getID());
-                            particles.add(new RenderedParticle(F.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y),projectileList.get("bloodsplat")));
-                            if(projectile.explosionKnockback){
-                                blood.add(new RenderedParticle(F.createMovingParticle(projectileList.get("blood"), target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x, center.y, target.getCenterX(), target.getCenterY()) + MathUtils.random(-10, 10)), MathUtils.random(60, 100)),projectileList.get("blood")));
+                            particle.getBoundingRectangle().getCenter(center);
+                            particle.entitiesHit.add(target.getID());
+                            particles.add(F.createStationaryParticle(projectileList.get("bloodsplat"), center.x, center.y));
+                            if(particle.explosionKnockback){
+                                blood.add(F.createMovingParticle(projectileList.get("blood"), target.getCenterX(), target.getCenterY(), (int) (Tools.getAngle(center.x, center.y, target.getCenterX(), target.getCenterY()) + MathUtils.random(-10, 10)), MathUtils.random(60, 100)));
                             }else{
-                                blood.add(new RenderedParticle(F.createMovingParticle(projectileList.get("blood"), center.x, center.y, projectile.rotation + MathUtils.random(-10, 10), MathUtils.random(60, 100)),projectileList.get("blood")));
+                                blood.add(F.createMovingParticle(projectileList.get("blood"), center.x, center.y, particle.rotation + MathUtils.random(-10, 10), MathUtils.random(60, 100)));
                             }
                         }
                     }
                 }
             }
 
-            if(projectile.destroyed){
-                destroyedProjectiles.add(projectile);
-                //FIXME if projectile hits some entity the onDestroy projectile is never created probably want to change this at some point
-                //server will create the onDestroy projectile in any case and send it to client if its networked
-                if(projectile.onDestroy!=null && projectile.entitiesHit.isEmpty()){
-                    ProjectileDefinition def = projectileList.get(projectile.onDestroy);
+            if(particle.destroyed){
+                destroyedParticles.add(particle);
+                //FIXME if particle hits some entity the onDestroy particle is never created probably want to change this at some point
+                //server will create the onDestroy particle in any case and send it to client if its networked
+                if(particle.onDestroy!=null && particle.entitiesHit.isEmpty()){
+                    ProjectileDefinition def = projectileList.get(particle.onDestroy);
                     if(def.type == ProjectileDefinition.PARTICLE){
                         Vector2 center = new Vector2();
-                        projectile.getBoundingRectangle().getCenter(center);
-                        particles.add(new RenderedParticle(F.createStationaryParticle(def, center.x, center.y),def));
+                        particle.getBoundingRectangle().getCenter(center);
+                        particles.add(F.createStationaryParticle(def, center.x, center.y));
                     }
                 }
             }
         }
-        projectiles.removeAll(destroyedProjectiles);
+        particles.removeAll(destroyedParticles);
+    }
+
+    private TextureRegion getParticleTexture(Particle p){
+        ProjectileDefinition def = projectileList.get(p.name);
+        if(textures.containsKey(def.image)){
+            return textures.get(def.image);
+        }else if(animations.containsKey(def.animation)){
+            return animations.get(def.animation).getKeyFrame(p.getLifeTime());
+        }else{
+            return textures.get("blank");
+        }
     }
 
     private Rectangle getCenteredTextureSize(TextureRegion t, Rectangle bounds){
@@ -1556,7 +1555,11 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             batch.end();
 
-            F.renderParticles(batch, blood);
+            batch.begin();
+            for(Particle p : blood){
+                F.renderPolygon(batch,getParticleTexture(p),p.getBoundingPolygon());
+            }
+            batch.end();
 
             //Render entities
             batch.begin();
@@ -1573,10 +1576,10 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
                     continue;
                 }
                 ClientEntity e = entities.get(id);
-                float healthbarWidth = e.getWidth() + 20;
+                float healthbarWidth = e.getWidth() + 5;
                 float healthbarHeight = healthbarWidth / 7;
-                float healthbarXOffset = -healthbarHeight;
-                float healthbarYOffset = e.getWidth() + 10;
+                float healthbarXOffset = -(healthbarWidth-e.getWidth())/2;
+                float healthbarYOffset = e.getHeight() + 5;//10;
                 batch.setColor(1, 1, 1, 1);
                 StringBuilder textureName = new StringBuilder(e.getImage());
                 if (playerList.contains(e.getID())) {
@@ -1610,14 +1613,17 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
             }
             batch.end();
 
-            F.renderParticles(batch, projectiles);
-            F.renderParticles(batch, particles);
+            batch.begin();
+            for(Particle p : particles){
+                F.renderPolygon(batch,getParticleTexture(p),p.getBoundingPolygon());
+            }
+            batch.end();
 
             if(ConVars.getBool("cl_show_debug")) {
                 shapeRenderer.setColor(1,1,1,1);
-                F.renderAttackBoundingBox(shapeRenderer, projectiles);
+                F.renderAttackBoundingBox(shapeRenderer, particles);
                 shapeRenderer.setColor(1,1,0,1);
-                F.renderAttackPolygon(shapeRenderer, projectiles);
+                F.renderAttackPolygon(shapeRenderer, particles);
             }
 
             drawTracer(shapeRenderer);
@@ -2383,7 +2389,7 @@ public class MinimusClient implements ApplicationListener, InputProcessor,Score.
         showMessage("Removing entity:"+e);
         for (int rotation = 0; rotation < 360; rotation += MathUtils.random(35,65)) {
             Particle p = F.createMovingParticle(projectileList.get("blood"), e.getCenterX(), e.getCenterY(), rotation, MathUtils.random(80, 120));
-            blood.add(new RenderedParticle(p,projectileList.get("blood")));
+            blood.add(p);
         }
 
         playSoundInLocation(sounds.get("death.wav"), e.getCenterX(), e.getCenterY());

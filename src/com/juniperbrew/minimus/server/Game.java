@@ -32,13 +32,11 @@ public class Game implements EntityChangeListener{
 
     //Rendered state
     Map map;
-    ArrayList<MapObject> mapObjects;
     //ArrayList<Rectangle> solidMapObjects;
     ConcurrentHashMap<Integer,ServerEntity> entities = new ConcurrentHashMap<>();
     ConcurrentHashMap<Integer,Powerup> powerups = new ConcurrentHashMap<>();
-    public ConcurrentLinkedQueue<Particle> projectiles = new ConcurrentLinkedQueue<>();
+    //public ConcurrentLinkedQueue<Particle> projectiles = new ConcurrentLinkedQueue<>();
     public ConcurrentLinkedQueue<Particle> particles = new ConcurrentLinkedQueue<>();
-
 
 
     HashMap<Integer,EntityAI> entityAIs = new HashMap<>();
@@ -143,7 +141,7 @@ public class Game implements EntityChangeListener{
         questComplete = true;
         removeAllNpcs();
         powerups.clear();
-        projectiles.clear();
+        particles.clear();
 
         loadMap(mapName);
 
@@ -164,7 +162,7 @@ public class Game implements EntityChangeListener{
         G.console.log("MapSize: "+G.mapWidth+"x"+G.mapHeight);
         G.console.log("Mapsize(tiles): "+G.mapWidthTiles+"x"+G.mapHeightTiles);
 
-        mapObjects = MapFunctions.getMapObjects(map);
+        ArrayList<MapObject> mapObjects = MapFunctions.getMapObjects(map);
         G.solidMapObjects = MapFunctions.getSolidMapObjects(mapObjects);
 
         G.collisionMap = MapFunctions.createCollisionMap(map);
@@ -251,15 +249,15 @@ public class Game implements EntityChangeListener{
 
         updateGameState(delta);
         updateEntities(delta);
-        updateProjectiles(delta);
         updateParticles(delta);
+        //updateParticles(delta);
         //checkPlayerEntityCollisions();
         checkPlayerCollisions();
         checkEntityCollisions();
         checkPowerupCollisions();
     }
 
-    private void updateParticles(float delta){
+    /*private void updateParticles(float delta){
         Iterator<Particle> iter = particles.iterator();
         while(iter.hasNext()){
             Particle p = iter.next();
@@ -268,7 +266,7 @@ public class Game implements EntityChangeListener{
                 iter.remove();
             }
         }
-    }
+    }*/
 
     private void updateEntities(float delta){
         for(EntityAI ai:entityAIs.values()){
@@ -377,75 +375,75 @@ public class Game implements EntityChangeListener{
         }
     }
 
-    private void updateProjectiles(float delta){
-        ArrayList<Particle> destroyedProjectiles = new ArrayList<>();
+    private void updateParticles(float delta){
+        ArrayList<Particle> destroyedParticles = new ArrayList<>();
         Rectangle intersection = new Rectangle();
-        for(Particle projectile:projectiles){
-            Rectangle projectileBounds = projectile.getBoundingRectangle();
-            projectile.update(delta);
-            if(!projectile.ignoreEntityCollision){
+        for(Particle p:particles){
+            Rectangle projectileBounds = p.getBoundingRectangle();
+            p.update(delta);
+            if(!p.ignoreEntityCollision){
                 //TODO hit detection no longer is the line projectile has travelled so its possible to go through thin objects
                 for(int id:entities.keySet()){
-                    if(projectile.ownerID==id&&!projectile.explosionKnockback){
+                    if(p.ownerID==id&&!p.explosionKnockback){
                         continue;
                     }
-                    if(projectile.entitiesHit.contains(id)){
+                    if(p.entitiesHit.contains(id)){
                         continue;
                     }
                     ServerEntity target = entities.get(id);
                     Rectangle entityBounds = target.getGdxBounds();
                     if(Intersector.intersectRectangles(projectileBounds, entityBounds, intersection)){
-                        if(Intersector.overlapConvexPolygons(projectile.getBoundingPolygon(), target.getPolygonBounds())){
-                            if(projectile.stopOnCollision){
-                                projectile.stopped = true;
-                            }else if(!projectile.dontDestroyOnCollision){
-                                projectile.destroyed = true;
+                        if(Intersector.overlapConvexPolygons(p.getBoundingPolygon(), target.getPolygonBounds())){
+                            if(p.stopOnCollision){
+                                p.stopped = true;
+                            }else if(!p.dontDestroyOnCollision){
+                                p.destroyed = true;
                             }
                             //Explosion self knockbacks apply on player but dont damage him
-                            if(projectile.knockback>0&&(projectile.ownerID!=id||projectile.explosionKnockback)){
+                            if(p.knockback>0&&(p.ownerID!=id||p.explosionKnockback)){
                                 Vector2 knockback;
-                                if(projectile.explosionKnockback){
+                                if(p.explosionKnockback){
                                     Vector2 projectileCenter = new Vector2();
                                     projectileBounds.getCenter(projectileCenter);
                                     //Knockback is scaled to how far into the explosion the entity is
                                     //Since you can only be hit once by an explosion if you walk into one you will only be hit with very minor knockback
                                     float scale = intersection.area()/entityBounds.area();
                                     Vector2 i = new Vector2(target.getCenterX()-projectileCenter.x,target.getCenterY()-projectileCenter.y);
-                                    knockback = new Vector2(projectile.knockback*scale,0);
+                                    knockback = new Vector2(p.knockback*scale,0);
                                     knockback.setAngle(i.angle());
                                     //Scale the damage too
-                                    projectile.damage *= scale;
+                                    p.damage *= scale;
                                 }else{
-                                    knockback = new Vector2(projectile.knockback,0);
-                                    knockback.setAngle(projectile.rotation);
+                                    knockback = new Vector2(p.knockback,0);
+                                    knockback.setAngle(p.rotation);
                                 }
                                 knockbacks.add(new Knockback(target.getID(), knockback));
-                                if(projectile.team!=target.getTeam()){
-                                    target.reduceHealth(projectile.damage,projectile.ownerID);
+                                if(p.team!=target.getTeam()){
+                                    target.reduceHealth(p.damage,p.ownerID);
                                     if(entityAIs.containsKey(target.getID())){
-                                        ServerEntity attacker = entities.get(projectile.ownerID);
+                                        ServerEntity attacker = entities.get(p.ownerID);
                                         if(attacker!=null){
                                             entityAIs.get(target.getID()).setTarget(attacker.getCenterX(),attacker.getCenterY());
                                         }
                                     }
                                 }
                             }
-                            projectile.entitiesHit.add(target.getID());
+                            p.entitiesHit.add(target.getID());
                         }
                     }
                 }
             }
 
-            if(projectile.destroyed){
-                destroyedProjectiles.add(projectile);
-                if(projectile.onDestroy!=null){
+            if(p.destroyed){
+                destroyedParticles.add(p);
+                if(p.onDestroy!=null){
                     Vector2 center = new Vector2();
-                    projectile.getBoundingRectangle().getCenter(center);
-                    createStationaryThing(projectile.onDestroy, center.x, center.y, projectile.ownerID, projectile.team);
+                    p.getBoundingRectangle().getCenter(center);
+                    createStationaryThing(p.onDestroy, center.x, center.y, p.ownerID, p.team);
                 }
             }
         }
-        projectiles.removeAll(destroyedProjectiles);
+        particles.removeAll(destroyedParticles);
     }
 
     private void checkPlayerCollisions(){
@@ -772,17 +770,15 @@ public class Game implements EntityChangeListener{
         }else if (projectileDefinition.type == ProjectileDefinition.PROJECTILE){
             //TODO projectiles with no duration or range will never get removed
             ArrayList<Particle> newProjectiles = F.createProjectiles(weapon, e.getCenterX(), e.getCenterY(), e.getRotation(), e.getID(), e.getTeam(), attack.projectileModifiers);
-            projectiles.addAll(newProjectiles);
+            particles.addAll(newProjectiles);
         }
     }
 
     private void createStationaryThing(String name, float x, float y, int id, int team){
         ProjectileDefinition def = projectileList.get(name);
-        if(def.type==ProjectileDefinition.PROJECTILE){
-            projectiles.add(F.createStationaryProjectile(def, x, y, id, team));
+        particles.add(F.createStationaryParticle(def, x, y, id, team));
+        if(def.networked){
             listener.networkedProjectileSpawned(def.name,x,y,id,team);
-        }else if(def.type==ProjectileDefinition.PARTICLE){
-            particles.add(F.createStationaryParticle(def, x, y));
         }
     }
 

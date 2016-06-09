@@ -24,9 +24,9 @@ import java.util.HashMap;
 /**
  * Created by Juniperbrew on 28/04/16.
  */
-public class ServerGUI  implements ApplicationListener, InputProcessor {
+public class ServerGUI implements ApplicationListener, InputProcessor {
 
-    HeadlessServer server;
+    GameServer server;
 
     TextureRegion cachedMap;
     String mapName;
@@ -45,7 +45,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
     Animation deathAnimation;
 
     public ServerGUI(){
-        server = new HeadlessServer();
+        server = new GameServer();
     }
 
     @Override
@@ -145,7 +145,7 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
         batch.end();*/
 
         batch.begin();
-        for(Particle p : server.game.projectiles){
+        for(Particle p : server.game.particles){
             F.renderPolygon(batch,getParticleTexture(p),p.getBoundingPolygon());
         }
         batch.end();
@@ -158,7 +158,6 @@ public class ServerGUI  implements ApplicationListener, InputProcessor {
     }
 
     private TextureRegion getParticleTexture(Particle p){
-
         ProjectileDefinition def = server.game.projectileList.get(p.name);
         if(textures.containsKey(def.image)){
             return textures.get(def.image);

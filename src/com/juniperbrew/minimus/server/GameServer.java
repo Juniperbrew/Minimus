@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Created by Juniperbrew on 18/05/16.
  */
-public class HeadlessServer implements Game.WorldChangeListener, Console.ServerCommands, Score.ScoreChangeListener, ConVars.ConVarChangeListener{
+public class GameServer implements Game.WorldChangeListener, Console.ServerCommands, Score.ScoreChangeListener, ConVars.ConVarChangeListener{
 
     boolean running = true;
 
@@ -58,7 +58,7 @@ public class HeadlessServer implements Game.WorldChangeListener, Console.ServerC
 
     Game game;
 
-    public HeadlessServer(){
+    public GameServer(){
         G.console = new Console(this);
         ConVars.addListener(this);
         game = new Game(this);
@@ -726,6 +726,6 @@ public class HeadlessServer implements Game.WorldChangeListener, Console.ServerC
     private class Disconnect{};
 
     public static void main(String[] args) {
-        new HeadlessServer();
+        new GameServer();
     }
 }

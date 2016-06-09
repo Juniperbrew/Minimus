@@ -1,5 +1,6 @@
 package com.juniperbrew.minimus.server;
 
+import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import com.juniperbrew.minimus.Tools;
@@ -22,17 +23,18 @@ public class ServerLauncher {
         File file = new File(Tools.getUserDataDirectory());
         file.mkdirs();
 
-        final ServerGUI serverGUI = new ServerGUI();
+        final ApplicationListener app = new ServerGUI();
+
         final LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
         cfg.vSyncEnabled = false; //vsync wastes cpu cycles for some reason
-        cfg.title = serverGUI.getClass().getSimpleName();
+        cfg.title = app.getClass().getSimpleName();
         //cfg.foregroundFPS = 0;
         //cfg.backgroundFPS = 0;
 
         if(useJFrame) {
 
             final JFrame frame = new JFrame();
-            frame.setTitle(serverGUI.getClass().getSimpleName());
+            frame.setTitle(app.getClass().getSimpleName());
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(false);
 
@@ -53,14 +55,14 @@ public class ServerLauncher {
             canvas.setSize(cfg.width, cfg.height);
             frame.add(canvas);
 
-            new LwjglApplication(serverGUI, cfg, canvas);
+            new LwjglApplication(app, cfg, canvas);
 
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setLocation(frame.getX(), 0);
             frame.setVisible(true);
         }else{
-            new LwjglApplication(serverGUI ,cfg);
+            new LwjglApplication(app ,cfg);
         }
     }
 }
